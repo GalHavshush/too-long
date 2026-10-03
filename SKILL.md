@@ -1,11 +1,20 @@
 ---
 name: too-long
-description: "Too long, just show me. Turns a long Markdown plan or technical document into a polished, interactive local website (.too-long/index.html, no build step) with views chosen for the reader's goal - overview, roadmap/timeline, task tracker, decisions & risks, architecture/dependency diagrams, file tree, step-by-step learning. Use when the user says 'too-long', 'too-long this', 'use too-long on X.md', or asks to visualize a Markdown plan, make a long or dense plan/spec/PRD/RFC/design doc easier to read or understand, turn a plan into a local website or dashboard, make a technical document interactive, make a Claude-generated implementation plan readable, build a roadmap view from Markdown, or visualize a project's architecture from a plan."
+argument-hint: <file.md> [--video]
+description: "Too long, just show me. Turns a long Markdown plan or technical document into a polished, interactive local website (.too-long/index.html, no build step), or with --video a ~2 minute narrated explainer video (.too-long/video/, rendered locally) with views chosen for the reader's goal - overview, roadmap/timeline, task tracker, decisions & risks, architecture/dependency diagrams, file tree, step-by-step learning. Use when the user says 'too-long', 'too-long this', 'use too-long on X.md', or asks to visualize a Markdown plan, make a long or dense plan/spec/PRD/RFC/design doc easier to read or understand, turn a plan into a local website or dashboard, make a technical document interactive, make a Claude-generated implementation plan readable, build a roadmap view from Markdown, visualize a project's architecture from a plan, or turn a plan into an explainer video."
 ---
 
 # too-long
 
 *Too long. Just show me.*
+
+## Arguments
+
+Arguments: `$ARGUMENTS`. Parse them with `python3 <skill-dir>/scripts/args.py "$ARGUMENTS"`
+(prints `{"file": ..., "video": ...}`; `--video` may come before or after the file).
+
+- No `--video`: continue with the website workflow below, unchanged.
+- `--video`: do **not** build the website. Read [video.md](video.md) and follow it instead.
 
 Turn one Markdown file into a local static site that shows the document in the
 ways the user actually needs. The Markdown stays the source of truth; the site
@@ -192,4 +201,5 @@ The Markdown is the source of truth.
 - `scripts/parse.py`: Markdown → content model. Run alone for a summary, `--json` for the model.
 - `scripts/build.py`: model + config → site. Validates the config.
 - `scripts/test_parse.py`: parser smoke test (`python3 scripts/test_parse.py`).
+- `video.md`, `scripts/video.py`, `scripts/render_video.mjs`, `scripts/args.py`, `assets/video/`: video mode (`--video`).
 - `assets/index.html`, `assets/styles.css`, `assets/app.js`: the site template, copied as is. `app.js` renders `data.js` into the chosen views.

@@ -1,3 +1,5 @@
 __pycache__/
 .DS_Store
 .too-long/
+examples/trailhead-video/audio/
+examples/trailhead-video/render/

@@ -1,0 +1,17 @@
+Trailhead is a plan for crowd-sourced trail conditions. Hikers report mud, snow, fallen trees and closures from their phones, and everyone else sees a fresh, map-based view before they leave home.
+
+Today this information lives in scattered Facebook groups and is usually days old. The goals: post a report in under thirty seconds, even offline, mark reports older than seven days as stale, and tie every report to a known trail.
+
+Two decisions shape everything. Start as a mobile web app, not native apps. And compute freshness when a report is read, so no nightly job is needed. The plan assumes most reports happen with weak or no signal.
+
+A report starts in the app and waits in a queue on the phone until there is a connection. It is then posted to the API and stored in Postgres, next to trails imported from OpenStreetMap. The map reads from there.
+
+The work runs in four phases. Foundations sets up the project, the database and the trail catalogue. Reporting adds the form and offline sync. Then the map and freshness, and finally launch.
+
+Trails are imported from OpenStreetMap into one table, keyed by their OSM relation id. Every report points at one of them.
+
+Offline support comes from a service worker that caches the app shell, and a queue in IndexedDB that holds drafts until the connection returns.
+
+Three risks stand out: photos that reveal other hikers, inconsistent trail names, and spam before moderation exists. Two questions are still open: whether reports should expire or only fade, and whether v1 needs accounts.
+
+Launch is a success at two hundred weekly active reporters across at least three regions, with reports under a day old, and a post that takes under thirty seconds.

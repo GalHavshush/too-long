@@ -34,6 +34,8 @@ For one project only (commit it so your team gets it too):
 git clone https://github.com/GalHavshush/too-long .claude/skills/too-long
 ```
 
+Video mode (`--video`) needs a few extra local tools; see [Video mode](#video-mode). Everything else works with Python alone.
+
 Start a new Claude Code session afterwards so the skill is picked up. To update:
 
 ```bash
@@ -50,6 +52,8 @@ too-long this plan
 Make docs/spec.md easier to understand with too-long
 Use too-long to turn this into a visual roadmap
 ```
+
+Add `--video` for a narrated explainer video instead of a website (`Use too-long on plan.md --video`).
 
 Claude reads the whole document, then asks what you want the visual version to help you do (unless you already said), for example:
 
@@ -104,6 +108,28 @@ The generated site is committed in [`examples/trailhead-site/`](examples/trailhe
 
 ![Document view, dark mode](docs/screenshots/document.png)
 
+## Video mode
+
+Add `--video` to get a ~2 minute narrated explainer video instead of a website:
+
+```text
+/too-long plan.md --video
+```
+
+Claude finds the story in your plan, writes a short script and a storyboard (title, goals, decisions, a diagram, the phases, risks, what success looks like), then renders it locally to `.too-long/video/<name>-explainer.mp4`. 
+**Watch the example:** [`examples/trailhead-video/trailhead-plan-explainer.mp4`](examples/trailhead-video/trailhead-plan-explainer.mp4) (1:51, narrated) is made from the same Trailhead plan. Its [`storyboard.json`](examples/trailhead-video/storyboard.json) and [`narration.txt`](examples/trailhead-video/narration.txt) sit next to it.
+
+![Frames from the example video](docs/screenshots/video-frames.png)
+
+Everything stays on your machine: the voice is macOS `say`, frames are drawn by headless Chrome, and ffmpeg encodes the result. No cloud services. Without `say` you still get a captioned video. What you need:
+
+```bash
+brew install ffmpeg      # encodes the video
+brew install node        # Node 22+ (drives Chrome; no npm packages)
+```
+
+plus Google Chrome (or Chromium/Edge/Brave). Check with `python3 ~/.claude/skills/too-long/scripts/video.py --check`. Rendering takes a few minutes. The same source-fidelity rules apply: code snippets and file paths must exist in your Markdown, and anything Claude had to infer gets an "Inferred" badge on screen.
+
 ## Views
 
 Only the views that fit the document and your goal are generated.
@@ -147,8 +173,13 @@ too-long/
 ├── scripts/
 │   ├── parse.py        # Markdown → content model
 │   ├── build.py        # content model + config → site
-│   └── test_parse.py   # parser test: python3 scripts/test_parse.py
-├── assets/             # site template (HTML, CSS, vanilla JS)
+│   ├── args.py         # parses "<file.md> [--video]"
+│   ├── video.py        # storyboard → narration → timing → mp4 (video mode)
+│   ├── render_video.mjs# frame capture via headless Chrome
+│   ├── test_parse.py   # parser test: python3 scripts/test_parse.py
+│   └── test_video.py   # args + storyboard validation tests
+├── video.md            # what Claude follows in video mode (storyboard schema)
+├── assets/             # site template (HTML, CSS, vanilla JS) + assets/video/ frame player
 ├── examples/           # example plan + generated site
 └── docs/screenshots/
 ```

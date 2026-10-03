@@ -1,0 +1,101 @@
+{
+  "title": "Trailhead: crowd-sourced trail conditions",
+  "accent": "#3f9d68",
+  "scenes": [
+    {
+      "id": "intro", "type": "title",
+      "heading": "Trailhead",
+      "subtitle": "Crowd-sourced trail conditions",
+      "narration": "Trailhead is a plan for crowd-sourced trail conditions. Hikers report mud, snow, fallen trees and closures from their phones, and everyone else sees a fresh, map-based view before they leave home."
+    },
+    {
+      "id": "goals", "type": "points",
+      "heading": "The problem and the goals",
+      "items": [
+        "Today this lives in scattered Facebook groups, usually days old",
+        "Post a report in under 30 seconds, even offline",
+        "Reports older than 7 days are marked stale",
+        "Every report links to a known trail"
+      ],
+      "sources": ["intro", "goals"],
+      "narration": "Today this information lives in scattered Facebook groups and is usually days old. The goals: post a report in under thirty seconds, even offline, mark reports older than seven days as stale, and tie every report to a known trail."
+    },
+    {
+      "id": "decisions", "type": "cards",
+      "heading": "Decisions and assumptions",
+      "items": [
+        {"kind": "decision", "label": "A web app, not native apps", "text": "One codebase, no app-store review, offline support through a service worker."},
+        {"kind": "assumption", "label": "Weak signal", "text": "Most reports are made at the trailhead or on the trail, often with weak or no signal."},
+        {"kind": "decision", "label": "Freshness at read time", "text": "Computed when a report is read, so nothing needs a nightly job."}
+      ],
+      "sources": ["intro", "phase-3-map-freshness"],
+      "narration": "Two decisions shape everything. Start as a mobile web app, not native apps. And compute freshness when a report is read, so no nightly job is needed. The plan assumes most reports happen with weak or no signal."
+    },
+    {
+      "id": "architecture", "type": "flow", "inferred": true,
+      "heading": "How a report travels",
+      "nodes": [
+        {"id": "pwa", "label": "SvelteKit PWA"},
+        {"id": "queue", "label": "IndexedDB queue"},
+        {"id": "api", "label": "API routes"},
+        {"id": "db", "label": "Postgres + PostGIS"},
+        {"id": "map", "label": "Map view (MapLibre)"},
+        {"id": "osm", "label": "OpenStreetMap import"}
+      ],
+      "edges": [["pwa", "queue"], ["queue", "api"], ["api", "db"], ["db", "map"], ["osm", "db"]],
+      "sources": ["phase-1-foundations", "phase-2-reporting", "phase-3-map-freshness"],
+      "narration": "A report starts in the app and waits in a queue on the phone until there is a connection. It is then posted to the API and stored in Postgres, next to trails imported from OpenStreetMap. The map reads from there."
+    },
+    {
+      "id": "phases", "type": "timeline",
+      "heading": "Four phases",
+      "phases": [
+        {"label": "Foundations", "detail": "Project, database and trail catalogue"},
+        {"label": "Reporting", "detail": "Report form and offline sync"},
+        {"label": "Map & freshness", "detail": "Map view and stale reports"},
+        {"label": "Launch", "detail": "Moderation, beta, public launch"}
+      ],
+      "sources": ["phase-1-foundations", "phase-2-reporting", "phase-3-map-freshness", "phase-4-launch"],
+      "narration": "The work runs in four phases. Foundations sets up the project, the database and the trail catalogue. Reporting adds the form and offline sync. Then the map and freshness, and finally launch."
+    },
+    {
+      "id": "catalogue", "type": "code",
+      "heading": "Everything hangs off the trail catalogue",
+      "lang": "sql",
+      "code": "CREATE TABLE trails (\n  id          BIGINT PRIMARY KEY,      -- OSM relation id\n  name        TEXT NOT NULL,\n  region      TEXT NOT NULL\n);",
+      "sources": ["phase-1-foundations"],
+      "narration": "Trails are imported from OpenStreetMap into one table, keyed by their OSM relation id. Every report points at one of them."
+    },
+    {
+      "id": "offline-files", "type": "files",
+      "heading": "Where the offline code lives",
+      "paths": ["web/src/service-worker.ts", "web/src/lib/offline/queue.ts", "web/src/routes/api/trails/+server.ts", "scripts/import_osm.py"],
+      "sources": ["phase-1-foundations", "phase-2-reporting"],
+      "narration": "Offline support comes from a service worker that caches the app shell, and a queue in IndexedDB that holds drafts until the connection returns."
+    },
+    {
+      "id": "risks", "type": "cards",
+      "heading": "Risks and open questions",
+      "items": [
+        {"kind": "risk", "label": "Photo privacy", "text": "Photos may reveal other hikers' faces."},
+        {"kind": "risk", "label": "Inconsistent names", "text": "OSM trail names differ across regions."},
+        {"kind": "risk", "label": "Spam", "text": "Fake reports before moderation tools exist."},
+        {"kind": "question", "label": "Expire or fade?", "text": "Should reports expire completely, or only fade?"},
+        {"kind": "question", "label": "Accounts?", "text": "Are accounts needed, or is a device id enough for v1?"}
+      ],
+      "sources": ["risks", "open-questions"],
+      "narration": "Three risks stand out: photos that reveal other hikers, inconsistent trail names, and spam before moderation exists. Two questions are still open: whether reports should expire or only fade, and whether v1 needs accounts."
+    },
+    {
+      "id": "success", "type": "points",
+      "heading": "What success looks like",
+      "items": [
+        "200 weekly active reporters across at least 3 regions",
+        "Median report age under 24 hours",
+        "Posting a report takes under 30 seconds"
+      ],
+      "sources": ["goals", "phase-4-launch"],
+      "narration": "Launch is a success at two hundred weekly active reporters across at least three regions, with reports under a day old, and a post that takes under thirty seconds."
+    }
+  ]
+}
