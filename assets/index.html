@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>too-long</title>
+  <link rel="stylesheet" href="styles.css">
+  <script>
+    // Apply the saved theme before first paint.
+    try { const t = localStorage.getItem("too-long:theme"); if (t) document.documentElement.dataset.theme = t; } catch {}
+  </script>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <a class="brand" href="#/" id="brand"></a>
+      <label class="search">
+        <span class="sr-only">Search the document</span>
+        <input id="search" type="search" placeholder="Search" autocomplete="off">
+        <kbd>/</kbd>
+      </label>
+      <nav id="views" aria-label="Views"></nav>
+      <nav id="toc" aria-label="Sections"></nav>
+      <footer class="sidebar-foot">
+        <button id="theme" type="button" aria-label="Toggle dark mode">◐ Theme</button>
+        <span title="Too long. Just show me.">too-long</span>
+      </footer>
+    </aside>
+    <main id="view" tabindex="-1"></main>
+  </div>
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

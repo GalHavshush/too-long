@@ -1,0 +1,21 @@
+{
+  "views": ["overview", "roadmap", "tasks", "highlights", "diagrams", "files", "steps", "document"],
+  "accent": "#2f7d4f",
+  "tldr": [
+    "A mobile web app (PWA) where hikers report trail conditions and everyone sees them on a map.",
+    "Reports must work offline: they are queued on the phone and sent when signal returns.",
+    "Four phases: foundations → reporting → map & freshness → launch.",
+    "Launch goal: 200 weekly active reporters across at least 3 regions."
+  ],
+  "notes": {
+    "phase-2-reporting": "The form and offline sync are separate halves: the form saves a draft locally first, and the sync layer is what actually sends it."
+  },
+  "diagrams": [
+    {
+      "title": "Architecture",
+      "description": "Components named in the plan and how a report travels from the trail to the map.",
+      "mermaid": "flowchart TD\n  H[\"Hiker's phone\"] --> PWA[\"SvelteKit PWA · web/\"]\n  PWA --> SW[\"Service worker\"]\n  SW --> Q[(\"IndexedDB queue\")]\n  Q -->|\"POST /api/reports\"| API[\"SvelteKit API routes\"]\n  API --> DB[(\"Postgres + PostGIS\")]\n  OSM[\"OpenStreetMap\"] -->|\"scripts/import_osm.py\"| DB\n  DB --> MAP[\"Map view · MapLibre\"]",
+      "sources": ["phase-1-foundations", "phase-2-reporting", "phase-3-map-freshness"]
+    }
+  ]
+}
