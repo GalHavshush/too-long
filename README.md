@@ -158,3 +158,7 @@ too-long/
 - Mermaid diagrams load mermaid.js from a CDN the first time. Offline, the diagram source is shown instead.
 - Task checks are stored in the browser (localStorage) and are not written back to the Markdown.
 - Raw HTML inside the Markdown is shown as text.
+
+## License
+
+[MIT](LICENSE)
