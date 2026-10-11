@@ -62,4 +62,45 @@ assert f[keys[7]]["body"][0]["text"].startswith("A paragraph in a decisions sect
 # ---- ADR: the "## Decision" section is one decision ----
 adr = decisions("adr.md")
 assert len(adr) == 1 and adr[0]["title"] == "We will store billing changes as an append-only event log.", adr
+
+# ---- Risks, mitigations and the other kinds ----
+def entries(name):
+    return parse_file(FIX / name)["callouts"]
+
+
+r = entries("risk-formats.md")
+assert [(e["kind"], e["title"]) for e in r] == [
+    ("risk", "PostgreSQL becomes a bottleneck."),
+    ("risk", "Redis loses writes on failover."),
+    ("risk", "Workers starve the event loop."),
+    ("risk", "Metrics explode in cardinality."),
+    ("risk", "An unlabeled bullet under the heading is a risk of its own."),
+    ("risk", "Vendor lock-in"),
+    ("question", "Do we need multi-region?"),
+    ("assumption", "Tenants are internal teams."),
+    ("milestone", "M1 internal alpha (MVP complete)."),
+], [(e["kind"], e["title"]) for e in r]
+det = lambda e: [(d["label"], d["text"]) for d in e["details"]]  # noqa: E731
+assert det(r[0]) == [("mitigation", "Batch database operations.")]  # separate paragraph
+assert det(r[1]) == [("mitigation", "the reconciler rebuilds the queue.")]  # inline
+assert det(r[2]) == [("mitigation", "Cap `to_thread` concurrency.")]  # next bullet, not a second risk
+assert det(r[3]) == [("impact", "dashboards time out."), ("mitigation", "no tenant labels."), ("owner", "platform team.")]
+assert det(r[5]) == [("likelihood", "L"), ("impact", "H"), ("mitigation", "Keep the queue behind an interface")]
+assert det(r[6]) == [("answer", "not before GA.")]
+assert r[8].get("inline")
+# A mitigation with nothing explicit before it is not attached anywhere and is not a risk.
+assert not any("no risk before it" in repr(e) for e in r)
+# Every detail points at a real line holding its text.
+lines = (FIX / "risk-formats.md").read_text().splitlines()
+for e in r:
+    for d in e["details"]:
+        assert d["text"][:10] in lines[d["line"] - 1], d
+
+# TaskForge section 18: nine risks, each with likelihood, impact and mitigation; section 19: eight questions.
+tf = entries("taskforge-risks.md")
+risks = [e for e in tf if e["kind"] == "risk"]
+assert len(risks) == 9 and [e["kind"] for e in tf].count("question") == 8
+assert all([d["label"] for d in e["details"]] == ["likelihood", "impact", "mitigation"] for e in risks)
+assert risks[0]["title"] == "PostgreSQL write throughput caps job throughput (about 5 writes per job)"
+assert not any("****" in repr(e["blocks"]) for e in risks)  # no doubled bold from the "**Risk:**" cell
 print("ok")

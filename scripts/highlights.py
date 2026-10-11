@@ -26,6 +26,8 @@ ALERT_RE = re.compile(rf"^\[!({KINDS})\]\s*(.*)$", re.I)
 # Only when the title is about that kind: it starts with the word, or uses the plural.
 SECTION_KIND_RE = re.compile(
     r"^(?:open |key )?(decision|risk|question|assumption|milestone)s?\b|\b(decision|risk|question|assumption|milestone)s\b", re.I)
+# "... done. **Milestone:** M1 alpha." - a bold label later in a sentence-separated text.
+INLINE_RE = re.compile(rf"(?<=[.!?]\s)(\*\*|__)({KINDS})(?:\s+(\d+))?:\1\s*(.+?)(?=\s+(?:\*\*|__)[A-Z][\w /-]*:(?:\*\*|__)|$)", re.I | re.S)
 # A heading that is one highlight, ADR style: "## Decision", "## Decision outcome".
 SINGLE_HEADING_RE = re.compile(r"^(decision|decision outcome|risk|assumption)$", re.I)
 
@@ -37,6 +39,12 @@ ATTRS = {
     "consequences": r"consequences?",
     "context": r"context",
     "status": r"status",
+    "mitigation": r"mitigations?|mitigated by",
+    "contingency": r"contingency|fallback",
+    "likelihood": r"likelihood|probability",
+    "impact": r"impact|severity",
+    "owner": r"owner",
+    "answer": r"answer|resolution|resolved",
 }
 _ATTR_ALT = "|".join(f"(?P<{k}>{v})" for k, v in ATTRS.items())
 # A label counts at the start of the text or right after the end of a sentence ("... index.** Tradeoff: ...").
@@ -162,6 +170,24 @@ def extract_section(title, blocks, at, sec, parent_kind=None, line=None):
     return extract(blocks, at, sec, section_kind(title) or parent_kind)
 
 
+def dedupe(entries):
+    """The same statement found twice (same kind, line and title) is listed once."""
+    seen, out = set(), []
+    for e in entries:
+        key = (e["kind"], e["line"], e["title"])
+        if key not in seen:
+            seen.add(key)
+            out.append(e)
+    return out
+
+
+def _canonical(label):
+    """A column header as a detail label: 'Mitigations' -> 'mitigation'; unknown headers as written."""
+    label = label.strip()
+    m = re.fullmatch(f"(?:{_ATTR_ALT})", label, re.I)
+    return m.lastgroup if m else label.lower() or "detail"
+
+
 def _starts_with_label(text):
     m = LABEL_RE.match(text)
     return m.start() == 0 if m else False
@@ -249,30 +275,64 @@ def _inner(b, at, sec, kind):
         return extract(b["blocks"], at, sec)
     if t == "list":
         return _items(b["items"], at, sec, kind, True)
-    if t == "table" and kind:
-        return _rows(b, at, sec, kind)
+    if t == "table":
+        # under a "Risks" heading, or a table whose first column is "Risk", "Decision", ...
+        head = re.fullmatch(rf"(?:open |key )?({KINDS})s?", strip_md(b["header"][0]).lower()) if b["header"] else None
+        if kind or head:
+            return _rows(b, at, sec, kind or head[1])
+    if t == "p":
+        return _inline(b["text"], b.get("line"), at, sec)
     return []
 
 
-def _items(items, at, sec, kind, top_level):
+def _inline(text, line, at, sec):
+    """'**Deliverables:** A platform. **Milestone:** M1 alpha.' -> a milestone highlight."""
     out = []
+    for m in INLINE_RE.finditer(text):
+        e = _Entry(m[2].lower(), at, sec, line, int(m[3]) if m[3] else None)
+        e.d["blocks"] = [{"type": "p", "text": m[4].strip()}]
+        e.add_text(m[4], line, lead_is_title=True)
+        e.d["inline"] = True  # found inside other text, not at the start of a block
+        out.append(e.done())
+    return out
+
+
+def _items(items, at, sec, kind, top_level):
+    """Highlights in a list. A bullet that starts with a describing label ("Mitigation: ...")
+    belongs to the highlight in the bullet right before it, not to a highlight of its own."""
+    out, prev = [], None
     for it in items:
         item_kind = it.get("kind") or (kind if top_level else None)
+        if prev is not None and not it.get("kind") and _starts_with_label(it["text"]):
+            prev.d["blocks"].append({"type": "p", "text": it["text"]})
+            prev.add_text(it["text"], it.get("line"))
+            continue
+        if prev is not None:
+            out.append(prev.done())
+            prev = None
         if item_kind:
             e = _Entry(item_kind, at, sec, it.get("line"), it.get("number"))
-            body = [{"type": "p", "text": it["text"]}]
+            e.d["blocks"] = [{"type": "p", "text": it["text"]}]
             if it.get("children"):
-                body.append({"type": "list", "items": it["children"]})
-            e.d["blocks"] = body
+                e.d["blocks"].append({"type": "list", "items": it["children"]})
             e.add_text(it["text"], it.get("line"), lead_is_title=True)
-            if it.get("children"):
-                e.body.append({"type": "list", "items": it["children"]})
+            other = []
+            for c in it.get("children", []):  # "- Risk: x" with "  - Mitigation: y" under it
+                if not c.get("kind") and _starts_with_label(c["text"]):
+                    e.add_text(c["text"], c.get("line"))
+                else:
+                    other.append(c)
+            if other:
+                e.body.append({"type": "list", "items": other})
             if not it.get("kind"):
                 e.d["from_heading"] = True  # a highlight because of the section it sits in
-            out.append(e.done())
+            prev = e
+        out += _inline(it["text"], it.get("line"), at, sec)
         out += _items(it.get("children", []), at, sec, kind, False)
         for x in it.get("blocks", []):
             out += _inner(x, at, sec, None)
+    if prev is not None:
+        out.append(prev.done())
     return out
 
 
@@ -291,8 +351,14 @@ def _rows(b, at, sec, kind):
         m = re.fullmatch(r"(\*\*|__)(.+)\1", title.strip())
         e.d["title"] = m[2] if m else title
         for h, cell in zip(b["header"][1:], row[1:]):
-            if cell:
-                e.d["details"].append({"label": strip_md(h).lower() or "detail", "text": cell, "line": e.d["line"]})
+            heads, cells = strip_md(h).split("/"), cell.split("/")
+            if len(heads) > 1 and len(heads) == len(cells):  # "Likelihood / Impact" | "M / H"
+                pairs = zip(heads, cells)
+            else:
+                pairs = [(strip_md(h), cell)]
+            for label, value in pairs:
+                if value.strip():
+                    e.d["details"].append({"label": _canonical(label), "text": value.strip(), "line": e.d["line"]})
         e.d["from_heading"] = True
         out.append(e.done())
     return out

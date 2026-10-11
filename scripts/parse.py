@@ -20,7 +20,7 @@ import re
 import sys
 from pathlib import Path
 
-from highlights import ALERT_RE, extract_section, match_callout, section_kind, strip_md
+from highlights import ALERT_RE, dedupe, extract_section, match_callout, section_kind, strip_md
 
 # ---------- line patterns ----------
 
@@ -410,6 +410,7 @@ def build_model(md, name="document", track=()):
         callouts += extract_section(s["title"], s["blocks"], s["id"], s["id"], line=s["line"])
         for sub in s["subsections"]:
             callouts += extract_section(sub["title"], sub["blocks"], sub["id"], s["id"], section_kind(s["title"]), sub["line"])
+    callouts = dedupe(callouts)
 
     phases = [s["id"] for s in sections if PHASE_RE.search(strip_md(s["title"]))]
     roadmap = ({"ids": phases, "basis": "titles"} if len(phases) >= 2

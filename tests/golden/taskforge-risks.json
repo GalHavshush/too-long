@@ -1,0 +1,579 @@
+{
+  "title": "TaskForge risks and questions (excerpt)",
+  "file": "taskforge-risks",
+  "intro": [
+    {
+      "type": "p",
+      "text": "From the TaskForge implementation plan, sections 18 and 19, verbatim.",
+      "line": 3
+    }
+  ],
+  "sections": [
+    {
+      "id": "18-risks-and-mitigations",
+      "title": "18. Risks and Mitigations",
+      "line": 5,
+      "blocks": [
+        {
+          "type": "table",
+          "header": [
+            "Risk",
+            "Likelihood / Impact",
+            "Mitigation"
+          ],
+          "rows": [
+            [
+              "**Risk:** PostgreSQL write throughput caps job throughput (about 5 writes per job)",
+              "M / H",
+              "Batch heartbeats, tune fillfactor and HOT updates, PgBouncer. Later: monthly partitioning and batched claims"
+            ],
+            [
+              "**Risk:** Table and index bloat from frequent updates",
+              "H / M",
+              "Tune autovacuum per table, retention purge, bloat alerts"
+            ],
+            [
+              "**Risk:** Non-idempotent handlers cause duplicate side effects",
+              "M / H",
+              "Handler contract docs, `idempotency_token` in context, duplicate-rate metric"
+            ],
+            [
+              "**Risk:** PostgreSQL outage longer than 75 s re-executes in-flight jobs",
+              "L / M",
+              "Documented. `lease_ttl` is tunable per deployment"
+            ],
+            [
+              "**Risk:** Starvation of low priorities",
+              "M / M",
+              "Monitor wait time per priority; aging in Later"
+            ],
+            [
+              "**Risk:** Reconciler load with backlogs of millions of jobs",
+              "L / M",
+              "ZCARD shortcut, `redispatch_after` backoff, batch limits"
+            ],
+            [
+              "**Risk:** Rolling deploys leave tasks unknown to old workers",
+              "M / L",
+              "`unknown_task` is retryable; deploy workers before the API emits new tasks"
+            ],
+            [
+              "**Risk:** Revocation lags by up to 60 s due to caching",
+              "L / M",
+              "Configurable TTL; emergency path flushes the cache"
+            ],
+            [
+              "**Risk:** Metric cardinality explosion",
+              "L / M",
+              "No tenant labels, task-name regex, cardinality alert"
+            ]
+          ],
+          "line": 7
+        }
+      ],
+      "subsections": []
+    },
+    {
+      "id": "19-open-questions",
+      "title": "19. Open Questions",
+      "line": 19,
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            {
+              "text": "Is the platform internal-only, or will external, untrusted tenants use it? The answer changes the handler sandboxing and payload-encryption requirements.",
+              "ordered": false,
+              "kind": "question",
+              "line": 21
+            },
+            {
+              "text": "Are cron or recurring schedules needed before GA?",
+              "ordered": false,
+              "kind": "question",
+              "line": 22
+            },
+            {
+              "text": "Do results need to exceed 64 KB, which would require object-storage offload?",
+              "ordered": false,
+              "kind": "question",
+              "line": 23
+            },
+            {
+              "text": "Is a per-tenant fairness guarantee needed (weighted fair queuing), or are rate limits and quotas enough?",
+              "ordered": false,
+              "kind": "question",
+              "line": 24
+            },
+            {
+              "text": "What are the retention and compliance requirements for payloads in history (30 days by default)?",
+              "ordered": false,
+              "kind": "question",
+              "line": 25
+            },
+            {
+              "text": "Will there be non-Python workers, which would mean an HTTP pull API with the same lease semantics?",
+              "ordered": false,
+              "kind": "question",
+              "line": 26
+            },
+            {
+              "text": "Should completion trigger client callbacks (webhooks)?",
+              "ordered": false,
+              "kind": "question",
+              "line": 27
+            },
+            {
+              "text": "What are the target cloud and managed services? The HA and RPO targets depend on them.",
+              "ordered": false,
+              "kind": "question",
+              "line": 28
+            }
+          ],
+          "line": 21
+        }
+      ],
+      "subsections": []
+    }
+  ],
+  "tasks": [],
+  "callouts": [
+    {
+      "kind": "risk",
+      "title": "PostgreSQL write throughput caps job throughput (about 5 writes per job)",
+      "details": [
+        {
+          "label": "likelihood",
+          "text": "M",
+          "line": 9
+        },
+        {
+          "label": "impact",
+          "text": "H",
+          "line": 9
+        },
+        {
+          "label": "mitigation",
+          "text": "Batch heartbeats, tune fillfactor and HOT updates, PgBouncer. Later: monthly partitioning and batched claims",
+          "line": 9
+        }
+      ],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "**Risk:** PostgreSQL write throughput caps job throughput (about 5 writes per job) · Likelihood / Impact: M / H · Mitigation: Batch heartbeats, tune fillfactor and HOT updates, PgBouncer. Later: monthly partitioning and batched claims"
+        }
+      ],
+      "at": "18-risks-and-mitigations",
+      "section": "18-risks-and-mitigations",
+      "line": 9,
+      "from_heading": true
+    },
+    {
+      "kind": "risk",
+      "title": "Table and index bloat from frequent updates",
+      "details": [
+        {
+          "label": "likelihood",
+          "text": "H",
+          "line": 10
+        },
+        {
+          "label": "impact",
+          "text": "M",
+          "line": 10
+        },
+        {
+          "label": "mitigation",
+          "text": "Tune autovacuum per table, retention purge, bloat alerts",
+          "line": 10
+        }
+      ],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "**Risk:** Table and index bloat from frequent updates · Likelihood / Impact: H / M · Mitigation: Tune autovacuum per table, retention purge, bloat alerts"
+        }
+      ],
+      "at": "18-risks-and-mitigations",
+      "section": "18-risks-and-mitigations",
+      "line": 10,
+      "from_heading": true
+    },
+    {
+      "kind": "risk",
+      "title": "Non-idempotent handlers cause duplicate side effects",
+      "details": [
+        {
+          "label": "likelihood",
+          "text": "M",
+          "line": 11
+        },
+        {
+          "label": "impact",
+          "text": "H",
+          "line": 11
+        },
+        {
+          "label": "mitigation",
+          "text": "Handler contract docs, `idempotency_token` in context, duplicate-rate metric",
+          "line": 11
+        }
+      ],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "**Risk:** Non-idempotent handlers cause duplicate side effects · Likelihood / Impact: M / H · Mitigation: Handler contract docs, `idempotency_token` in context, duplicate-rate metric"
+        }
+      ],
+      "at": "18-risks-and-mitigations",
+      "section": "18-risks-and-mitigations",
+      "line": 11,
+      "from_heading": true
+    },
+    {
+      "kind": "risk",
+      "title": "PostgreSQL outage longer than 75 s re-executes in-flight jobs",
+      "details": [
+        {
+          "label": "likelihood",
+          "text": "L",
+          "line": 12
+        },
+        {
+          "label": "impact",
+          "text": "M",
+          "line": 12
+        },
+        {
+          "label": "mitigation",
+          "text": "Documented. `lease_ttl` is tunable per deployment",
+          "line": 12
+        }
+      ],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "**Risk:** PostgreSQL outage longer than 75 s re-executes in-flight jobs · Likelihood / Impact: L / M · Mitigation: Documented. `lease_ttl` is tunable per deployment"
+        }
+      ],
+      "at": "18-risks-and-mitigations",
+      "section": "18-risks-and-mitigations",
+      "line": 12,
+      "from_heading": true
+    },
+    {
+      "kind": "risk",
+      "title": "Starvation of low priorities",
+      "details": [
+        {
+          "label": "likelihood",
+          "text": "M",
+          "line": 13
+        },
+        {
+          "label": "impact",
+          "text": "M",
+          "line": 13
+        },
+        {
+          "label": "mitigation",
+          "text": "Monitor wait time per priority; aging in Later",
+          "line": 13
+        }
+      ],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "**Risk:** Starvation of low priorities · Likelihood / Impact: M / M · Mitigation: Monitor wait time per priority; aging in Later"
+        }
+      ],
+      "at": "18-risks-and-mitigations",
+      "section": "18-risks-and-mitigations",
+      "line": 13,
+      "from_heading": true
+    },
+    {
+      "kind": "risk",
+      "title": "Reconciler load with backlogs of millions of jobs",
+      "details": [
+        {
+          "label": "likelihood",
+          "text": "L",
+          "line": 14
+        },
+        {
+          "label": "impact",
+          "text": "M",
+          "line": 14
+        },
+        {
+          "label": "mitigation",
+          "text": "ZCARD shortcut, `redispatch_after` backoff, batch limits",
+          "line": 14
+        }
+      ],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "**Risk:** Reconciler load with backlogs of millions of jobs · Likelihood / Impact: L / M · Mitigation: ZCARD shortcut, `redispatch_after` backoff, batch limits"
+        }
+      ],
+      "at": "18-risks-and-mitigations",
+      "section": "18-risks-and-mitigations",
+      "line": 14,
+      "from_heading": true
+    },
+    {
+      "kind": "risk",
+      "title": "Rolling deploys leave tasks unknown to old workers",
+      "details": [
+        {
+          "label": "likelihood",
+          "text": "M",
+          "line": 15
+        },
+        {
+          "label": "impact",
+          "text": "L",
+          "line": 15
+        },
+        {
+          "label": "mitigation",
+          "text": "`unknown_task` is retryable; deploy workers before the API emits new tasks",
+          "line": 15
+        }
+      ],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "**Risk:** Rolling deploys leave tasks unknown to old workers · Likelihood / Impact: M / L · Mitigation: `unknown_task` is retryable; deploy workers before the API emits new tasks"
+        }
+      ],
+      "at": "18-risks-and-mitigations",
+      "section": "18-risks-and-mitigations",
+      "line": 15,
+      "from_heading": true
+    },
+    {
+      "kind": "risk",
+      "title": "Revocation lags by up to 60 s due to caching",
+      "details": [
+        {
+          "label": "likelihood",
+          "text": "L",
+          "line": 16
+        },
+        {
+          "label": "impact",
+          "text": "M",
+          "line": 16
+        },
+        {
+          "label": "mitigation",
+          "text": "Configurable TTL; emergency path flushes the cache",
+          "line": 16
+        }
+      ],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "**Risk:** Revocation lags by up to 60 s due to caching · Likelihood / Impact: L / M · Mitigation: Configurable TTL; emergency path flushes the cache"
+        }
+      ],
+      "at": "18-risks-and-mitigations",
+      "section": "18-risks-and-mitigations",
+      "line": 16,
+      "from_heading": true
+    },
+    {
+      "kind": "risk",
+      "title": "Metric cardinality explosion",
+      "details": [
+        {
+          "label": "likelihood",
+          "text": "L",
+          "line": 17
+        },
+        {
+          "label": "impact",
+          "text": "M",
+          "line": 17
+        },
+        {
+          "label": "mitigation",
+          "text": "No tenant labels, task-name regex, cardinality alert",
+          "line": 17
+        }
+      ],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "**Risk:** Metric cardinality explosion · Likelihood / Impact: L / M · Mitigation: No tenant labels, task-name regex, cardinality alert"
+        }
+      ],
+      "at": "18-risks-and-mitigations",
+      "section": "18-risks-and-mitigations",
+      "line": 17,
+      "from_heading": true
+    },
+    {
+      "kind": "question",
+      "title": "Is the platform internal-only, or will external, untrusted tenants use it?",
+      "details": [],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Is the platform internal-only, or will external, untrusted tenants use it? The answer changes the handler sandboxing and payload-encryption requirements."
+        }
+      ],
+      "at": "19-open-questions",
+      "section": "19-open-questions",
+      "line": 21,
+      "body": [
+        {
+          "type": "p",
+          "text": "The answer changes the handler sandboxing and payload-encryption requirements.",
+          "line": 21
+        }
+      ]
+    },
+    {
+      "kind": "question",
+      "title": "Are cron or recurring schedules needed before GA?",
+      "details": [],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Are cron or recurring schedules needed before GA?"
+        }
+      ],
+      "at": "19-open-questions",
+      "section": "19-open-questions",
+      "line": 22
+    },
+    {
+      "kind": "question",
+      "title": "Do results need to exceed 64 KB, which would require object-storage offload?",
+      "details": [],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Do results need to exceed 64 KB, which would require object-storage offload?"
+        }
+      ],
+      "at": "19-open-questions",
+      "section": "19-open-questions",
+      "line": 23
+    },
+    {
+      "kind": "question",
+      "title": "Is a per-tenant fairness guarantee needed (weighted fair queuing), or are rate limits and quotas enough?",
+      "details": [],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Is a per-tenant fairness guarantee needed (weighted fair queuing), or are rate limits and quotas enough?"
+        }
+      ],
+      "at": "19-open-questions",
+      "section": "19-open-questions",
+      "line": 24
+    },
+    {
+      "kind": "question",
+      "title": "What are the retention and compliance requirements for payloads in history (30 days by default)?",
+      "details": [],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "What are the retention and compliance requirements for payloads in history (30 days by default)?"
+        }
+      ],
+      "at": "19-open-questions",
+      "section": "19-open-questions",
+      "line": 25
+    },
+    {
+      "kind": "question",
+      "title": "Will there be non-Python workers, which would mean an HTTP pull API with the same lease semantics?",
+      "details": [],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Will there be non-Python workers, which would mean an HTTP pull API with the same lease semantics?"
+        }
+      ],
+      "at": "19-open-questions",
+      "section": "19-open-questions",
+      "line": 26
+    },
+    {
+      "kind": "question",
+      "title": "Should completion trigger client callbacks (webhooks)?",
+      "details": [],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Should completion trigger client callbacks (webhooks)?"
+        }
+      ],
+      "at": "19-open-questions",
+      "section": "19-open-questions",
+      "line": 27
+    },
+    {
+      "kind": "question",
+      "title": "What are the target cloud and managed services?",
+      "details": [],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "What are the target cloud and managed services? The HA and RPO targets depend on them."
+        }
+      ],
+      "at": "19-open-questions",
+      "section": "19-open-questions",
+      "line": 28,
+      "body": [
+        {
+          "type": "p",
+          "text": "The HA and RPO targets depend on them.",
+          "line": 28
+        }
+      ]
+    }
+  ],
+  "diagrams": [],
+  "files": [],
+  "refs": {},
+  "warnings": [],
+  "roadmap": {
+    "ids": [
+      "18-risks-and-mitigations",
+      "19-open-questions"
+    ],
+    "basis": "titles"
+  },
+  "stats": {
+    "words": 330,
+    "code_blocks": 0
+  }
+}

@@ -50,7 +50,11 @@ with an OS lock on `.<name>.too-long.lock`. `serve.py` exposes it as `POST /api/
   number ("Decision 2 —"), `body` unlabeled blocks that belong to it, `details` labeled parts
   (`[{label, text, line}]`, e.g. `tradeoff`, `rationale`), `rejected` the alternatives listed under
   "Rejected:" (`[{text, line}]`). `blocks` is the original content. `from_heading` means it is a
-  highlight because of the heading it sits under ("Risks"), not because of its own label.
+  highlight because of the heading it sits under ("Risks") or a table column, not because of its
+  own label; `inline` that its label appeared later in a sentence ("... **Milestone:** M1").
+  Detail labels: `rejected` (separate list), `tradeoff`, `rationale`, `consequences`, `context`,
+  `status`, `mitigation`, `contingency`, `likelihood`, `impact`, `owner`, `answer`; table columns
+  that are none of these keep their header as the label.
 - **diagram**: `{text, line, at, section}`.
 - **file**: `{path, at: [section id], mentions: [{at, line}]}`.
 - **block**: `{type, line?, ...}` with type `heading`, `p`, `list`, `code`, `mermaid`, `table`,

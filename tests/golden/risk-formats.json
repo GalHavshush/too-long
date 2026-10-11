@@ -1,0 +1,436 @@
+{
+  "title": "Risk formats",
+  "file": "risk-formats",
+  "intro": [],
+  "sections": [
+    {
+      "id": "paragraphs",
+      "title": "Paragraphs",
+      "line": 3,
+      "blocks": [
+        {
+          "type": "callout",
+          "kind": "risk",
+          "blocks": [
+            {
+              "type": "p",
+              "text": "PostgreSQL becomes a bottleneck."
+            }
+          ],
+          "line": 5
+        },
+        {
+          "type": "p",
+          "text": "Mitigation: Batch database operations.",
+          "line": 7
+        },
+        {
+          "type": "callout",
+          "kind": "risk",
+          "blocks": [
+            {
+              "type": "p",
+              "text": "Redis loses writes on failover. **Mitigation:** the reconciler rebuilds the queue."
+            }
+          ],
+          "line": 9
+        }
+      ],
+      "subsections": []
+    },
+    {
+      "id": "standalone",
+      "title": "Standalone",
+      "line": 11,
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Mitigation: a mitigation with no risk before it stays plain text.",
+          "line": 13
+        }
+      ],
+      "subsections": []
+    },
+    {
+      "id": "risks-and-mitigations",
+      "title": "Risks and mitigations",
+      "line": 15,
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            {
+              "text": "Workers starve the event loop.",
+              "ordered": false,
+              "kind": "risk",
+              "line": 17
+            },
+            {
+              "text": "Mitigation: Cap `to_thread` concurrency.",
+              "ordered": false,
+              "line": 18
+            },
+            {
+              "text": "Metrics explode in cardinality.",
+              "ordered": false,
+              "kind": "risk",
+              "line": 19,
+              "children": [
+                {
+                  "text": "Impact: dashboards time out.",
+                  "ordered": false,
+                  "line": 20
+                },
+                {
+                  "text": "Mitigation: no tenant labels.",
+                  "ordered": false,
+                  "line": 21
+                },
+                {
+                  "text": "Owner: platform team.",
+                  "ordered": false,
+                  "line": 22
+                }
+              ]
+            },
+            {
+              "text": "An unlabeled bullet under the heading is a risk of its own.",
+              "ordered": false,
+              "line": 23
+            }
+          ],
+          "line": 17
+        }
+      ],
+      "subsections": []
+    },
+    {
+      "id": "review-table",
+      "title": "Review table",
+      "line": 25,
+      "blocks": [
+        {
+          "type": "table",
+          "header": [
+            "Risk",
+            "Likelihood / Impact",
+            "Mitigations"
+          ],
+          "rows": [
+            [
+              "Vendor lock-in",
+              "L / H",
+              "Keep the queue behind an interface"
+            ]
+          ],
+          "line": 27
+        }
+      ],
+      "subsections": []
+    },
+    {
+      "id": "open-questions",
+      "title": "Open questions",
+      "line": 31,
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            {
+              "text": "Do we need multi-region? **Answer:** not before GA.",
+              "ordered": false,
+              "kind": "question",
+              "line": 33
+            }
+          ],
+          "line": 33
+        }
+      ],
+      "subsections": []
+    },
+    {
+      "id": "context",
+      "title": "Context",
+      "line": 35,
+      "blocks": [
+        {
+          "type": "callout",
+          "kind": "assumption",
+          "blocks": [
+            {
+              "type": "p",
+              "text": "Tenants are internal teams."
+            }
+          ],
+          "line": 37
+        }
+      ],
+      "subsections": []
+    },
+    {
+      "id": "phase-7",
+      "title": "Phase 7",
+      "line": 39,
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            {
+              "text": "**Deliverables:** A self-healing platform. **Milestone:** M1 internal alpha (MVP complete).",
+              "ordered": false,
+              "line": 41
+            }
+          ],
+          "line": 41
+        }
+      ],
+      "subsections": []
+    }
+  ],
+  "tasks": [],
+  "callouts": [
+    {
+      "kind": "risk",
+      "title": "PostgreSQL becomes a bottleneck.",
+      "details": [
+        {
+          "label": "mitigation",
+          "text": "Batch database operations.",
+          "line": 7
+        }
+      ],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "PostgreSQL becomes a bottleneck."
+        },
+        {
+          "type": "p",
+          "text": "Mitigation: Batch database operations.",
+          "line": 7
+        }
+      ],
+      "at": "paragraphs",
+      "section": "paragraphs",
+      "line": 5
+    },
+    {
+      "kind": "risk",
+      "title": "Redis loses writes on failover.",
+      "details": [
+        {
+          "label": "mitigation",
+          "text": "the reconciler rebuilds the queue.",
+          "line": 9
+        }
+      ],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Redis loses writes on failover. **Mitigation:** the reconciler rebuilds the queue."
+        }
+      ],
+      "at": "paragraphs",
+      "section": "paragraphs",
+      "line": 9
+    },
+    {
+      "kind": "risk",
+      "title": "Workers starve the event loop.",
+      "details": [
+        {
+          "label": "mitigation",
+          "text": "Cap `to_thread` concurrency.",
+          "line": 18
+        }
+      ],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Workers starve the event loop."
+        },
+        {
+          "type": "p",
+          "text": "Mitigation: Cap `to_thread` concurrency."
+        }
+      ],
+      "at": "risks-and-mitigations",
+      "section": "risks-and-mitigations",
+      "line": 17
+    },
+    {
+      "kind": "risk",
+      "title": "Metrics explode in cardinality.",
+      "details": [
+        {
+          "label": "impact",
+          "text": "dashboards time out.",
+          "line": 20
+        },
+        {
+          "label": "mitigation",
+          "text": "no tenant labels.",
+          "line": 21
+        },
+        {
+          "label": "owner",
+          "text": "platform team.",
+          "line": 22
+        }
+      ],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Metrics explode in cardinality."
+        },
+        {
+          "type": "list",
+          "items": [
+            {
+              "text": "Impact: dashboards time out.",
+              "ordered": false,
+              "line": 20
+            },
+            {
+              "text": "Mitigation: no tenant labels.",
+              "ordered": false,
+              "line": 21
+            },
+            {
+              "text": "Owner: platform team.",
+              "ordered": false,
+              "line": 22
+            }
+          ]
+        }
+      ],
+      "at": "risks-and-mitigations",
+      "section": "risks-and-mitigations",
+      "line": 19
+    },
+    {
+      "kind": "risk",
+      "title": "An unlabeled bullet under the heading is a risk of its own.",
+      "details": [],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "An unlabeled bullet under the heading is a risk of its own."
+        }
+      ],
+      "at": "risks-and-mitigations",
+      "section": "risks-and-mitigations",
+      "line": 23,
+      "from_heading": true
+    },
+    {
+      "kind": "risk",
+      "title": "Vendor lock-in",
+      "details": [
+        {
+          "label": "likelihood",
+          "text": "L",
+          "line": 29
+        },
+        {
+          "label": "impact",
+          "text": "H",
+          "line": 29
+        },
+        {
+          "label": "mitigation",
+          "text": "Keep the queue behind an interface",
+          "line": 29
+        }
+      ],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "**Vendor lock-in** · Likelihood / Impact: L / H · Mitigations: Keep the queue behind an interface"
+        }
+      ],
+      "at": "review-table",
+      "section": "review-table",
+      "line": 29,
+      "from_heading": true
+    },
+    {
+      "kind": "question",
+      "title": "Do we need multi-region?",
+      "details": [
+        {
+          "label": "answer",
+          "text": "not before GA.",
+          "line": 33
+        }
+      ],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Do we need multi-region? **Answer:** not before GA."
+        }
+      ],
+      "at": "open-questions",
+      "section": "open-questions",
+      "line": 33
+    },
+    {
+      "kind": "assumption",
+      "title": "Tenants are internal teams.",
+      "details": [],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Tenants are internal teams."
+        }
+      ],
+      "at": "context",
+      "section": "context",
+      "line": 37
+    },
+    {
+      "kind": "milestone",
+      "title": "M1 internal alpha (MVP complete).",
+      "details": [],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "M1 internal alpha (MVP complete)."
+        }
+      ],
+      "at": "phase-7",
+      "section": "phase-7",
+      "line": 41,
+      "inline": true
+    }
+  ],
+  "diagrams": [],
+  "files": [],
+  "refs": {},
+  "warnings": [],
+  "roadmap": {
+    "ids": [
+      "paragraphs",
+      "standalone",
+      "risks-and-mitigations",
+      "review-table",
+      "open-questions",
+      "context",
+      "phase-7"
+    ],
+    "basis": "sections"
+  },
+  "stats": {
+    "words": 126,
+    "code_blocks": 0
+  }
+}
