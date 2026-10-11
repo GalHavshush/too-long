@@ -201,6 +201,8 @@ The Markdown is the source of truth.
 
 - Mermaid loads from a CDN the first time; offline, diagram source is shown instead.
 - Task checks live in the browser (localStorage). They never change the Markdown.
+- That state is keyed by a document id kept in `<out>/build.json` (with the task ids of the
+  last build, so checks follow tasks through edits). Keep the file; deleting it starts fresh.
 - Inline HTML in the Markdown is shown as text, not rendered.
 
 ## Files

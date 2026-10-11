@@ -17,6 +17,7 @@ import shutil
 import sys
 from pathlib import Path
 
+from identity import apply_identity, load_manifest, save_manifest
 from parse import parse_file, section_ids, suggest_views
 
 ASSETS = Path(__file__).resolve().parent.parent / "assets"
@@ -78,12 +79,14 @@ def main():
 
     config, warnings = check_config(config, model)
     warnings = model["warnings"] + warnings
+    manifest = apply_identity(model, md, load_manifest(out), out)  # doc_id + task ids stable across builds
 
     out.mkdir(parents=True, exist_ok=True)
     for name in ("index.html", "styles.css", "app.js"):
         shutil.copy(ASSETS / name, out / name)
     data = json.dumps({"model": model, "config": config}, ensure_ascii=False)
     (out / "data.js").write_text(f"window.TOO_LONG = {data};\n", encoding="utf-8")
+    save_manifest(out, manifest)
 
     for w in warnings:
         print(f"warning: {w}")

@@ -1,0 +1,86 @@
+{
+  "doc_id": "490b993ada3b455d",
+  "source": "../trailhead-plan.md",
+  "tasks": [
+    {
+      "id": "t-phase-1-foundations-create-the-sveltekit-app-in-web-with",
+      "text": "Create the SvelteKit app in `web/` with TypeScript and Vitest",
+      "at": "phase-1-foundations"
+    },
+    {
+      "id": "t-phase-1-foundations-add-postgres-postgis-via-docker-compo",
+      "text": "Add Postgres + PostGIS via `docker-compose.yml`",
+      "at": "phase-1-foundations"
+    },
+    {
+      "id": "t-phase-1-foundations-import-trail-geometries-from-openstree",
+      "text": "Import trail geometries from OpenStreetMap into `trails` with `scripts/import_osm.py`",
+      "at": "phase-1-foundations"
+    },
+    {
+      "id": "t-phase-1-foundations-trail-search-endpoint-get-apitrailsq",
+      "text": "Trail search endpoint `GET /api/trails?q=` in `web/src/routes/api/trails/+server.ts`",
+      "at": "phase-1-foundations"
+    },
+    {
+      "id": "t-report-form-report-form-trail-condition-tags-opti",
+      "text": "Report form: trail, condition tags, optional photo, free-text note",
+      "at": "report-form"
+    },
+    {
+      "id": "t-report-form-client-side-photo-compression-to-400-k",
+      "text": "Client-side photo compression to ≤ 400 KB before upload",
+      "at": "report-form"
+    },
+    {
+      "id": "t-report-form-save-drafts-to-indexeddb-in-websrclib",
+      "text": "Save drafts to IndexedDB in `web/src/lib/offline/queue.ts`",
+      "at": "report-form"
+    },
+    {
+      "id": "t-offline-sync-service-worker-in-websrcservice-worke",
+      "text": "Service worker in `web/src/service-worker.ts` caches the app shell",
+      "at": "offline-sync"
+    },
+    {
+      "id": "t-offline-sync-background-sync-replays-the-queued-repor",
+      "text": "Background sync replays the queued reports when the connection returns",
+      "at": "offline-sync"
+    },
+    {
+      "id": "t-offline-sync-show-3-reports-waiting-to-send-in-the",
+      "text": "Show \"3 reports waiting to send\" in the header",
+      "at": "offline-sync"
+    },
+    {
+      "id": "t-phase-3-map-freshness-map-view-with-maplibre-trails-colour",
+      "text": "Map view with MapLibre, trails coloured by latest condition",
+      "at": "phase-3-map-freshness"
+    },
+    {
+      "id": "t-phase-3-map-freshness-stale-reports-7-days-shown-faded-wit",
+      "text": "Stale reports (> 7 days) shown faded with a \"last reported\" date",
+      "at": "phase-3-map-freshness"
+    },
+    {
+      "id": "t-phase-3-map-freshness-trail-page-lists-the-last-20-reports",
+      "text": "Trail page lists the last 20 reports, newest first",
+      "at": "phase-3-map-freshness"
+    },
+    {
+      "id": "t-phase-4-launch-moderation-hide-a-report-after-3-indepe",
+      "text": "Moderation: hide a report after 3 independent flags",
+      "at": "phase-4-launch"
+    },
+    {
+      "id": "t-phase-4-launch-seed-3-regional-hiking-groups-as-beta-re",
+      "text": "Seed 3 regional hiking groups as beta reporters",
+      "at": "phase-4-launch"
+    },
+    {
+      "id": "t-phase-4-launch-public-launch-post",
+      "text": "Public launch post",
+      "at": "phase-4-launch"
+    }
+  ]
+}

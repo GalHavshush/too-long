@@ -175,6 +175,43 @@ await test("empty document renders", async () => {
   assert.deepEqual(p.errors, []);
 });
 
+await test("same-titled documents keep separate task state", async () => {
+  const md = (name, extra) => { const f = join(tmp, name); writeFileSync(f, `# Same title\n\n## Work\n\n- [ ] Shared task\n${extra}`); return f; };
+  const a = build("same-a", md("a.md", ""));
+  const b = build("same-b", md("b.md", "- [ ] Only in b\n"));
+  const p = await open(a + "#/tasks");
+  await p.evaluate(`document.querySelector("input[data-task]").click()`);
+  await p.navigate(b + "#/tasks");
+  assert.equal(await p.evaluate(`document.querySelector("input[data-task]").checked`), false);
+  await p.navigate(a + "#/tasks");
+  assert.equal(await p.evaluate(`document.querySelector("input[data-task]").checked`), true);
+});
+
+await test("state saved under the old title key is migrated once", async () => {
+  const f = join(tmp, "legacy.md");
+  writeFileSync(f, "# Legacy plan\n\n## Work\n\n- [ ] Old task\n");
+  const url = build("legacy", f);
+  const p = await open(url);
+  const id = await p.evaluate(`document.querySelector("input[data-task]")?.dataset.task || window.TOO_LONG.model.tasks[0].id`);
+  await p.evaluate(`localStorage.setItem("too-long:Legacy plan:tasks", JSON.stringify({ "${id}": true }))`);
+  await p.evaluate(`Object.keys(localStorage).filter(k => k.endsWith(":migrated")).forEach(k => localStorage.removeItem(k))`);
+  await p.go("#/tasks");
+  await p.reload();
+  assert.equal(await p.evaluate(`document.querySelector('input[data-task="${id}"]').checked`), true);
+});
+
+await test("a saved check does not apply once the task text changed", async () => {
+  const f = join(tmp, "sig.md");
+  writeFileSync(f, "# Sig plan\n\n## Work\n\n- [ ] Task\n");
+  const url = build("sig", f);
+  const p = await open(url + "#/tasks");
+  const key = await p.evaluate(`"too-long:" + window.TOO_LONG.model.doc_id + ":tasks"`);
+  const id = await p.evaluate(`window.TOO_LONG.model.tasks[0].id`);
+  await p.evaluate(`localStorage.setItem(${JSON.stringify(key)}, JSON.stringify({ "${id}": { done: true, sig: "stale" } }))`);
+  await p.reload();
+  assert.equal(await p.evaluate(`document.querySelector('input[data-task="${id}"]').checked`), false);
+});
+
 await test("invalid config is refused by build.py", async () => {
   assert.throws(() => build("bad", example, { notes: { "no-such-section": "x" } }), /unknown section id/);
 });

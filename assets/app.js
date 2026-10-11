@@ -25,13 +25,32 @@
   const has = v => config.views.includes(v);
 
   // ---------- per-browser state (never written back to the Markdown) ----------
-  const KEY = "too-long:" + model.title;
+  // Keyed by the document's stable id (from build.json), so plans that share a title never share state.
+  const KEY = "too-long:" + (model.doc_id || model.title);
+  try {  // one-time copy of state saved before documents had ids (it was keyed by title)
+    const legacy = "too-long:" + model.title;
+    if (model.doc_id && !localStorage.getItem(`${KEY}:migrated`)) {
+      ["tasks", "steps"].forEach(k => {
+        const v = localStorage.getItem(`${legacy}:${k}`);
+        if (v !== null && localStorage.getItem(`${KEY}:${k}`) === null) localStorage.setItem(`${KEY}:${k}`, v);
+      });
+      localStorage.setItem(`${KEY}:migrated`, "1");
+    }
+  } catch {}
   const load = (k, d) => { try { return JSON.parse(localStorage.getItem(`${KEY}:${k}`)) ?? d; } catch { return d; } };
   const save = (k, v) => { try { localStorage.setItem(`${KEY}:${k}`, JSON.stringify(v)); } catch {} };
-  let checks = load("tasks", {});      // task id -> checked, overrides the Markdown's [ ] / [x]
+  let checks = load("tasks", {});      // task id -> {done, sig}, overrides the Markdown's [ ] / [x]
   let understood = load("steps", {});  // section id -> true
 
-  const isDone = t => checks[t.id] ?? t.done;
+  const taskById = Object.fromEntries(model.tasks.map(t => [t.id, t]));
+  // A saved check applies only while the task's text is unchanged (sig), so it never lands on a different
+  // task. Plain booleans are checks saved before sigs existed.
+  const isDone = t => {
+    const c = checks[t.id];
+    if (c == null) return t.done;
+    if (typeof c === "boolean") return c;
+    return c.sig === taskById[t.id]?.sig ? c.done : t.done;
+  };
   const tasksIn = id => id === "all" ? model.tasks : model.tasks.filter(t => t.at === id || t.section === id);
   const progress = ts => {
     const done = ts.filter(isDone).length;
@@ -480,7 +499,7 @@
   document.addEventListener("change", e => {
     const id = e.target.dataset?.task;
     if (!id) return;
-    checks[id] = e.target.checked;
+    checks[id] = { done: e.target.checked, sig: taskById[id]?.sig };
     save("tasks", checks);
     const { view } = parseRoute();
     if (view === "roadmap" || view === "overview") return render(true);
