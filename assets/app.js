@@ -414,24 +414,62 @@
       </section>`).join("") : `<p class="empty">Nothing here.</p>`}`;
   }
 
+  // Highlights for reviewing a plan: decisions with what was rejected, risks with their mitigation, open
+  // questions, assumptions, milestones. Everything shown is from the document (highlights.py); the
+  // structure (title, details, rejected) comes only from explicit labels in the source.
+  const GROUPS = [
+    ["decision", "Decisions"], ["risk", "Risks and mitigations"], ["question", "Open questions"],
+    ["assumption", "Assumptions"], ["milestone", "Milestones"], ["warning", "Warnings"], ["caution", "Cautions"],
+    ["important", "Important"], ["note", "Notes"], ["tip", "Tips"],
+  ];
+  const LABELS = { likelihood: "Likelihood", impact: "Impact", mitigation: "Mitigation", tradeoff: "Tradeoff", rationale: "Rationale",
+    consequences: "Consequences", context: "Context", status: "Status", contingency: "Contingency", owner: "Owner", answer: "Answer" };
+
+  function highlightCard(c) {
+    if (!c.title) {  // data from an older build: the original blocks
+      return `<article class="hl" data-kind="${esc(c.kind)}"><div class="hl-body">${blocks(c.blocks)}</div>${hlFooter(c)}</article>`;
+    }
+    const meta = c.details.filter(d => d.label === "likelihood" || d.label === "impact");
+    const rest = c.details.filter(d => !meta.includes(d));
+    const number = c.number != null ? `<span class="hl-num">${esc(cap(c.kind))} ${c.number}</span>` : "";
+    return `<article class="hl" data-kind="${esc(c.kind)}">
+      <div class="hl-body">
+        ${number}<h3 class="hl-title" dir="auto">${inline(c.title)}</h3>
+        ${meta.length ? `<p class="hl-meta">${meta.map(d => `<span class="pill">${esc(LABELS[d.label])}: ${inline(d.text)}</span>`).join("")}</p>` : ""}
+        ${blocks(c.body)}
+        ${rest.length ? `<dl class="hl-details">${rest.map(d =>
+          `<div><dt>${esc(LABELS[d.label] || cap(d.label))}</dt><dd dir="auto">${inline(d.text)}</dd></div>`).join("")}</dl>` : ""}
+        ${c.rejected.length ? `<div class="hl-rejected"><p class="hl-label">Rejected</p><ul>${c.rejected.map(r =>
+          `<li dir="auto">${inline(r.text)}</li>`).join("")}</ul></div>` : ""}
+      </div>
+      ${hlFooter(c)}
+    </article>`;
+  }
+  const hlFooter = c => `<footer>${link(c.at)} ${lineRef(c.line)}${c.from_heading ? ` <span class="muted small">· listed under that heading</span>` : ""}</footer>`;
+
   function viewHighlights(only) {
     const counts = countKinds();
-    const kinds = Object.keys(counts).sort((a, b) => KIND_ORDER.indexOf(a) - KIND_ORDER.indexOf(b));
-    const shown = kinds.filter(k => !only || k === only);
+    const groups = [...GROUPS, ...Object.keys(counts).filter(k => !GROUPS.some(g => g[0] === k)).map(k => [k, cap(k) + "s"])]
+      .filter(([k]) => counts[k]);
+    const shown = groups.filter(([k]) => !only || k === only);
+    const of = k => model.callouts.filter(c => c.kind === k);
+    const mitigated = of("risk").filter(c => c.details?.some(d => d.label === "mitigation")).length;
+    const answered = of("question").filter(c => c.details?.some(d => d.label === "answer")).length;
+    const summary = [
+      counts.decision && `${counts.decision} decision${counts.decision > 1 ? "s" : ""}`,
+      counts.risk && `${counts.risk} risk${counts.risk > 1 ? "s" : ""} (${mitigated} with a stated mitigation)`,
+      counts.question && `${counts.question} open question${counts.question > 1 ? "s" : ""}${answered ? ` (${answered} answered)` : ""}`,
+    ].filter(Boolean).join(" · ");
     return `
       <header class="page-head">
         <h1>Highlights</h1>
-        <p class="muted">Decisions, risks, questions and other callouts found in the document.</p>
-        <div class="tabs"><a href="#/highlights" class="${only ? "" : "on"}">All</a>${kinds.map(k =>
-          `<a href="#/highlights/${k}" class="${only === k ? "on" : ""}">${cap(k)} <span class="muted">${counts[k]}</span></a>`).join("")}</div>
+        <p class="muted">${summary ? summary + ". " : ""}Pulled from labeled text in the document (“Decision:”, “Risk:”, “Rejected:”, “Mitigation:”, headings like “Risks”). Each links to where it is written.</p>
+        <div class="tabs"><a href="#/highlights" class="${only ? "" : "on"}">All</a>${groups.map(([k, label]) =>
+          `<a href="#/highlights/${esc(k)}" class="${only === k ? "on" : ""}">${esc(label)} <span class="muted">${counts[k]}</span></a>`).join("")}</div>
       </header>
-      ${shown.map(k => `<section class="hl-group">
-        <h2>${cap(k)}s</h2>
-        <div class="hl-grid">${model.callouts.filter(c => c.kind === k).map(c => `
-          <article class="hl" data-kind="${esc(k)}">
-            <div class="hl-body">${blocks(c.blocks)}</div>
-            <footer>${link(c.at)} ${lineRef(c.line)}${c.from_heading ? ` <span class="muted small">· listed under that heading</span>` : ""}</footer>
-          </article>`).join("")}</div>
+      ${shown.map(([k, label]) => `<section class="hl-group" aria-labelledby="hl-${esc(k)}">
+        <h2 id="hl-${esc(k)}">${esc(label)}</h2>
+        <div class="hl-grid">${of(k).map(highlightCard).join("")}</div>
       </section>`).join("")}`;
   }
 

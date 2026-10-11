@@ -358,6 +358,31 @@ await test("files view merges short references and shows what is on disk", async
   assert.deepEqual(p.errors, []);
 });
 
+await test("highlights view shows decisions with rejected alternatives and risks with mitigations", async () => {
+  const p = await open(build("hl-dec", join(ROOT, "tests", "fixtures", "taskforge-decisions.md"), { views: ["highlights"] }) + "#/highlights");
+  assert.deepEqual(await p.evaluate(`[...document.querySelectorAll(".hl-group h2")].map(h => h.textContent)`), ["Decisions"]);
+  assert.equal(await p.count('.hl[data-kind="decision"]'), 12);
+  const d2 = await p.evaluate(`(() => { const c = [...document.querySelectorAll(".hl")].find(c => c.querySelector(".hl-num")?.textContent === "Decision 2");
+    return { title: c.querySelector(".hl-title").textContent, rejected: [...c.querySelectorAll(".hl-rejected li")].map(li => li.textContent.split(".")[0]),
+             source: c.querySelector("a.where").getAttribute("href") }; })()`);
+  assert.match(d2.title, /^Claims are fenced by a CAS UPDATE/);
+  assert.deepEqual(d2.rejected, ["Redis reliable queue (LMOVE into a processing list)", "Redlock"]);
+  assert.equal(d2.source, "#/source/12");
+  assert.ok(!(await p.evaluate(`[...document.querySelectorAll(".hl-title")].some(t => /^Redlock|^JWT/.test(t.textContent))`)));
+
+  await p.navigate(build("hl-risk", join(ROOT, "tests", "fixtures", "taskforge-risks.md"), { views: ["highlights"] }) + "#/highlights/risk");
+  const r1 = await p.evaluate(`(() => { const c = document.querySelector('.hl[data-kind="risk"]');
+    return { meta: [...c.querySelectorAll(".pill")].map(x => x.textContent), dt: [...c.querySelectorAll("dt")].map(x => x.textContent) }; })()`);
+  assert.deepEqual(r1, { meta: ["Likelihood: M", "Impact: H"], dt: ["Mitigation"] });
+  assert.match(await p.text(".page-head"), /9 risks \(9 with a stated mitigation\) · 8 open questions/);
+  assert.equal(await p.count(".hl-group"), 1);  // the risk tab shows only risks
+  // Each card links to its section and line.
+  await p.evaluate(`document.querySelector('.hl footer a[href^="#/document/"]').click()`);
+  await p.evaluate("new Promise(r => setTimeout(r, 50))");
+  assert.match(await p.evaluate("location.hash"), /^#\/document\/18-risks-and-mitigations/);
+  assert.deepEqual(p.errors, []);
+});
+
 await test("invalid config is refused by build.py", async () => {
   assert.throws(() => build("bad", example, { notes: { "no-such-section": "x" } }), /unknown section id/);
 });

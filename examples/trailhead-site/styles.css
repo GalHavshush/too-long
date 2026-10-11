@@ -288,15 +288,26 @@ details.sec > summary .progress { min-width: 160px; flex: none; }
 .hl-group h2 { font: 600 1.25rem/1.2 var(--serif); margin: 32px 0 12px; }
 .hl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
 .hl {
-  --k: var(--k-note);
   display: flex; flex-direction: column; justify-content: space-between; gap: 10px;
   padding: 14px 16px; border-radius: var(--radius); background: var(--surface);
   border: 1px solid var(--border); border-top: 3px solid var(--k); box-shadow: var(--shadow);
 }
+.hl:not([data-kind="decision"]):not([data-kind="risk"]):not([data-kind="warning"]):not([data-kind="caution"]):not([data-kind="important"]):not([data-kind="question"]):not([data-kind="assumption"]):not([data-kind="milestone"]) { --k: var(--k-note); }
 .hl-body > :first-child { margin-top: 0; }
+.hl-body p { font-size: .9rem; margin: 0 0 6px; }
 .hl-body > :last-child { margin-bottom: 0; }
 .hl-body ul { padding-left: 1.2em; }
 .hl footer { font-size: .8rem; color: var(--muted); }
+.hl-num { font: 600 .7rem/1 var(--mono); color: var(--k, var(--muted)); letter-spacing: .03em; }
+.hl-title { font: 600 1rem/1.35 var(--sans); margin: 4px 0 6px; }
+.hl-meta { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 6px; }
+.pill { font-size: .75rem; padding: 1px 8px; border-radius: 99px; background: var(--sunken); color: var(--muted); }
+.hl-details { margin: 8px 0 0; display: grid; gap: 6px; }
+.hl-details dt { font: 600 .68rem/1.4 var(--sans); text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.hl-details dd { margin: 0; font-size: .9rem; }
+.hl-label { font: 600 .72rem/1 var(--sans); text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 10px 0 4px; }
+.hl-rejected ul { margin: 0; padding-left: 1.1em; font-size: .9rem; color: var(--muted); }
+.hl-rejected li::marker { content: "✕  "; color: var(--k-risk); }
 
 /* ---------- diagrams ---------- */
 .diagram { margin: 1.2em 0; padding: 16px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); overflow-x: auto; }
