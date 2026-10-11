@@ -2,8 +2,8 @@
 // Builds sites with scripts/build.py, opens them over file:// in headless Chrome (scripts/cdp.mjs),
 // and checks views, navigation, tasks, persistence, diagram fallback, source links, a11y basics
 // and console errors. Needs Node 22+ and Chrome; skips (exit 0) when either is missing.
-import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from "node:fs";
+import { execFileSync, spawn } from "node:child_process";
+import { mkdtempSync, rmSync, writeFileSync, mkdirSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -31,7 +31,7 @@ function build(name, md, config) {
 }
 
 const chrome = await launchChrome(chromePath);
-setTimeout(() => { console.log("FAIL e2e tests timed out after 90s"); process.exit(1); }, 90000).unref();
+setTimeout(() => { console.log("FAIL e2e tests timed out after 150s"); process.exit(1); }, 150000).unref();
 let failures = 0;
 
 // Open a page that records console errors and uncaught exceptions.
@@ -266,6 +266,47 @@ await test("inferred content is flagged when its source changes", async () => {
   assert.equal(await p.count(".diagram-card .badge.stale"), 1);
   await p.go("#/document");
   assert.equal(await p.count(".badge.stale"), 0);  // the note on Alpha is still current
+});
+
+await test("served mode writes checks to the Markdown and follows edits", async () => {
+  const f = join(tmp, "served.md");
+  writeFileSync(f, "# Served\n\n## Work\n\n- [ ] Ship it\n\n## Steps\n\n1. Tracked step\n");
+  const out = join(tmp, "served");
+  mkdirSync(out, { recursive: true });
+  writeFileSync(join(out, "config.json"), JSON.stringify({ views: ["tasks"], track: ["steps"] }));
+  const server = spawn("python3", [join(SCRIPTS, "serve.py"), f, "--out", out, "--port", "0"], { stdio: ["ignore", "pipe", "pipe"] });
+  process.on("exit", () => server.kill());
+  try {
+    const url = await new Promise((ok, fail) => {
+      server.stdout.on("data", (d) => { const m = String(d).match(/Serving (http:\/\/127\.0\.0\.1:\d+\/)/); if (m) ok(m[1]); });
+      server.on("exit", () => fail(new Error("serve.py exited")));
+    });
+    const p = await open(url + "#/tasks");
+    assert.match(await p.text("#view"), /written to served\.md/);
+    const waitFor = async (expr, ms = 5000) => {
+      for (const end = Date.now() + ms; Date.now() < end;) {
+        try { if (await p.evaluate(expr)) return; } catch {}  // the page may be reloading
+        await new Promise((r) => setTimeout(r, 100));
+      }
+      throw new Error(`timed out waiting for ${expr}`);
+    };
+    const ship = await p.evaluate(`window.TOO_LONG.model.tasks.find(t => t.text === "Ship it").id`);
+    await p.evaluate(`document.querySelector('input[data-task="${ship}"]').click()`);
+    await waitFor(`window.TOO_LONG.model.tasks.find(t => t.id === "${ship}").done`);
+    assert.match(readFileSync(f, "utf8"), /- \[x\] Ship it/);
+    assert.equal(await p.evaluate(`document.querySelector('input[data-task="${ship}"]').checked`), true);
+    // A tracked numbered step stays in the browser; the Markdown is untouched.
+    const before = readFileSync(f, "utf8");
+    await p.evaluate(`document.querySelector('input[data-task]:not([data-task="${ship}"])').click()`);
+    await new Promise((r) => setTimeout(r, 300));
+    assert.equal(readFileSync(f, "utf8"), before);
+    // Editing the Markdown elsewhere: the open page picks it up.
+    writeFileSync(f, before.replace("- [x] Ship it", "- [x] Ship it\n- [ ] Added in an editor"));
+    await waitFor(`window.TOO_LONG.model.tasks.some(t => t.text === "Added in an editor")`, 8000);
+    assert.deepEqual(p.errors, []);
+  } finally {
+    server.kill();
+  }
 });
 
 await test("invalid config is refused by build.py", async () => {

@@ -58,7 +58,8 @@
       "at": "שלב-1-הקמה",
       "section": "שלב-1-הקמה",
       "n": null,
-      "line": 5
+      "line": 5,
+      "browser_only": false
     },
     {
       "id": "t-שלב-1-הקמה-ליצור-מסד-נתונים",
@@ -67,7 +68,8 @@
       "at": "שלב-1-הקמה",
       "section": "שלב-1-הקמה",
       "n": null,
-      "line": 6
+      "line": 6,
+      "browser_only": false
     }
   ],
   "callouts": [],

@@ -87,7 +87,8 @@
       "at": "intro",
       "section": "intro",
       "n": null,
-      "line": 7
+      "line": 7,
+      "browser_only": false
     }
   ],
   "callouts": [],

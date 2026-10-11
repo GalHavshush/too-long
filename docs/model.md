@@ -32,9 +32,19 @@ Fields not listed here are internal and may change.
 
 - **section**: `{id, title, line, blocks, subsections: [{id, title, line, blocks}]}`. `id` is a slug,
   unique in the document (`intro` is reserved).
-- **task**: `{id, text, done, line, at, section, n, sig}`. `at` is the section or subsection id it
-  sits in, `section` its top-level section, `n` the number of a numbered step (else `null`), `sig`
-  a hash of the text. `line` is the line of the `- [ ]` item.
+- **task**: `{id, text, done, line, at, section, n, sig, browser_only}`. `at` is the section or
+  subsection id it sits in, `section` its top-level section, `n` the number of a numbered step
+  (else `null`), `sig` a hash of the text. `line` is the line of the `- [ ]` item. `browser_only`
+  is true for numbered steps tracked via config `track`: they have no checkbox in the Markdown, so
+  their state cannot be written back.
+
+## Writing task state back
+
+`sync.update_task(md, task_id, done, expected_revision, out=...)` is the only writer. It returns
+`Applied(revision, line)`, `Conflict(current_revision)` (the file is not the revision you saw;
+nothing written) or `Busy()` (another too-long writer held the lock past the timeout), and raises
+`TaskNotFound` / `NotATask`. It changes one character, writes atomically, and serialises writers
+with an OS lock on `.<name>.too-long.lock`. `serve.py` exposes it as `POST /api/task`.
 - **highlight**: `{kind, blocks, line, at, section, from_heading?}`. `from_heading` means it is a
   highlight because of the heading it sits under ("Risks"), not because of its own text.
 - **diagram**: `{text, line, at, section}`.

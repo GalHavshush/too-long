@@ -45,9 +45,15 @@
   let understood = load("steps", {});  // section id -> true
 
   const taskById = Object.fromEntries(model.tasks.map(t => [t.id, t]));
+  // Served by serve.py (it adds the token): checkboxes are written to the Markdown, which stays the source of
+  // truth. Opened as a file: checks are saved in this browser only. Tracked numbered steps have no checkbox
+  // in the Markdown, so they are always browser-only.
+  const TOKEN = document.querySelector('meta[name="too-long-token"]')?.content;
+  const synced = id => !!TOKEN && !!taskById[id] && !taskById[id].browser_only;
   // A saved check applies only while the task's text is unchanged (sig), so it never lands on a different
   // task. Plain booleans are checks saved before sigs existed.
   const isDone = t => {
+    if (synced(t.id)) return taskById[t.id].done;
     const c = checks[t.id];
     if (c == null) return t.done;
     if (typeof c === "boolean") return c;
@@ -327,7 +333,9 @@
           <div class="tabs">${tab("all", "All")}${tab("open", "Open")}${tab("done", "Done")}</div>
           <button type="button" data-act="reset">Reset to Markdown</button>
         </div>
-        <p class="muted small">${tracked ? `Numbered steps in ${esc(tracked)} are shown as tasks. ` : ""}Checks are saved in this browser only. The Markdown file is not changed.</p>
+        <p class="muted small">${TOKEN
+          ? `Checks are written to ${esc(model.file)}.${tracked ? ` Numbered steps in ${esc(tracked)} are shown as tasks; they have no checkbox in the Markdown, so their checks stay in this browser.` : ""}`
+          : `${tracked ? `Numbered steps in ${esc(tracked)} are shown as tasks. ` : ""}Checks are saved in this browser only. The Markdown file is not changed.`}</p>
       </header>
       ${groups.length ? groups.map(g => `<section class="task-group">
         <div class="group-head"><h2 dir="auto">${nodes[g.id].parent ? `<span class="muted">${inline(nodes[nodes[g.id].parent].title)} ›</span> ` : ""}${link(g.id)}</h2>${progressEl(g.id)}</div>
@@ -521,9 +529,55 @@
   const isDark = () => document.documentElement.dataset.theme === "dark" ||
     (!document.documentElement.dataset.theme && matchMedia("(prefers-color-scheme: dark)").matches);
 
+  // ---------- served mode: write to the Markdown, follow its changes ----------
+  const api = (path, body) => fetch(path, {
+    method: body ? "POST" : "GET",
+    headers: { "X-Too-Long-Token": TOKEN, ...(body ? { "Content-Type": "application/json" } : {}) },
+    body: body && JSON.stringify(body),
+  }).then(r => r.json().then(j => ({ ...j, ok: r.ok, status: r.status })));
+
+  // New data.js on disk: reload, keeping the place (the route is in the hash; checks are in localStorage).
+  function reloadKeepingPlace() {
+    try { sessionStorage.setItem("too-long:scroll", String(window.scrollY)); } catch {}
+    location.reload();
+  }
+
+  function notify(text) {
+    let el = document.getElementById("notice");
+    if (!el) {
+      el = Object.assign(document.createElement("div"), { id: "notice", role: "status" });
+      document.body.append(el);
+    }
+    el.textContent = text;
+    el.hidden = false;
+    clearTimeout(notify.t);
+    notify.t = setTimeout(() => { el.hidden = true; }, 4000);
+  }
+
+  function writeTask(box) {
+    const id = box.dataset.task, done = box.checked;
+    document.querySelectorAll(`[data-task="${CSS.escape(id)}"]`).forEach(b => { b.disabled = true; });
+    api("/api/task", { id, done, revision: model.revision }).then(r => {
+      if (r.ok) return reloadKeepingPlace();
+      throw r;
+    }).catch(r => {
+      document.querySelectorAll(`[data-task="${CSS.escape(id)}"]`).forEach(b => { b.checked = !done; b.disabled = false; });
+      if (r.status === 409) { notify("The Markdown changed since this page loaded. Reloading…"); setTimeout(reloadKeepingPlace, 1200); }
+      else notify(`Not saved: ${r.error || "the too-long server is not reachable"}`);
+    });
+  }
+
+  if (TOKEN) {  // follow edits made in an editor (serve.py rebuilds on save)
+    setInterval(() => {
+      if (document.hidden) return;
+      api("/api/state").then(r => { if (r.ok && r.revision && r.revision !== model.revision) reloadKeepingPlace(); }).catch(() => {});
+    }, 1500);
+  }
+
   document.addEventListener("change", e => {
     const id = e.target.dataset?.task;
     if (!id) return;
+    if (synced(id)) return writeTask(e.target);
     checks[id] = { done: e.target.checked, sig: taskById[id]?.sig };
     save("tasks", checks);
     const { view } = parseRoute();
@@ -553,7 +607,9 @@
       understood[btn.dataset.id] = !understood[btn.dataset.id];
       save("steps", understood);
       render(true);
-    } else if (act === "reset" && confirm("Clear the checks saved in this browser and go back to the Markdown's [ ] / [x]?")) {
+    } else if (act === "reset" && confirm(TOKEN
+      ? "Clear the checks saved in this browser (numbered steps)? Checkboxes in the Markdown are not changed."
+      : "Clear the checks saved in this browser and go back to the Markdown's [ ] / [x]?")) {
       checks = {};
       save("tasks", checks);
       render(true);
@@ -586,4 +642,8 @@
   window.addEventListener("hashchange", () => { search.value = ""; render(); });
   sidebar();
   render();
+  try {  // back to where the reader was before a served-mode reload
+    const y = sessionStorage.getItem("too-long:scroll");
+    if (y !== null) { sessionStorage.removeItem("too-long:scroll"); window.scrollTo(0, +y); }
+  } catch {}
 })();

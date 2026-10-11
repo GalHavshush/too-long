@@ -117,7 +117,8 @@
       "at": "setup",
       "section": "setup",
       "n": null,
-      "line": 7
+      "line": 7,
+      "browser_only": false
     },
     {
       "id": "t-setup-install-dependencies-2",
@@ -126,7 +127,8 @@
       "at": "setup",
       "section": "setup",
       "n": null,
-      "line": 8
+      "line": 8,
+      "browser_only": false
     },
     {
       "id": "t-setup-2-install-dependencies",
@@ -135,7 +137,8 @@
       "at": "setup-2",
       "section": "setup-2",
       "n": null,
-      "line": 16
+      "line": 16,
+      "browser_only": false
     }
   ],
   "callouts": [],

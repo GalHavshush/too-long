@@ -146,6 +146,7 @@ tr:last-child td { border-bottom: 0; }
   padding: 4px 7px; border-radius: 99px; border: 1px dashed var(--muted); color: var(--muted);
 }
 .badge.source { border-style: solid; }
+#notice { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); max-width: min(92vw, 520px); background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-size: .9rem; box-shadow: var(--shadow); z-index: 10; }
 .badge.stale { border-style: solid; border-color: var(--k-warning); color: var(--k-warning); margin-left: 6px; }
 .chip {
   --k: var(--muted);

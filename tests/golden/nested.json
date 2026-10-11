@@ -172,7 +172,8 @@
       "at": "lists",
       "section": "lists",
       "n": null,
-      "line": 9
+      "line": 9,
+      "browser_only": false
     },
     {
       "id": "t-lists-done-subtask",
@@ -181,7 +182,8 @@
       "at": "lists",
       "section": "lists",
       "n": null,
-      "line": 10
+      "line": 10,
+      "browser_only": false
     },
     {
       "id": "t-lists-open-subtask",
@@ -190,7 +192,8 @@
       "at": "lists",
       "section": "lists",
       "n": null,
-      "line": 11
+      "line": 11,
+      "browser_only": false
     }
   ],
   "callouts": [],

@@ -413,12 +413,14 @@ def build_model(md, name="document", track=()):
     def walk_items(items, at, sec, kind, top_level):
         for it in items:
             note_files(it["text"], at, it["line"])
+            browser_only = False
             if top_level and it["ordered"] and "task" not in it and (at in track or sec in track):
                 it["task"] = False  # a numbered step the reader asked to track (config "track")
+                browser_only = True  # no checkbox in the Markdown, so its state can only live in the viewer
             if "task" in it:
                 it["id"] = slugify(f"t-{at}-{it['text'][:40]}", task_ids)
                 tasks.append({"id": it["id"], "text": it["text"], "done": it["task"], "at": at, "section": sec,
-                              "n": it.get("n"), "line": it["line"]})
+                              "n": it.get("n"), "line": it["line"], "browser_only": browser_only})
             item_kind = it.get("kind") or (kind if top_level else None)
             if item_kind:
                 body = [{"type": "p", "text": it["text"]}]

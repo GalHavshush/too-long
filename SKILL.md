@@ -168,9 +168,11 @@ user wants it refreshed (a changed config clears the flags).
 ### 6. Report
 
 Two or three lines: where the site is, which views it has, and exactly what
-you added that is inferred. Mention that task checks are saved in the browser
-only and that re-running build.py after editing the Markdown refreshes the
-site. If `.too-long/` is not ignored by git, suggest adding it to `.gitignore`;
+you added that is inferred. Mention that, opened as a file, task checks are
+saved in the browser only and re-running build.py refreshes the site; and that
+`python3 <skill-dir>/scripts/serve.py path/to/plan.md` serves it on
+127.0.0.1 so ticking a task writes `[x]` into the Markdown and edits to the
+Markdown show up in the open page. If `.too-long/` is not ignored by git, suggest adding it to `.gitignore`;
 don't edit it yourself.
 
 ## Fidelity rules
@@ -210,7 +212,12 @@ The Markdown is the source of truth.
   diagram source is shown instead. It is the only network request the site makes.
 - Links may use http(s), mailto, file or relative paths; any other scheme (javascript:, data:...)
   is turned into a dead link. `accent` must be a plain CSS color.
-- Task checks live in the browser (localStorage). They never change the Markdown.
+- Opened as a file (file://), task checks live in the browser (localStorage) and never
+  change the Markdown. Served with `serve.py`, checkboxes are written to the Markdown
+  (one character, atomically, refused if the file changed since the page loaded) and
+  the page follows edits. Numbered steps shown via `track` have no checkbox, so they
+  stay browser-only either way. `serve.py` leaves a `.<name>.too-long.lock` file next
+  to the Markdown (used to serialise writers).
 - That state is keyed by a document id kept in `<out>/build.json` (with the task ids of the
   last build, so checks follow tasks through edits). Keep the file; deleting it starts fresh.
 - Inline HTML in the Markdown is shown as text, not rendered.
@@ -221,7 +228,8 @@ The Markdown is the source of truth.
 - `scripts/build.py`: model + config → site (thin command over `regen.py`). `scripts/watch.py`: rebuild on change.
 - Core modules (no HTTP, no browser): `config.py` (load/validate config, staleness), `identity.py`
   (doc and task ids, `build.json`), `model.py` (`build_document`, schema in `docs/model.md`),
-  `regen.py` (`Regenerator`), `website.py` (writes the site files).
+  `regen.py` (`Regenerator`), `website.py` (writes the site files), `sync.py` (`update_task`:
+  writes a checkbox to the Markdown). `scripts/serve.py`: local server, a thin transport over them.
 - `scripts/run_tests.py`: runs every test in `tests/` (`python3 scripts/run_tests.py`).
 - `video.md`, `scripts/video.py`, `scripts/render_video.mjs`, `scripts/args.py`, `assets/video/`: video mode (`--video`).
 - `assets/index.html`, `assets/styles.css`, `assets/app.js`: the site template, copied as is. `app.js` renders `data.js` into the chosen views.
