@@ -124,7 +124,7 @@ The generated site is committed in [`examples/trailhead-site/`](examples/trailhe
 
 ![Tasks view](docs/screenshots/tasks.png)
 
-**Highlights:** decisions, risks, warnings, assumptions, questions and milestones pulled out as cards, each linking back to where it appears.
+**Highlights:** decisions with their rejected alternatives and tradeoffs, risks with their mitigation, open questions, assumptions and milestones, each linking back to where it appears.
 
 ![Highlights view](docs/screenshots/highlights.png)
 
@@ -170,11 +170,11 @@ Only the views that fit the document and your goal are generated.
 |---|---|
 | Overview | Title, TL;DR, stats, intro, section cards with progress |
 | Document | The whole document. Always included |
-| Roadmap | Stages as a timeline with status and current focus |
+| Roadmap | Stages with progress; when the plan states dependencies, what each stage needs, ready/blocked status and parallel waves |
 | Tasks | All checkboxes (or numbered steps you choose to track), with progress |
-| Highlights | Decisions, risks, warnings, questions, assumptions, milestones |
+| Highlights | Decisions with their rejected alternatives, risks with likelihood/impact and mitigation, open questions, assumptions, milestones |
 | Diagrams | Mermaid from the document + inferred diagrams |
-| Files | Tree of every file path the document mentions |
+| Files | Tree of every file path the document mentions, merged when written two ways, marked on disk / not on disk / ambiguous |
 | Step by step | One section at a time, for learning or presenting |
 
 Every site has search, light/dark mode, works on phones, and has a Source view (`#/source/<line>`) showing the Markdown exactly as written; the "L42" links on tasks, highlights, diagrams and files open it at that line.
@@ -210,6 +210,7 @@ Claude writes `.too-long/config.json`; you can edit it too. Every field is optio
 | `diagrams` | `[{title, description, mermaid, sources: [section-id]}]`. Inferred. |
 | `roadmap` | Section ids to use as roadmap stages, when heading detection picks the wrong ones. |
 | `track` | Section ids whose numbered `1. 2. 3.` steps become tasks. |
+| `dependencies` | `{stage-id: [stage-ids]}`: what a roadmap stage needs, when the document doesn't say it on a `Dependencies:` line. Replaces what was found for that stage; shown as inferred. |
 
 Section ids come from `too_long.py parse plan.md`. A config that cites an unknown id is refused when it is new. If the config was valid and a heading was renamed later, the build continues and warns instead. The page template lives in `assets/` (`index.html`, `styles.css`, `app.js`, plain HTML/CSS/JS); change it there to customise every site.
 
@@ -223,8 +224,57 @@ too-long uses its own small parser (Python standard library only), so the suppor
 - Tables: pipe tables, with `\|` and `` `a|b` `` inside cells.
 - Links: inline `[text](url)`, reference `[text][ref]` / `[ref]`, `<https://…>` and bare URLs, plus images.
 - Other blocks: blockquotes, GitHub alerts (`> [!WARNING]`), horizontal rules, YAML front matter.
-- Callouts: paragraphs or bullets starting with `Decision:`, `Risk:`, `Warning:`, `Question:`, `Note:`, `Assumption:`, `Milestone:`, and bullets under headings like "Risks" or "Open questions".
+- Highlights: see [What it extracts](#what-it-extracts) below.
 - Not supported: raw HTML (shown as text), footnotes, definition lists. An unclosed code fence runs to the end of the file (as in CommonMark) and is reported as a warning.
+
+## What it extracts
+
+Everything below is deterministic: plain rules over the text, no LLM, re-run on every build. The rules are conservative: when the text doesn't say something explicitly, too-long leaves it out rather than guess. It stays visible in the Document view either way.
+
+**Decisions.** Any of these is one decision:
+
+```markdown
+Decision: Use PostgreSQL.
+**Decision:** Keep the API stateless.
+**Decision 3 — Short leases with heartbeat renewal.**
+### Decision 2: Fenced claims
+## Decision            (ADR style: the section is the decision)
+```
+
+The labeled statement is the decision. Labels that follow it belong to it: `Rejected:` (inline, or the list after it) becomes the rejected alternatives, and `Tradeoff:`, `Rationale:`/`Why:`, `Consequences:`, `Context:`, `Status:` become details. A numbered decision inside a "Decisions" section, or a decision heading, also keeps the unlabeled paragraphs after it. Bullets under a "Decisions" heading count as decisions only when the section has no explicitly labeled ones, so a list of rejected alternatives never becomes a list of decisions.
+
+**Risks, questions, assumptions, milestones, warnings** use the same labels (`Risk:`, `Open question:`, `Assumption:`, `Milestone:`, `> [!WARNING]`). A `Mitigation:`, `Contingency:`, `Likelihood:`, `Impact:`, `Owner:` or `Answer:` belongs to the highlight right before it: in the same sentence run, the next paragraph, the next bullet, or a child bullet. It is never a highlight of its own. A table whose first column is "Risk" (or one under a "Risks" heading) gives one risk per row, with the other columns as details; `Likelihood / Impact` cells like `M / H` split in two. A bold label later in a sentence (`... **Milestone:** M1 alpha.`) is found too. Bullets under a heading that names two kinds ("Risks and decisions") are left unclassified unless labeled.
+
+**Stage dependencies.** A stage's `Dependencies:` / `Depends on:` / `Requires:` / `Prerequisites:` / `Blocked by:` line is read as follows:
+
+- The first sentence lists what the stage needs: `P2, P3`, `Phase 1`, `P1–P3`, an exact stage title, `All prior phases`, or `None`.
+- A later sentence with "needs", "requires" or "after" adds a *partial* dependency (shown, but never blocking).
+- "Can run in parallel with P7" records parallel stages, never dependencies.
+- A line that names no stage leaves the dependencies unknown, with a warning.
+- References to missing stages and dependency cycles are reported.
+
+When the text implies dependencies without labeling them, Claude can state them in config `dependencies`; they are then marked inferred.
+
+**Roadmap status:**
+
+| Status | When |
+|---|---|
+| done | every task in the stage is checked |
+| in progress | some tasks are checked |
+| ready | nothing checked yet, and every stage it needs (stated or from config) is done |
+| blocked | nothing checked yet, and a stage it needs is not done |
+| not started | nothing checked yet, and its dependencies are unknown, part of a cycle, or depend on a stage without tasks; no ready/blocked claim is made |
+
+Partial dependencies never block. If every stage's dependencies are known, stages are grouped into waves that can run in parallel. A plan that states no dependencies keeps the simple order: the first unfinished stage is the current one.
+
+**File references.**
+
+- `src/x/{a,b}.py` expands to two files.
+- A short reference (`config.py`, `db/models.py`) is merged with the one longer path in the document it ends with. If it could be several files, it stays separate and lists the candidates. `../` and absolute paths are never merged.
+- Each path is then looked up from the git repository root, or, outside a repository, from the Markdown's folder, and marked **on disk**, **not on disk** (a file the plan will create, or a misspelled path; never assumed to exist), or **ambiguous**.
+- In a git repository, a short reference that matches exactly one file there links to it.
+
+**Deterministic vs inferred.** Everything above comes from the document and links to its source line. Only what Claude writes in `config.json` (TL;DR, notes, diagrams, `dependencies`) is inferred, and the site labels it that way. The JSON model is documented in [`docs/model.md`](docs/model.md).
 
 ## Faithful to the source
 
@@ -277,10 +327,11 @@ python3 scripts/run_tests.py
 This runs everything:
 
 - golden-file parser tests over readable fixtures in `tests/fixtures/`
+- semantic snapshots of realistic plans (`tests/test_semantic.py`, `tests/golden/semantic/`): which decisions, rejected alternatives, mitigations, stage dependencies and merged file references are extracted. Excerpts of TaskForge, a 7,800-word implementation plan used for testing, are among the fixtures
 - unit tests for identity, config, regeneration, sync, the server and the CLI
 - browser tests (`tests/e2e.test.mjs`) that build sites and drive headless Chrome over the DevTools protocol, with no npm packages
 
-The browser tests need Node 22+ and Chrome and skip themselves without them. After an intended parser change, regenerate the golden files with `python3 tests/test_golden.py --update` and review the diff.
+The browser tests need Node 22+ and Chrome and skip themselves without them. After an intended parser change, regenerate the golden files with `python3 tests/test_golden.py --update` and `python3 tests/test_semantic.py --update`, and review the diff.
 
 ## Troubleshooting
 
@@ -293,6 +344,9 @@ The browser tests need Node 22+ and Chrome and skip themselves without them. Aft
 | Ticking a task doesn't change the Markdown | That only happens with `too_long.py serve`; a page opened from disk saves checks in the browser. |
 | "The Markdown changed since this page loaded" | Someone (or Claude) edited the file; the page reloads, then tick again. |
 | `Could not listen on 127.0.0.1:8765` | Something else uses the port: `serve plan.md --port 8766`. |
+| A decision or risk is missing from Highlights | It needs an explicit label (`Decision:`, `**Decision 3 —**`, `Risk:`...) or a "Decisions"/"Risks" heading; unlabeled prose is left in the Document view on purpose. |
+| A stage shows "not started" instead of ready/blocked | Its dependencies aren't stated (or the line names no stage). Add a `Dependencies:` line, or have Claude set config `dependencies`. |
+| A file shows "not on disk" | It isn't at that path from the repository root (or the Markdown's folder). Planned files are expected to show this. |
 | Checks disappeared after a rebuild | The task's text changed, or `.too-long/build.json` was deleted; too-long won't carry a check over to a task it can't match with confidence. |
 | Video tools missing | `too_long.py doctor` lists what's missing and the install command for your OS. |
 
@@ -302,6 +356,7 @@ The browser tests need Node 22+ and Chrome and skip themselves without them. Aft
 - Opened as a file, task checks are stored in the browser only; writing them to the Markdown needs `serve`.
 - Raw HTML inside the Markdown is shown as text.
 - The parser covers the subset above, not all of CommonMark.
+- Highlights and dependencies are found from explicit labels only. A decision written as plain prose, or a dependency implied but not labeled, is not extracted (Claude can add dependencies through the config).
 
 ## License
 

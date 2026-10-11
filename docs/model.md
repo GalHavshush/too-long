@@ -77,6 +77,14 @@ dependency applies to part of the stage ("The API fast path needs P4."). `roadma
 `{stage: [stage]}` from sentences about running in parallel. `roadmap.cycles` lists dependency
 cycles. These keys are added by `model.build_document` (not by `parse.build_model` alone).
 
+### Roadmap status (computed by the viewer)
+
+Status depends on live checkbox state, so viewers compute it: `done` when every task of the stage
+is checked, `in progress` when some are; otherwise `ready` when every non-qualified dependency is
+`done`, `blocked` when one is not (and has tasks), and `not started` with no ready/blocked claim
+when the stage's dependencies are unknown, in a cycle, or wait on a stage without tasks. Without
+any stated dependencies, the first unfinished stage is current and the rest are upcoming.
+
 ## Invariants
 
 1. Task ids are unique, and the ids in `tasks` are exactly the ids on task items in the blocks.

@@ -21,10 +21,12 @@ interfaces:  build.py   watch.py (PollingWatcher → Debouncer → Regenerator) 
 
 | Module | Responsibility | Depends on |
 |---|---|---|
-| `parse.py` | Markdown → blocks and indexes (tasks, callouts, diagrams, files), each with its source line. Reads files (`read_markdown`, clear errors). | stdlib |
+| `parse.py` | Markdown → blocks and indexes (tasks, diagrams, files), each with its source line; merges shortened file references. Reads files (`read_markdown`, clear errors). | highlights |
+| `highlights.py` | Labels → structured highlights: decisions with rejected alternatives and details, risks with mitigations, questions, milestones. Conservative: explicit labels only. | stdlib |
+| `roadmap.py` | Stage dependencies from labeled lines (and config), parallel stages, cycles. | highlights |
 | `config.py` | Load and validate the config (`ConfigError`), mark inferred content, compute staleness stamps. | parse |
 | `identity.py` | `doc_id` per output folder; reconcile task ids with the previous build; `build.json`. | stdlib |
-| `model.py` | `build_document(md, config, manifest, out)`: one pure function producing the documented model (`docs/model.md`); `check_invariants`. | parse, config, identity |
+| `model.py` | `build_document(md, config, manifest, out)`: one function producing the documented model (`docs/model.md`), including stage dependencies and whether referenced files exist; `check_invariants`. Writes nothing. | parse, config, identity, roadmap |
 | `website.py` | Write the template and `data.js`, only the files whose bytes changed. | identity |
 | `regen.py` | `Regenerator`: refresh when inputs changed, one refresh at a time, notify subscribers. | model, website, config |
 | `sync.py` | `update_task`: the only code that writes the Markdown. | model, config, identity |
@@ -65,6 +67,11 @@ changes, keeping its route (hash), scroll position and browser-only state.
   with a text hash so it never moves to a different task.
 - **Strict writes.** `update_task` refuses on any revision mismatch rather than merging. A retry is
   cheap; silently overwriting someone's edit is not.
+- **Explicit labels, not guesses.** Highlights and dependencies come from labels in the text
+  ("Decision 3 —", "Rejected:", "Mitigation:", "Dependencies: P2"). Prose that implies a
+  relationship is left for Claude, who can state it in the config, where it is marked inferred.
+  When a rule can't decide (two kinds in one heading, a dependency line naming no stage, a short
+  file name matching two paths), the content is left unclassified rather than misfiled.
 - **No LLM in the loop.** Rebuilding is deterministic. Inferred content (TL;DR, notes, diagrams) is
   flagged as stale when its sources change, never regenerated automatically.
 - **Security.**
@@ -86,6 +93,7 @@ An editor integration (for example a side panel that shows the current plan) nee
 | Layer | File | Covers |
 |---|---|---|
 | Parser | `tests/test_golden.py`, `test_parse.py`, `test_traceability.py` | fixtures vs golden JSON, nothing dropped, large plans, line numbers |
+| Meaning | `test_highlights.py`, `test_roadmap.py`, `test_files.py`, `test_semantic.py` | decision/risk formats, dependency graphs, file merging and status, snapshots of realistic plans |
 | Core | `test_identity.py`, `test_build.py`, `test_regen.py` | ids across edits, config rules, regeneration, debounce, watcher swap, staleness, model invariants |
 | Writes | `test_sync.py`, `test_serve.py` | byte-exact edits, conflicts, cross-process locking, HTTP guards |
 | CLI | `test_cli.py` | actionable errors, doctor |
