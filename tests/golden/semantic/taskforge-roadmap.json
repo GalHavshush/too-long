@@ -1,0 +1,469 @@
+{
+  "highlights": [
+    {
+      "kind": "risk",
+      "title": "Over-investing in scaffolding.",
+      "line": 29
+    },
+    {
+      "kind": "risk",
+      "title": "Index choices hurting HOT updates.",
+      "line": 46
+    },
+    {
+      "kind": "risk",
+      "title": "The revocation cache window.",
+      "line": 61
+    },
+    {
+      "kind": "risk",
+      "title": "Slow listing queries at scale.",
+      "line": 77
+    },
+    {
+      "kind": "risk",
+      "title": "Reconciler cost when the backlog is huge.",
+      "line": 93
+    },
+    {
+      "kind": "risk",
+      "title": "Blocking sync handlers starving the event loop.",
+      "line": 110
+    },
+    {
+      "kind": "milestone",
+      "title": "M1 internal alpha (MVP complete).",
+      "line": 124
+    },
+    {
+      "kind": "risk",
+      "title": "Flaky timing-based tests.",
+      "line": 127
+    },
+    {
+      "kind": "risk",
+      "title": "The soft quota can be overshot by up to 15 s worth of submissions.",
+      "line": 142
+    },
+    {
+      "kind": "milestone",
+      "title": "M2 beta.",
+      "line": 155
+    },
+    {
+      "kind": "risk",
+      "title": "Cardinality from the `task` label.",
+      "line": 158
+    },
+    {
+      "kind": "milestone",
+      "title": "M3 GA.",
+      "line": 170
+    },
+    {
+      "kind": "risk",
+      "title": "PostgreSQL write throughput turning into the ceiling (see §18).",
+      "line": 173
+    }
+  ],
+  "roadmap": {
+    "stages": [
+      "phase-1-foundation-and-tooling",
+      "phase-2-persistence-layer-and-state-machine",
+      "phase-3-authentication-and-api-keys",
+      "phase-4-jobs-api",
+      "phase-5-redis-queue-and-scheduler-dispatch",
+      "phase-6-worker-runtime",
+      "phase-7-recovery-cancellation-dlq-and-outage-handling",
+      "phase-8-rate-limiting-backpressure-and-abuse-prevention",
+      "phase-9-observability",
+      "phase-10-production-deployment-cicd-and-ga-hardening"
+    ],
+    "dependencies": {
+      "phase-1-foundation-and-tooling": [],
+      "phase-2-persistence-layer-and-state-machine": [
+        "phase-1-foundation-and-tooling"
+      ],
+      "phase-3-authentication-and-api-keys": [
+        "phase-2-persistence-layer-and-state-machine"
+      ],
+      "phase-4-jobs-api": [
+        "phase-2-persistence-layer-and-state-machine",
+        "phase-3-authentication-and-api-keys"
+      ],
+      "phase-5-redis-queue-and-scheduler-dispatch": [
+        "phase-2-persistence-layer-and-state-machine",
+        "phase-4-jobs-api (partly)"
+      ],
+      "phase-6-worker-runtime": [
+        "phase-5-redis-queue-and-scheduler-dispatch"
+      ],
+      "phase-7-recovery-cancellation-dlq-and-outage-handling": [
+        "phase-6-worker-runtime"
+      ],
+      "phase-8-rate-limiting-backpressure-and-abuse-prevention": [
+        "phase-4-jobs-api",
+        "phase-5-redis-queue-and-scheduler-dispatch"
+      ],
+      "phase-9-observability": [
+        "phase-4-jobs-api",
+        "phase-6-worker-runtime"
+      ],
+      "phase-10-production-deployment-cicd-and-ga-hardening": [
+        "phase-1-foundation-and-tooling",
+        "phase-2-persistence-layer-and-state-machine",
+        "phase-3-authentication-and-api-keys",
+        "phase-4-jobs-api",
+        "phase-5-redis-queue-and-scheduler-dispatch",
+        "phase-6-worker-runtime",
+        "phase-7-recovery-cancellation-dlq-and-outage-handling",
+        "phase-8-rate-limiting-backpressure-and-abuse-prevention",
+        "phase-9-observability"
+      ]
+    },
+    "parallel": {
+      "phase-9-observability": [
+        "phase-7-recovery-cancellation-dlq-and-outage-handling",
+        "phase-8-rate-limiting-backpressure-and-abuse-prevention"
+      ]
+    },
+    "cycles": []
+  },
+  "tasks": [
+    "t-phase-1-foundation-and-tooling-initialize-a-uv-project-wit L19",
+    "t-phase-1-foundation-and-tooling-configpy-pydantic-settings L20",
+    "t-phase-1-foundation-and-tooling-loggingpy-structlog-json-co L21",
+    "t-phase-1-foundation-and-tooling-deploydocker-composeyml-wit L22",
+    "t-phase-1-foundation-and-tooling-multi-stage-deploydockerfil L23",
+    "t-phase-1-foundation-and-tooling-ciyml-lint-typecheck-unit-t L24",
+    "t-phase-2-persistence-layer-and-state-machine-domainstatespy L35",
+    "t-phase-2-persistence-layer-and-state-machine-dbmodelspy-sql L36",
+    "t-phase-2-persistence-layer-and-state-machine-first-alembic L37",
+    "t-phase-2-persistence-layer-and-state-machine-dbjobsrepopy-a L38",
+    "t-phase-2-persistence-layer-and-state-machine-insertjob-idem L39",
+    "t-phase-2-persistence-layer-and-state-machine-requestcancel L40",
+    "t-phase-2-persistence-layer-and-state-machine-dbsessionpy-as L41",
+    "t-phase-3-authentication-and-api-keys-securityapikeyspy-gene L52",
+    "t-phase-3-authentication-and-api-keys-apidepspy-a-principal L53",
+    "t-phase-3-authentication-and-api-keys-apirouteskeyspy-create L54",
+    "t-phase-3-authentication-and-api-keys-cli-admin-create-tenan L55",
+    "t-phase-3-authentication-and-api-keys-failed-auth-counter-pe L56",
+    "t-phase-4-jobs-api-apischemaspy-strict-request-and-res L67",
+    "t-phase-4-jobs-api-post-v1jobs-idempotent-insert-req L68",
+    "t-phase-4-jobs-api-get-v1jobs-keyset-pagination-with-fi L69",
+    "t-phase-4-jobs-api-cancel-and-retry-endpoints-mapped-to-the L70",
+    "t-phase-4-jobs-api-rfc-9457-error-handler-requestid-mid L71",
+    "t-phase-4-jobs-api-healthz-and-readyz L72",
+    "t-phase-5-redis-queue-and-scheduler-dispatch-queueredisbacke L83",
+    "t-phase-5-redis-queue-and-scheduler-dispatch-post-commit-fas L84",
+    "t-phase-5-redis-queue-and-scheduler-dispatch-schedulerpromot L85",
+    "t-phase-5-redis-queue-and-scheduler-dispatch-schedulerdispat L86",
+    "t-phase-5-redis-queue-and-scheduler-dispatch-skip-reconcilin L87",
+    "t-phase-5-redis-queue-and-scheduler-dispatch-schedulermainpy L88",
+    "t-phase-6-worker-runtime-workersregistrypy-taskname-retr L99",
+    "t-phase-6-worker-runtime-workersrunnerpy-slot-semaphore-pop L100",
+    "t-phase-6-worker-runtime-classify-errors-retryable-non-retry L101",
+    "t-phase-6-worker-runtime-sync-handlers-via-tothread-with-pro L102",
+    "t-phase-6-worker-runtime-workersleasepy-batched-heartbeat-c L103",
+    "t-phase-6-worker-runtime-worker-registration-status-updates L104",
+    "t-phase-6-worker-runtime-workerscontextpy-a-jobcontext-exp L105",
+    "t-phase-7-recovery-cancellation-dlq-and-outage-handling-sche L116",
+    "t-phase-7-recovery-cancellation-dlq-and-outage-handling-sche-2 L117",
+    "t-phase-7-recovery-cancellation-dlq-and-outage-handling-coop L118",
+    "t-phase-7-recovery-cancellation-dlq-and-outage-handling-dlq L119",
+    "t-phase-7-recovery-cancellation-dlq-and-outage-handling-redi L120",
+    "t-phase-7-recovery-cancellation-dlq-and-outage-handling-data L121",
+    "t-phase-7-recovery-cancellation-dlq-and-outage-handling-test L122",
+    "t-phase-8-rate-limiting-backpressure-and-abuse-prevention-qu L133",
+    "t-phase-8-rate-limiting-backpressure-and-abuse-prevention-in L134",
+    "t-phase-8-rate-limiting-backpressure-and-abuse-prevention-qu-2 L135",
+    "t-phase-8-rate-limiting-backpressure-and-abuse-prevention-sc L136",
+    "t-phase-8-rate-limiting-backpressure-and-abuse-prevention-fa L137",
+    "t-phase-9-observability-telemetrypy-otel-providers-auto-ins L148",
+    "t-phase-9-observability-prometheus-metrics-per-12-scheduler L149",
+    "t-phase-9-observability-add-the-otel-collector-jaeger-promet L150",
+    "t-phase-9-observability-deploygrafanadashboardsoverviewwor L151",
+    "t-phase-9-observability-runbooks-for-each-alert-in-docsrunbo L152",
+    "t-phase-9-observability-get-v1workers-and-get-v1queuesst L153",
+    "t-phase-10-production-deployment-cicd-and-ga-hardening-helm L164",
+    "t-phase-10-production-deployment-cicd-and-ga-hardening-relea L165",
+    "t-phase-10-production-deployment-cicd-and-ga-hardening-load L166",
+    "t-phase-10-production-deployment-cicd-and-ga-hardening-sched L167",
+    "t-phase-10-production-deployment-cicd-and-ga-hardening-secur L168"
+  ],
+  "files": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "aliases": [
+        "ci.yml"
+      ]
+    },
+    {
+      "path": ".github/workflows/release.yml",
+      "aliases": [
+        "release.yml"
+      ]
+    },
+    {
+      "path": "db/session.py"
+    },
+    {
+      "path": "deploy/docker-compose.yml"
+    },
+    {
+      "path": "deploy/grafana/"
+    },
+    {
+      "path": "deploy/grafana/dashboards/overview.json"
+    },
+    {
+      "path": "deploy/grafana/dashboards/workers.json"
+    },
+    {
+      "path": "deploy/helm/taskforge/"
+    },
+    {
+      "path": "deploy/prometheus/rules.yml"
+    },
+    {
+      "path": "docs/runbooks/"
+    },
+    {
+      "path": "domain/backoff.py"
+    },
+    {
+      "path": "pyproject.toml"
+    },
+    {
+      "path": "src/taskforge/api/deps.py",
+      "aliases": [
+        "api/deps.py"
+      ]
+    },
+    {
+      "path": "src/taskforge/api/errors.py"
+    },
+    {
+      "path": "src/taskforge/api/routes/health.py"
+    },
+    {
+      "path": "src/taskforge/api/routes/jobs.py"
+    },
+    {
+      "path": "src/taskforge/api/routes/keys.py",
+      "aliases": [
+        "api/routes/keys.py"
+      ]
+    },
+    {
+      "path": "src/taskforge/api/routes/queues.py"
+    },
+    {
+      "path": "src/taskforge/api/routes/workers.py"
+    },
+    {
+      "path": "src/taskforge/api/schemas.py",
+      "aliases": [
+        "api/schemas.py"
+      ]
+    },
+    {
+      "path": "src/taskforge/cli.py"
+    },
+    {
+      "path": "src/taskforge/config.py",
+      "aliases": [
+        "config.py"
+      ]
+    },
+    {
+      "path": "src/taskforge/db/jobs_repo.py",
+      "aliases": [
+        "db/jobs_repo.py"
+      ]
+    },
+    {
+      "path": "src/taskforge/db/keys_repo.py"
+    },
+    {
+      "path": "src/taskforge/db/migrations/versions/0001_initial.py"
+    },
+    {
+      "path": "src/taskforge/db/models.py",
+      "aliases": [
+        "db/models.py"
+      ]
+    },
+    {
+      "path": "src/taskforge/db/workers_repo.py"
+    },
+    {
+      "path": "src/taskforge/domain/states.py",
+      "aliases": [
+        "domain/states.py"
+      ]
+    },
+    {
+      "path": "src/taskforge/logging.py",
+      "aliases": [
+        "logging.py"
+      ]
+    },
+    {
+      "path": "src/taskforge/queue/lua/token_bucket.lua",
+      "aliases": [
+        "queue/lua/token_bucket.lua"
+      ]
+    },
+    {
+      "path": "src/taskforge/queue/ratelimit.py",
+      "aliases": [
+        "queue/ratelimit.py"
+      ]
+    },
+    {
+      "path": "src/taskforge/queue/redis_backend.py",
+      "aliases": [
+        "queue/redis_backend.py"
+      ]
+    },
+    {
+      "path": "src/taskforge/scheduler/dispatcher.py",
+      "aliases": [
+        "scheduler/dispatcher.py"
+      ]
+    },
+    {
+      "path": "src/taskforge/scheduler/main.py",
+      "aliases": [
+        "scheduler/main.py"
+      ]
+    },
+    {
+      "path": "src/taskforge/scheduler/monitor.py",
+      "aliases": [
+        "scheduler/monitor.py"
+      ]
+    },
+    {
+      "path": "src/taskforge/scheduler/promoter.py",
+      "aliases": [
+        "scheduler/promoter.py"
+      ]
+    },
+    {
+      "path": "src/taskforge/scheduler/reaper.py",
+      "aliases": [
+        "scheduler/reaper.py"
+      ]
+    },
+    {
+      "path": "src/taskforge/scheduler/retention.py",
+      "aliases": [
+        "scheduler/retention.py"
+      ]
+    },
+    {
+      "path": "src/taskforge/security/api_keys.py",
+      "aliases": [
+        "security/api_keys.py"
+      ]
+    },
+    {
+      "path": "src/taskforge/telemetry.py",
+      "aliases": [
+        "telemetry.py"
+      ]
+    },
+    {
+      "path": "src/taskforge/workers/context.py",
+      "aliases": [
+        "workers/context.py"
+      ]
+    },
+    {
+      "path": "src/taskforge/workers/lease.py",
+      "aliases": [
+        "workers/lease.py"
+      ]
+    },
+    {
+      "path": "src/taskforge/workers/main.py"
+    },
+    {
+      "path": "src/taskforge/workers/registry.py",
+      "aliases": [
+        "workers/registry.py"
+      ]
+    },
+    {
+      "path": "src/taskforge/workers/runner.py",
+      "aliases": [
+        "workers/runner.py"
+      ]
+    },
+    {
+      "path": "tests/chaos/"
+    },
+    {
+      "path": "tests/chaos/invariants.py"
+    },
+    {
+      "path": "tests/contract/test_openapi.py"
+    },
+    {
+      "path": "tests/integration/test_auth.py"
+    },
+    {
+      "path": "tests/integration/test_claim_race.py"
+    },
+    {
+      "path": "tests/integration/test_dispatch.py"
+    },
+    {
+      "path": "tests/integration/test_graceful_shutdown.py"
+    },
+    {
+      "path": "tests/integration/test_idempotency.py"
+    },
+    {
+      "path": "tests/integration/test_job_recovery.py"
+    },
+    {
+      "path": "tests/integration/test_jobs_api.py"
+    },
+    {
+      "path": "tests/integration/test_jobs_repo.py"
+    },
+    {
+      "path": "tests/integration/test_metrics.py"
+    },
+    {
+      "path": "tests/integration/test_rate_limit.py"
+    },
+    {
+      "path": "tests/integration/test_redis_rebuild.py"
+    },
+    {
+      "path": "tests/integration/test_scheduler_replicas.py"
+    },
+    {
+      "path": "tests/integration/test_timeouts.py"
+    },
+    {
+      "path": "tests/integration/test_worker_execution.py"
+    },
+    {
+      "path": "tests/load/"
+    },
+    {
+      "path": "tests/load/locustfile.py"
+    },
+    {
+      "path": "tests/unit/test_backoff.py"
+    },
+    {
+      "path": "tests/unit/test_states.py"
+    }
+  ]
+}

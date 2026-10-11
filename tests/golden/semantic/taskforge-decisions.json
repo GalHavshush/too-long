@@ -1,0 +1,136 @@
+{
+  "highlights": [
+    {
+      "kind": "decision",
+      "number": 1,
+      "title": "PostgreSQL is the source of truth; Redis is a rebuildable dispatch index.",
+      "line": 7,
+      "details": [
+        "tradeoff: two writes per dispatch, plus reconciler complexity."
+      ],
+      "rejected": [
+        "*Redis-only state (RQ/Celery style).* State is lost on Redis failover, and querying and listing are weak.",
+        "*PostgreSQL-only queue using `SKIP LOCKED` polling.* Simpler, but worker polling puts load on the primary at scale, and the requirements call for Redis. It stays as a possible degraded mode."
+      ]
+    },
+    {
+      "kind": "decision",
+      "number": 2,
+      "title": "Claims are fenced by a CAS `UPDATE` in PostgreSQL with a per-claim `lease_token`.",
+      "line": 12,
+      "rejected": [
+        "*Redis reliable queue (`LMOVE` into a processing list).* Redis isn't durable enough to act as the authority.",
+        "*Redlock.* Unsafe under clock jumps and GC pauses."
+      ]
+    },
+    {
+      "kind": "decision",
+      "number": 3,
+      "title": "Short leases with heartbeat renewal, kept separate from the job timeout.",
+      "line": 17,
+      "details": [
+        "tradeoff: heartbeat write load, about `running_jobs / 15` updates per second."
+      ],
+      "rejected": [
+        "*an SQS-style visibility timeout equal to the job timeout*, where a crashed hour-long job would sit locked for an hour."
+      ]
+    },
+    {
+      "kind": "decision",
+      "number": 4,
+      "title": "Delayed, scheduled, and retrying jobs live only in PostgreSQL and are promoted by the scheduler.",
+      "line": 20,
+      "details": [
+        "tradeoff: about 1 s of scheduling precision."
+      ],
+      "rejected": [
+        "*a Redis delayed ZSET*, which would create a second source of truth for timing."
+      ]
+    },
+    {
+      "kind": "decision",
+      "number": 5,
+      "title": "Leaderless scheduler loops using `FOR UPDATE SKIP LOCKED`.",
+      "line": 23,
+      "details": [
+        "tradeoff: every loop must be idempotent, which is enforced in review and tests."
+      ],
+      "rejected": [
+        "*leader election with an advisory lock or a Redis lock.* It adds failover gaps and split-brain cases."
+      ]
+    },
+    {
+      "kind": "decision",
+      "number": 6,
+      "title": "One Redis sorted set per queue, with a composite priority and FIFO score.",
+      "line": 26,
+      "details": [
+        "tradeoff: low priorities can starve. Aging is deferred to Later."
+      ],
+      "rejected": [
+        "*Redis Streams.* The consumer-group PEL duplicates the PostgreSQL leasing, and Streams have no priority.",
+        "*One list per priority level.* More keys, and every level has to be blocked on."
+      ]
+    },
+    {
+      "kind": "decision",
+      "number": 7,
+      "title": "Async-first worker runtime: one event loop per process with M slots, scaled out by processes.",
+      "line": 33,
+      "rejected": [
+        "*Prefork process pools.* Complex supervision and IPC.",
+        "*Killing threads.* Python can't do it."
+      ]
+    },
+    {
+      "kind": "decision",
+      "number": 8,
+      "title": "At-least-once execution with an idempotent-handler contract.",
+      "line": 38,
+      "rejected": [
+        "*exactly-once through distributed transactions.* It isn't achievable with arbitrary external side effects."
+      ]
+    },
+    {
+      "kind": "decision",
+      "number": 9,
+      "title": "Prefixed API keys stored as HMAC-SHA256 with a versioned pepper.",
+      "line": 41,
+      "rejected": [
+        "*bcrypt or argon2.* Adds around 50 ms to every request.",
+        "*JWT.* Revocation is hard."
+      ]
+    },
+    {
+      "kind": "decision",
+      "number": 10,
+      "title": "The DLQ is the `dead` status in PostgreSQL, not a separate queue.",
+      "line": 46
+    },
+    {
+      "kind": "decision",
+      "number": 11,
+      "title": "Running jobs are cancelled cooperatively, on a best-effort basis.",
+      "line": 49,
+      "rejected": [
+        "*hard-killing worker tasks.* It corrupts handler state and shared connections."
+      ]
+    },
+    {
+      "kind": "decision",
+      "number": 12,
+      "title": "The worker dashboard is built in Grafana, not as a custom UI.",
+      "line": 52
+    }
+  ],
+  "roadmap": {
+    "stages": [
+      "architectural-decisions"
+    ],
+    "dependencies": {},
+    "parallel": {},
+    "cycles": []
+  },
+  "tasks": [],
+  "files": []
+}

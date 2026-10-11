@@ -1,0 +1,89 @@
+{
+  "highlights": [
+    {
+      "kind": "risk",
+      "title": "PostgreSQL becomes a bottleneck.",
+      "line": 5,
+      "details": [
+        "mitigation: Batch database operations."
+      ]
+    },
+    {
+      "kind": "risk",
+      "title": "Redis loses writes on failover.",
+      "line": 9,
+      "details": [
+        "mitigation: the reconciler rebuilds the queue."
+      ]
+    },
+    {
+      "kind": "risk",
+      "title": "Workers starve the event loop.",
+      "line": 17,
+      "details": [
+        "mitigation: Cap `to_thread` concurrency."
+      ]
+    },
+    {
+      "kind": "risk",
+      "title": "Metrics explode in cardinality.",
+      "line": 19,
+      "details": [
+        "impact: dashboards time out.",
+        "mitigation: no tenant labels.",
+        "owner: platform team."
+      ]
+    },
+    {
+      "kind": "risk",
+      "title": "An unlabeled bullet under the heading is a risk of its own.",
+      "line": 23,
+      "from_heading": true
+    },
+    {
+      "kind": "risk",
+      "title": "Vendor lock-in",
+      "line": 29,
+      "details": [
+        "likelihood: L",
+        "impact: H",
+        "mitigation: Keep the queue behind an interface"
+      ],
+      "from_heading": true
+    },
+    {
+      "kind": "question",
+      "title": "Do we need multi-region?",
+      "line": 33,
+      "details": [
+        "answer: not before GA."
+      ]
+    },
+    {
+      "kind": "assumption",
+      "title": "Tenants are internal teams.",
+      "line": 37
+    },
+    {
+      "kind": "milestone",
+      "title": "M1 internal alpha (MVP complete).",
+      "line": 41
+    }
+  ],
+  "roadmap": {
+    "stages": [
+      "paragraphs",
+      "standalone",
+      "risks-and-mitigations",
+      "review-table",
+      "open-questions",
+      "context",
+      "phase-7"
+    ],
+    "dependencies": {},
+    "parallel": {},
+    "cycles": []
+  },
+  "tasks": [],
+  "files": []
+}

@@ -1,0 +1,144 @@
+{
+  "highlights": [
+    {
+      "kind": "decision",
+      "title": "Keep Postgres as the system of record.",
+      "line": 5,
+      "details": [
+        "rationale: the finance team already audits it."
+      ]
+    },
+    {
+      "kind": "risk",
+      "title": "Double charges during the cut-over.",
+      "line": 9,
+      "details": [
+        "mitigation: idempotency keys on every charge."
+      ]
+    },
+    {
+      "kind": "decision",
+      "title": "Run both systems in parallel for two weeks.",
+      "line": 10
+    },
+    {
+      "kind": "risk",
+      "title": "Stripe webhook backlog",
+      "line": 17,
+      "details": [
+        "impact: High",
+        "owner: Payments"
+      ],
+      "from_heading": true
+    },
+    {
+      "kind": "risk",
+      "title": "Currency rounding drift",
+      "line": 18,
+      "details": [
+        "impact: Medium",
+        "owner: Finance"
+      ],
+      "from_heading": true
+    },
+    {
+      "kind": "decision",
+      "number": 1,
+      "title": "Event log for every balance change.",
+      "line": 49,
+      "details": [
+        "rationale: auditors replay it."
+      ],
+      "rejected": [
+        "*mutable balances*, which lose history."
+      ]
+    },
+    {
+      "kind": "decision",
+      "number": 2,
+      "title": "Amounts are integers in minor units.",
+      "line": 52,
+      "rejected": [
+        "*Floats.* Rounding errors.",
+        "*Decimal strings.* Slow to aggregate."
+      ]
+    },
+    {
+      "kind": "question",
+      "title": "Who owns refunds after the cut-over?",
+      "line": 59,
+      "from_heading": true
+    },
+    {
+      "kind": "question",
+      "title": "Do we need multi-currency at launch?",
+      "line": 60,
+      "details": [
+        "answer: no, EUR only."
+      ]
+    }
+  ],
+  "roadmap": {
+    "stages": [
+      "phase-1-schema",
+      "phase-2-api",
+      "phase-3-web-dashboard",
+      "phase-4-cut-over",
+      "phase-5-cleanup"
+    ],
+    "dependencies": {
+      "phase-1-schema": [],
+      "phase-2-api": [
+        "phase-1-schema"
+      ],
+      "phase-3-web-dashboard": [
+        "phase-1-schema"
+      ],
+      "phase-5-cleanup": [
+        "phase-2-api",
+        "phase-4-cut-over"
+      ]
+    },
+    "parallel": {
+      "phase-3-web-dashboard": [
+        "phase-2-api"
+      ]
+    },
+    "cycles": []
+  },
+  "tasks": [
+    "t-phase-1-schema-create-servicesledgermodelspy L23",
+    "t-phase-1-schema-write-migrations L24",
+    "t-phase-2-api-write-migrations L29",
+    "t-phase-2-api-add-servicesledgerapipy-and-apipy L30",
+    "t-phase-3-web-dashboard-charts-in-websrcledger L35",
+    "t-phase-4-cut-over-switch-traffic L40",
+    "t-phase-5-cleanup-delete-the-old-billing-module L45"
+  ],
+  "files": [
+    {
+      "path": "billing/"
+    },
+    {
+      "path": "services/ledger/"
+    },
+    {
+      "path": "services/ledger/api.py",
+      "aliases": [
+        "api.py"
+      ]
+    },
+    {
+      "path": "services/ledger/app.py",
+      "aliases": [
+        "app.py"
+      ]
+    },
+    {
+      "path": "services/ledger/models.py"
+    },
+    {
+      "path": "web/src/ledger/"
+    }
+  ]
+}

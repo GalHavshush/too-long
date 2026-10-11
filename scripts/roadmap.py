@@ -89,12 +89,14 @@ def add_dependencies(model, config):
     deps, parallel = {}, {}
     for stage in ids:
         for text, line in _dep_lines(nodes[stage]):
-            found = deps.setdefault(stage, [])
+            found, understood = [], False
             sentences = [s for s in re.split(r"(?<=[.;])\s+", text.strip()) if s]
             for k, sentence in enumerate(sentences):
                 if NONE_RE.match(strip_md(sentence)):
+                    understood = understood or k == 0
                     continue
                 refs = _refs(sentence, stage, ids, by_number, by_title, warnings)
+                understood = understood or (k == 0 and bool(refs))
                 if re.search(r"\bparallel\b", sentence, re.I):
                     parallel.setdefault(stage, []).extend(r for r in refs if r not in parallel.get(stage, []))
                 elif k == 0:
@@ -102,6 +104,11 @@ def add_dependencies(model, config):
                 elif refs and NEEDS_RE.search(sentence):
                     found += [{"id": r, "line": line, "source": "document", "qualified": sentence}
                               for r in refs if r not in [d["id"] for d in found]]
+            if understood:
+                deps.setdefault(stage, []).extend(d for d in found if d["id"] not in [x["id"] for x in deps[stage]])
+            else:  # "Dependencies: the auth work, probably" names no stage: unknown, not "none"
+                warnings.append(f"roadmap: could not tell which stages '{stage}' depends on from {text.strip()!r}; "
+                                f"set config 'dependencies' if it matters")
 
     # config.json "dependencies" (written by Claude) replaces what was found for that stage.
     for stage, needs in (config.get("dependencies") or {}).items():

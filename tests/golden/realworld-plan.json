@@ -1,0 +1,696 @@
+{
+  "title": "Ledger: billing service rewrite",
+  "file": "realworld-plan",
+  "intro": [
+    {
+      "type": "p",
+      "text": "Move invoicing out of the monolith into `services/ledger/`. See `services/ledger/app.py` and `app.py`.",
+      "line": 3
+    },
+    {
+      "type": "callout",
+      "kind": "decision",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Keep Postgres as the system of record. Rationale: the finance team already audits it."
+        }
+      ],
+      "line": 5
+    }
+  ],
+  "sections": [
+    {
+      "id": "risks-and-decisions",
+      "title": "Risks and decisions",
+      "line": 7,
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            {
+              "text": "Double charges during the cut-over. **Mitigation:** idempotency keys on every charge.",
+              "ordered": false,
+              "kind": "risk",
+              "line": 9
+            },
+            {
+              "text": "Run both systems in parallel for two weeks.",
+              "ordered": false,
+              "kind": "decision",
+              "line": 10
+            },
+            {
+              "text": "Rollback must be possible within an hour.",
+              "ordered": false,
+              "line": 11
+            }
+          ],
+          "line": 9
+        }
+      ],
+      "subsections": []
+    },
+    {
+      "id": "risk-register",
+      "title": "Risk register",
+      "line": 13,
+      "blocks": [
+        {
+          "type": "table",
+          "header": [
+            "Risk",
+            "Impact",
+            "Owner"
+          ],
+          "rows": [
+            [
+              "Stripe webhook backlog",
+              "High",
+              "Payments"
+            ],
+            [
+              "Currency rounding drift",
+              "Medium",
+              "Finance"
+            ]
+          ],
+          "line": 15
+        }
+      ],
+      "subsections": []
+    },
+    {
+      "id": "phase-1-schema",
+      "title": "Phase 1 — Schema",
+      "line": 20,
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            {
+              "text": "**Dependencies:** None.",
+              "ordered": false,
+              "line": 22
+            },
+            {
+              "text": "Create `services/ledger/models.py`",
+              "ordered": false,
+              "task": false,
+              "line": 23,
+              "id": "t-phase-1-schema-create-servicesledgermodelspy"
+            },
+            {
+              "text": "Write migrations",
+              "ordered": false,
+              "task": false,
+              "line": 24,
+              "id": "t-phase-1-schema-write-migrations"
+            }
+          ],
+          "line": 22
+        }
+      ],
+      "subsections": []
+    },
+    {
+      "id": "phase-2-api",
+      "title": "Phase 2 — API",
+      "line": 26,
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            {
+              "text": "**Depends on:** Phase 1.",
+              "ordered": false,
+              "line": 28
+            },
+            {
+              "text": "Write migrations",
+              "ordered": false,
+              "task": false,
+              "line": 29,
+              "id": "t-phase-2-api-write-migrations"
+            },
+            {
+              "text": "Add `services/ledger/api.py` and `api.py` tests",
+              "ordered": false,
+              "task": false,
+              "line": 30,
+              "id": "t-phase-2-api-add-servicesledgerapipy-and-apipy"
+            }
+          ],
+          "line": 28
+        }
+      ],
+      "subsections": []
+    },
+    {
+      "id": "phase-3-web-dashboard",
+      "title": "Phase 3 — Web dashboard",
+      "line": 32,
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            {
+              "text": "**Dependencies:** Phase 1. Can run in parallel with Phase 2.",
+              "ordered": false,
+              "line": 34
+            },
+            {
+              "text": "Charts in `web/src/ledger/`",
+              "ordered": false,
+              "task": false,
+              "line": 35,
+              "id": "t-phase-3-web-dashboard-charts-in-websrcledger"
+            }
+          ],
+          "line": 34
+        }
+      ],
+      "subsections": []
+    },
+    {
+      "id": "phase-4-cut-over",
+      "title": "Phase 4 — Cut-over",
+      "line": 37,
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            {
+              "text": "**Dependencies:** probably the API work, once finance signs off.",
+              "ordered": false,
+              "line": 39
+            },
+            {
+              "text": "Switch traffic",
+              "ordered": false,
+              "task": false,
+              "line": 40,
+              "id": "t-phase-4-cut-over-switch-traffic"
+            }
+          ],
+          "line": 39
+        }
+      ],
+      "subsections": []
+    },
+    {
+      "id": "phase-5-cleanup",
+      "title": "Phase 5 — Cleanup",
+      "line": 42,
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            {
+              "text": "**Requires:** P2, P4, P7.",
+              "ordered": false,
+              "line": 44
+            },
+            {
+              "text": "Delete the old `billing/` module",
+              "ordered": false,
+              "task": false,
+              "line": 45,
+              "id": "t-phase-5-cleanup-delete-the-old-billing-module"
+            }
+          ],
+          "line": 44
+        }
+      ],
+      "subsections": []
+    },
+    {
+      "id": "architectural-decisions",
+      "title": "Architectural decisions",
+      "line": 47,
+      "blocks": [
+        {
+          "type": "callout",
+          "kind": "decision",
+          "blocks": [
+            {
+              "type": "p",
+              "text": "**Event log for every balance change.** Rationale: auditors replay it. **Rejected:** *mutable balances*, which lose history."
+            }
+          ],
+          "number": 1,
+          "line": 49
+        },
+        {
+          "type": "callout",
+          "kind": "decision",
+          "blocks": [
+            {
+              "type": "p",
+              "text": "**Amounts are integers in minor units.** **Rejected:**"
+            }
+          ],
+          "number": 2,
+          "line": 52
+        },
+        {
+          "type": "list",
+          "items": [
+            {
+              "text": "*Floats.* Rounding errors.",
+              "ordered": false,
+              "line": 54
+            },
+            {
+              "text": "*Decimal strings.* Slow to aggregate.",
+              "ordered": false,
+              "line": 55
+            }
+          ],
+          "line": 54
+        }
+      ],
+      "subsections": []
+    },
+    {
+      "id": "open-questions",
+      "title": "Open questions",
+      "line": 57,
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            {
+              "text": "Who owns refunds after the cut-over?",
+              "ordered": false,
+              "line": 59
+            },
+            {
+              "text": "Do we need multi-currency at launch? **Answer:** no, EUR only.",
+              "ordered": false,
+              "kind": "question",
+              "line": 60
+            }
+          ],
+          "line": 59
+        }
+      ],
+      "subsections": []
+    }
+  ],
+  "tasks": [
+    {
+      "id": "t-phase-1-schema-create-servicesledgermodelspy",
+      "text": "Create `services/ledger/models.py`",
+      "done": false,
+      "at": "phase-1-schema",
+      "section": "phase-1-schema",
+      "n": null,
+      "line": 23,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-1-schema-write-migrations",
+      "text": "Write migrations",
+      "done": false,
+      "at": "phase-1-schema",
+      "section": "phase-1-schema",
+      "n": null,
+      "line": 24,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-2-api-write-migrations",
+      "text": "Write migrations",
+      "done": false,
+      "at": "phase-2-api",
+      "section": "phase-2-api",
+      "n": null,
+      "line": 29,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-2-api-add-servicesledgerapipy-and-apipy",
+      "text": "Add `services/ledger/api.py` and `api.py` tests",
+      "done": false,
+      "at": "phase-2-api",
+      "section": "phase-2-api",
+      "n": null,
+      "line": 30,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-3-web-dashboard-charts-in-websrcledger",
+      "text": "Charts in `web/src/ledger/`",
+      "done": false,
+      "at": "phase-3-web-dashboard",
+      "section": "phase-3-web-dashboard",
+      "n": null,
+      "line": 35,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-4-cut-over-switch-traffic",
+      "text": "Switch traffic",
+      "done": false,
+      "at": "phase-4-cut-over",
+      "section": "phase-4-cut-over",
+      "n": null,
+      "line": 40,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-5-cleanup-delete-the-old-billing-module",
+      "text": "Delete the old `billing/` module",
+      "done": false,
+      "at": "phase-5-cleanup",
+      "section": "phase-5-cleanup",
+      "n": null,
+      "line": 45,
+      "browser_only": false
+    }
+  ],
+  "callouts": [
+    {
+      "kind": "decision",
+      "title": "Keep Postgres as the system of record.",
+      "details": [
+        {
+          "label": "rationale",
+          "text": "the finance team already audits it.",
+          "line": 5
+        }
+      ],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Keep Postgres as the system of record. Rationale: the finance team already audits it."
+        }
+      ],
+      "at": "intro",
+      "section": "intro",
+      "line": 5
+    },
+    {
+      "kind": "risk",
+      "title": "Double charges during the cut-over.",
+      "details": [
+        {
+          "label": "mitigation",
+          "text": "idempotency keys on every charge.",
+          "line": 9
+        }
+      ],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Double charges during the cut-over. **Mitigation:** idempotency keys on every charge."
+        }
+      ],
+      "at": "risks-and-decisions",
+      "section": "risks-and-decisions",
+      "line": 9
+    },
+    {
+      "kind": "decision",
+      "title": "Run both systems in parallel for two weeks.",
+      "details": [],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Run both systems in parallel for two weeks."
+        }
+      ],
+      "at": "risks-and-decisions",
+      "section": "risks-and-decisions",
+      "line": 10
+    },
+    {
+      "kind": "risk",
+      "title": "Stripe webhook backlog",
+      "details": [
+        {
+          "label": "impact",
+          "text": "High",
+          "line": 17
+        },
+        {
+          "label": "owner",
+          "text": "Payments",
+          "line": 17
+        }
+      ],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "**Stripe webhook backlog** · Impact: High · Owner: Payments"
+        }
+      ],
+      "at": "risk-register",
+      "section": "risk-register",
+      "line": 17,
+      "from_heading": true
+    },
+    {
+      "kind": "risk",
+      "title": "Currency rounding drift",
+      "details": [
+        {
+          "label": "impact",
+          "text": "Medium",
+          "line": 18
+        },
+        {
+          "label": "owner",
+          "text": "Finance",
+          "line": 18
+        }
+      ],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "**Currency rounding drift** · Impact: Medium · Owner: Finance"
+        }
+      ],
+      "at": "risk-register",
+      "section": "risk-register",
+      "line": 18,
+      "from_heading": true
+    },
+    {
+      "kind": "decision",
+      "title": "Event log for every balance change.",
+      "details": [
+        {
+          "label": "rationale",
+          "text": "auditors replay it.",
+          "line": 49
+        }
+      ],
+      "rejected": [
+        {
+          "text": "*mutable balances*, which lose history.",
+          "line": 49
+        }
+      ],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "**Event log for every balance change.** Rationale: auditors replay it. **Rejected:** *mutable balances*, which lose history."
+        }
+      ],
+      "at": "architectural-decisions",
+      "section": "architectural-decisions",
+      "line": 49,
+      "number": 1
+    },
+    {
+      "kind": "decision",
+      "title": "Amounts are integers in minor units.",
+      "details": [],
+      "rejected": [
+        {
+          "text": "*Floats.* Rounding errors.",
+          "line": 54
+        },
+        {
+          "text": "*Decimal strings.* Slow to aggregate.",
+          "line": 55
+        }
+      ],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "**Amounts are integers in minor units.** **Rejected:**"
+        },
+        {
+          "type": "list",
+          "items": [
+            {
+              "text": "*Floats.* Rounding errors.",
+              "ordered": false,
+              "line": 54
+            },
+            {
+              "text": "*Decimal strings.* Slow to aggregate.",
+              "ordered": false,
+              "line": 55
+            }
+          ],
+          "line": 54
+        }
+      ],
+      "at": "architectural-decisions",
+      "section": "architectural-decisions",
+      "line": 52,
+      "number": 2
+    },
+    {
+      "kind": "question",
+      "title": "Who owns refunds after the cut-over?",
+      "details": [],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Who owns refunds after the cut-over?"
+        }
+      ],
+      "at": "open-questions",
+      "section": "open-questions",
+      "line": 59,
+      "from_heading": true
+    },
+    {
+      "kind": "question",
+      "title": "Do we need multi-currency at launch?",
+      "details": [
+        {
+          "label": "answer",
+          "text": "no, EUR only.",
+          "line": 60
+        }
+      ],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Do we need multi-currency at launch? **Answer:** no, EUR only."
+        }
+      ],
+      "at": "open-questions",
+      "section": "open-questions",
+      "line": 60
+    }
+  ],
+  "diagrams": [],
+  "files": [
+    {
+      "path": "billing/",
+      "at": [
+        "phase-5-cleanup"
+      ],
+      "mentions": [
+        {
+          "at": "phase-5-cleanup",
+          "line": 45
+        }
+      ]
+    },
+    {
+      "path": "services/ledger/",
+      "at": [
+        "intro"
+      ],
+      "mentions": [
+        {
+          "at": "intro",
+          "line": 3
+        }
+      ]
+    },
+    {
+      "path": "services/ledger/api.py",
+      "at": [
+        "phase-2-api"
+      ],
+      "mentions": [
+        {
+          "at": "phase-2-api",
+          "line": 30
+        },
+        {
+          "at": "phase-2-api",
+          "line": 30
+        }
+      ],
+      "aliases": [
+        "api.py"
+      ]
+    },
+    {
+      "path": "services/ledger/app.py",
+      "at": [
+        "intro"
+      ],
+      "mentions": [
+        {
+          "at": "intro",
+          "line": 3
+        },
+        {
+          "at": "intro",
+          "line": 3
+        }
+      ],
+      "aliases": [
+        "app.py"
+      ]
+    },
+    {
+      "path": "services/ledger/models.py",
+      "at": [
+        "phase-1-schema"
+      ],
+      "mentions": [
+        {
+          "at": "phase-1-schema",
+          "line": 23
+        }
+      ]
+    },
+    {
+      "path": "web/src/ledger/",
+      "at": [
+        "phase-3-web-dashboard"
+      ],
+      "mentions": [
+        {
+          "at": "phase-3-web-dashboard",
+          "line": 35
+        }
+      ]
+    }
+  ],
+  "refs": {},
+  "warnings": [],
+  "roadmap": {
+    "ids": [
+      "phase-1-schema",
+      "phase-2-api",
+      "phase-3-web-dashboard",
+      "phase-4-cut-over",
+      "phase-5-cleanup"
+    ],
+    "basis": "titles"
+  },
+  "stats": {
+    "words": 218,
+    "code_blocks": 0
+  }
+}

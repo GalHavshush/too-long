@@ -66,8 +66,14 @@ def match_callout(text):
 def section_kind(title):
     if match_callout(title):
         return None  # "Decision 2: Fenced claims" is one decision, not a list of them
-    m = SECTION_KIND_RE.search(strip_md(title))
-    return (m[1] or m[2]).lower() if m else None
+    plain = strip_md(title)
+    m = SECTION_KIND_RE.search(plain)
+    if not m:
+        return None
+    kinds = {k.lower() for k in re.findall(r"\b(decision|risk|question|assumption|milestone)s?\b", plain, re.I)}
+    if len(kinds) > 1:
+        return None  # "Risks and decisions": an unlabeled bullet could be either, so it is neither
+    return (m[1] or m[2]).lower()
 
 
 def heading_entry_kind(title):

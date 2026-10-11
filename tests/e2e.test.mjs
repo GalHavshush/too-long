@@ -383,6 +383,17 @@ await test("highlights view shows decisions with rejected alternatives and risks
   assert.deepEqual(p.errors, []);
 });
 
+await test("dependencies from config.json are shown as inferred", async () => {
+  const p = await open(build("deps-config", join(ROOT, "tests", "fixtures", "roadmap-deps.md"),
+    { views: ["roadmap"], dependencies: { "phase-7-retro": ["phase-1-setup"] } }) + "#/roadmap");
+  const chip = await p.evaluate(`(() => { const c = document.querySelector(".dep.inferred"); return c && [c.textContent, c.title]; })()`);
+  assert.deepEqual(chip, ["Phase 1", "Inferred: from config.json, not stated in the document"]);
+  assert.equal(await p.count(".dep.inferred"), 1);
+  assert.match(await p.text(".phase:last-child"), /Needs\s+Phase 1/);
+  assert.match(await p.text(".phase:nth-child(5)"), /dependency cycle/);  // phase 5 <-> 6 in the fixture
+  assert.deepEqual(p.errors, []);
+});
+
 await test("invalid config is refused by build.py", async () => {
   assert.throws(() => build("bad", example, { notes: { "no-such-section": "x" } }), /unknown section id/);
 });
