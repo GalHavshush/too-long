@@ -1,0 +1,184 @@
+{
+  "title": "File references",
+  "file": "file-references",
+  "intro": [],
+  "sections": [
+    {
+      "id": "layout",
+      "title": "Layout",
+      "line": 3,
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Code lives in `src/app/config.py`, `src/app/db/models.py` and `src/app/scheduler/{main,reaper}.py`.",
+          "line": 5
+        }
+      ],
+      "subsections": []
+    },
+    {
+      "id": "shortened-references",
+      "title": "Shortened references",
+      "line": 7,
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            {
+              "text": "Edit `config.py` and `db/models.py`.",
+              "ordered": false,
+              "line": 9
+            },
+            {
+              "text": "`main.py` could be the scheduler or the CLI entry point in `src/app/cli/main.py`.",
+              "ordered": false,
+              "line": 10
+            },
+            {
+              "text": "`../shared/settings.py` is outside the project and never merged.",
+              "ordered": false,
+              "line": 11
+            },
+            {
+              "text": "`scheduler/reaper.py` reclaims expired leases.",
+              "ordered": false,
+              "line": 12
+            }
+          ],
+          "line": 9
+        }
+      ],
+      "subsections": []
+    }
+  ],
+  "tasks": [],
+  "callouts": [],
+  "diagrams": [],
+  "files": [
+    {
+      "path": "../shared/settings.py",
+      "at": [
+        "shortened-references"
+      ],
+      "mentions": [
+        {
+          "at": "shortened-references",
+          "line": 11
+        }
+      ]
+    },
+    {
+      "path": "main.py",
+      "at": [
+        "shortened-references"
+      ],
+      "mentions": [
+        {
+          "at": "shortened-references",
+          "line": 10
+        }
+      ],
+      "candidates": [
+        "src/app/cli/main.py",
+        "src/app/scheduler/main.py"
+      ]
+    },
+    {
+      "path": "src/app/cli/main.py",
+      "at": [
+        "shortened-references"
+      ],
+      "mentions": [
+        {
+          "at": "shortened-references",
+          "line": 10
+        }
+      ]
+    },
+    {
+      "path": "src/app/config.py",
+      "at": [
+        "layout",
+        "shortened-references"
+      ],
+      "mentions": [
+        {
+          "at": "layout",
+          "line": 5
+        },
+        {
+          "at": "shortened-references",
+          "line": 9
+        }
+      ],
+      "aliases": [
+        "config.py"
+      ]
+    },
+    {
+      "path": "src/app/db/models.py",
+      "at": [
+        "layout",
+        "shortened-references"
+      ],
+      "mentions": [
+        {
+          "at": "layout",
+          "line": 5
+        },
+        {
+          "at": "shortened-references",
+          "line": 9
+        }
+      ],
+      "aliases": [
+        "db/models.py"
+      ]
+    },
+    {
+      "path": "src/app/scheduler/main.py",
+      "at": [
+        "layout"
+      ],
+      "mentions": [
+        {
+          "at": "layout",
+          "line": 5
+        }
+      ]
+    },
+    {
+      "path": "src/app/scheduler/reaper.py",
+      "at": [
+        "layout",
+        "shortened-references"
+      ],
+      "mentions": [
+        {
+          "at": "layout",
+          "line": 5
+        },
+        {
+          "at": "shortened-references",
+          "line": 12
+        }
+      ],
+      "aliases": [
+        "scheduler/reaper.py"
+      ]
+    }
+  ],
+  "refs": {},
+  "warnings": [],
+  "roadmap": {
+    "ids": [
+      "layout",
+      "shortened-references"
+    ],
+    "basis": "sections"
+  },
+  "stats": {
+    "words": 64,
+    "code_blocks": 0
+  }
+}

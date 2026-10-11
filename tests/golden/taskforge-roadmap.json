@@ -1896,8 +1896,15 @@
       "mentions": [
         {
           "at": "phase-1-foundation-and-tooling",
+          "line": 24
+        },
+        {
+          "at": "phase-1-foundation-and-tooling",
           "line": 25
         }
+      ],
+      "aliases": [
+        "ci.yml"
       ]
     },
     {
@@ -1908,92 +1915,15 @@
       "mentions": [
         {
           "at": "phase-10-production-deployment-cicd-and-ga-hardening",
+          "line": 165
+        },
+        {
+          "at": "phase-10-production-deployment-cicd-and-ga-hardening",
           "line": 169
         }
-      ]
-    },
-    {
-      "path": "api/deps.py",
-      "at": [
-        "phase-3-authentication-and-api-keys"
       ],
-      "mentions": [
-        {
-          "at": "phase-3-authentication-and-api-keys",
-          "line": 53
-        }
-      ]
-    },
-    {
-      "path": "api/routes/keys.py",
-      "at": [
-        "phase-3-authentication-and-api-keys"
-      ],
-      "mentions": [
-        {
-          "at": "phase-3-authentication-and-api-keys",
-          "line": 54
-        }
-      ]
-    },
-    {
-      "path": "api/schemas.py",
-      "at": [
-        "phase-4-jobs-api"
-      ],
-      "mentions": [
-        {
-          "at": "phase-4-jobs-api",
-          "line": 67
-        }
-      ]
-    },
-    {
-      "path": "ci.yml",
-      "at": [
-        "phase-1-foundation-and-tooling"
-      ],
-      "mentions": [
-        {
-          "at": "phase-1-foundation-and-tooling",
-          "line": 24
-        }
-      ]
-    },
-    {
-      "path": "config.py",
-      "at": [
-        "phase-1-foundation-and-tooling"
-      ],
-      "mentions": [
-        {
-          "at": "phase-1-foundation-and-tooling",
-          "line": 20
-        }
-      ]
-    },
-    {
-      "path": "db/jobs_repo.py",
-      "at": [
-        "phase-2-persistence-layer-and-state-machine"
-      ],
-      "mentions": [
-        {
-          "at": "phase-2-persistence-layer-and-state-machine",
-          "line": 38
-        }
-      ]
-    },
-    {
-      "path": "db/models.py",
-      "at": [
-        "phase-2-persistence-layer-and-state-machine"
-      ],
-      "mentions": [
-        {
-          "at": "phase-2-persistence-layer-and-state-machine",
-          "line": 36
-        }
+      "aliases": [
+        "release.yml"
       ]
     },
     {
@@ -2033,7 +1963,19 @@
       ]
     },
     {
-      "path": "deploy/grafana/dashboards/",
+      "path": "deploy/grafana/dashboards/overview.json",
+      "at": [
+        "phase-9-observability"
+      ],
+      "mentions": [
+        {
+          "at": "phase-9-observability",
+          "line": 151
+        }
+      ]
+    },
+    {
+      "path": "deploy/grafana/dashboards/workers.json",
       "at": [
         "phase-9-observability"
       ],
@@ -2101,30 +2043,6 @@
       ]
     },
     {
-      "path": "domain/states.py",
-      "at": [
-        "phase-2-persistence-layer-and-state-machine"
-      ],
-      "mentions": [
-        {
-          "at": "phase-2-persistence-layer-and-state-machine",
-          "line": 35
-        }
-      ]
-    },
-    {
-      "path": "logging.py",
-      "at": [
-        "phase-1-foundation-and-tooling"
-      ],
-      "mentions": [
-        {
-          "at": "phase-1-foundation-and-tooling",
-          "line": 21
-        }
-      ]
-    },
-    {
       "path": "pyproject.toml",
       "at": [
         "phase-1-foundation-and-tooling"
@@ -2137,138 +2055,6 @@
       ]
     },
     {
-      "path": "queue/lua/token_bucket.lua",
-      "at": [
-        "phase-8-rate-limiting-backpressure-and-abuse-prevention"
-      ],
-      "mentions": [
-        {
-          "at": "phase-8-rate-limiting-backpressure-and-abuse-prevention",
-          "line": 133
-        }
-      ]
-    },
-    {
-      "path": "queue/ratelimit.py",
-      "at": [
-        "phase-8-rate-limiting-backpressure-and-abuse-prevention"
-      ],
-      "mentions": [
-        {
-          "at": "phase-8-rate-limiting-backpressure-and-abuse-prevention",
-          "line": 133
-        }
-      ]
-    },
-    {
-      "path": "queue/redis_backend.py",
-      "at": [
-        "phase-5-redis-queue-and-scheduler-dispatch"
-      ],
-      "mentions": [
-        {
-          "at": "phase-5-redis-queue-and-scheduler-dispatch",
-          "line": 83
-        }
-      ]
-    },
-    {
-      "path": "release.yml",
-      "at": [
-        "phase-10-production-deployment-cicd-and-ga-hardening"
-      ],
-      "mentions": [
-        {
-          "at": "phase-10-production-deployment-cicd-and-ga-hardening",
-          "line": 165
-        }
-      ]
-    },
-    {
-      "path": "scheduler/dispatcher.py",
-      "at": [
-        "phase-5-redis-queue-and-scheduler-dispatch"
-      ],
-      "mentions": [
-        {
-          "at": "phase-5-redis-queue-and-scheduler-dispatch",
-          "line": 86
-        }
-      ]
-    },
-    {
-      "path": "scheduler/main.py",
-      "at": [
-        "phase-5-redis-queue-and-scheduler-dispatch"
-      ],
-      "mentions": [
-        {
-          "at": "phase-5-redis-queue-and-scheduler-dispatch",
-          "line": 88
-        }
-      ]
-    },
-    {
-      "path": "scheduler/monitor.py",
-      "at": [
-        "phase-7-recovery-cancellation-dlq-and-outage-handling"
-      ],
-      "mentions": [
-        {
-          "at": "phase-7-recovery-cancellation-dlq-and-outage-handling",
-          "line": 117
-        }
-      ]
-    },
-    {
-      "path": "scheduler/promoter.py",
-      "at": [
-        "phase-5-redis-queue-and-scheduler-dispatch"
-      ],
-      "mentions": [
-        {
-          "at": "phase-5-redis-queue-and-scheduler-dispatch",
-          "line": 85
-        }
-      ]
-    },
-    {
-      "path": "scheduler/reaper.py",
-      "at": [
-        "phase-7-recovery-cancellation-dlq-and-outage-handling"
-      ],
-      "mentions": [
-        {
-          "at": "phase-7-recovery-cancellation-dlq-and-outage-handling",
-          "line": 116
-        }
-      ]
-    },
-    {
-      "path": "scheduler/retention.py",
-      "at": [
-        "phase-10-production-deployment-cicd-and-ga-hardening"
-      ],
-      "mentions": [
-        {
-          "at": "phase-10-production-deployment-cicd-and-ga-hardening",
-          "line": 167
-        }
-      ]
-    },
-    {
-      "path": "security/api_keys.py",
-      "at": [
-        "phase-3-authentication-and-api-keys"
-      ],
-      "mentions": [
-        {
-          "at": "phase-3-authentication-and-api-keys",
-          "line": 52
-        }
-      ]
-    },
-    {
       "path": "src/taskforge/api/deps.py",
       "at": [
         "phase-3-authentication-and-api-keys",
@@ -2277,12 +2063,19 @@
       "mentions": [
         {
           "at": "phase-3-authentication-and-api-keys",
+          "line": 53
+        },
+        {
+          "at": "phase-3-authentication-and-api-keys",
           "line": 57
         },
         {
           "at": "phase-8-rate-limiting-backpressure-and-abuse-prevention",
           "line": 138
         }
+      ],
+      "aliases": [
+        "api/deps.py"
       ]
     },
     {
@@ -2294,18 +2087,6 @@
         {
           "at": "phase-4-jobs-api",
           "line": 73
-        }
-      ]
-    },
-    {
-      "path": "src/taskforge/api/routes/",
-      "at": [
-        "phase-9-observability"
-      ],
-      "mentions": [
-        {
-          "at": "phase-9-observability",
-          "line": 154
         }
       ]
     },
@@ -2341,7 +2122,38 @@
       "mentions": [
         {
           "at": "phase-3-authentication-and-api-keys",
+          "line": 54
+        },
+        {
+          "at": "phase-3-authentication-and-api-keys",
           "line": 57
+        }
+      ],
+      "aliases": [
+        "api/routes/keys.py"
+      ]
+    },
+    {
+      "path": "src/taskforge/api/routes/queues.py",
+      "at": [
+        "phase-9-observability"
+      ],
+      "mentions": [
+        {
+          "at": "phase-9-observability",
+          "line": 154
+        }
+      ]
+    },
+    {
+      "path": "src/taskforge/api/routes/workers.py",
+      "at": [
+        "phase-9-observability"
+      ],
+      "mentions": [
+        {
+          "at": "phase-9-observability",
+          "line": 154
         }
       ]
     },
@@ -2353,8 +2165,15 @@
       "mentions": [
         {
           "at": "phase-4-jobs-api",
+          "line": 67
+        },
+        {
+          "at": "phase-4-jobs-api",
           "line": 73
         }
+      ],
+      "aliases": [
+        "api/schemas.py"
       ]
     },
     {
@@ -2377,8 +2196,15 @@
       "mentions": [
         {
           "at": "phase-1-foundation-and-tooling",
+          "line": 20
+        },
+        {
+          "at": "phase-1-foundation-and-tooling",
           "line": 25
         }
+      ],
+      "aliases": [
+        "config.py"
       ]
     },
     {
@@ -2389,8 +2215,15 @@
       "mentions": [
         {
           "at": "phase-2-persistence-layer-and-state-machine",
+          "line": 38
+        },
+        {
+          "at": "phase-2-persistence-layer-and-state-machine",
           "line": 42
         }
+      ],
+      "aliases": [
+        "db/jobs_repo.py"
       ]
     },
     {
@@ -2425,8 +2258,15 @@
       "mentions": [
         {
           "at": "phase-2-persistence-layer-and-state-machine",
+          "line": 36
+        },
+        {
+          "at": "phase-2-persistence-layer-and-state-machine",
           "line": 42
         }
+      ],
+      "aliases": [
+        "db/models.py"
       ]
     },
     {
@@ -2449,8 +2289,15 @@
       "mentions": [
         {
           "at": "phase-2-persistence-layer-and-state-machine",
+          "line": 35
+        },
+        {
+          "at": "phase-2-persistence-layer-and-state-machine",
           "line": 42
         }
+      ],
+      "aliases": [
+        "domain/states.py"
       ]
     },
     {
@@ -2461,8 +2308,15 @@
       "mentions": [
         {
           "at": "phase-1-foundation-and-tooling",
+          "line": 21
+        },
+        {
+          "at": "phase-1-foundation-and-tooling",
           "line": 25
         }
+      ],
+      "aliases": [
+        "logging.py"
       ]
     },
     {
@@ -2473,8 +2327,15 @@
       "mentions": [
         {
           "at": "phase-8-rate-limiting-backpressure-and-abuse-prevention",
+          "line": 133
+        },
+        {
+          "at": "phase-8-rate-limiting-backpressure-and-abuse-prevention",
           "line": 138
         }
+      ],
+      "aliases": [
+        "queue/lua/token_bucket.lua"
       ]
     },
     {
@@ -2485,8 +2346,15 @@
       "mentions": [
         {
           "at": "phase-8-rate-limiting-backpressure-and-abuse-prevention",
+          "line": 133
+        },
+        {
+          "at": "phase-8-rate-limiting-backpressure-and-abuse-prevention",
           "line": 138
         }
+      ],
+      "aliases": [
+        "queue/ratelimit.py"
       ]
     },
     {
@@ -2497,25 +2365,110 @@
       "mentions": [
         {
           "at": "phase-5-redis-queue-and-scheduler-dispatch",
+          "line": 83
+        },
+        {
+          "at": "phase-5-redis-queue-and-scheduler-dispatch",
           "line": 89
         }
+      ],
+      "aliases": [
+        "queue/redis_backend.py"
       ]
     },
     {
-      "path": "src/taskforge/scheduler/",
+      "path": "src/taskforge/scheduler/dispatcher.py",
       "at": [
-        "phase-5-redis-queue-and-scheduler-dispatch",
-        "phase-7-recovery-cancellation-dlq-and-outage-handling"
+        "phase-5-redis-queue-and-scheduler-dispatch"
       ],
       "mentions": [
         {
           "at": "phase-5-redis-queue-and-scheduler-dispatch",
+          "line": 86
+        },
+        {
+          "at": "phase-5-redis-queue-and-scheduler-dispatch",
           "line": 89
+        }
+      ],
+      "aliases": [
+        "scheduler/dispatcher.py"
+      ]
+    },
+    {
+      "path": "src/taskforge/scheduler/main.py",
+      "at": [
+        "phase-5-redis-queue-and-scheduler-dispatch"
+      ],
+      "mentions": [
+        {
+          "at": "phase-5-redis-queue-and-scheduler-dispatch",
+          "line": 88
+        },
+        {
+          "at": "phase-5-redis-queue-and-scheduler-dispatch",
+          "line": 89
+        }
+      ],
+      "aliases": [
+        "scheduler/main.py"
+      ]
+    },
+    {
+      "path": "src/taskforge/scheduler/monitor.py",
+      "at": [
+        "phase-7-recovery-cancellation-dlq-and-outage-handling"
+      ],
+      "mentions": [
+        {
+          "at": "phase-7-recovery-cancellation-dlq-and-outage-handling",
+          "line": 117
         },
         {
           "at": "phase-7-recovery-cancellation-dlq-and-outage-handling",
           "line": 123
         }
+      ],
+      "aliases": [
+        "scheduler/monitor.py"
+      ]
+    },
+    {
+      "path": "src/taskforge/scheduler/promoter.py",
+      "at": [
+        "phase-5-redis-queue-and-scheduler-dispatch"
+      ],
+      "mentions": [
+        {
+          "at": "phase-5-redis-queue-and-scheduler-dispatch",
+          "line": 85
+        },
+        {
+          "at": "phase-5-redis-queue-and-scheduler-dispatch",
+          "line": 89
+        }
+      ],
+      "aliases": [
+        "scheduler/promoter.py"
+      ]
+    },
+    {
+      "path": "src/taskforge/scheduler/reaper.py",
+      "at": [
+        "phase-7-recovery-cancellation-dlq-and-outage-handling"
+      ],
+      "mentions": [
+        {
+          "at": "phase-7-recovery-cancellation-dlq-and-outage-handling",
+          "line": 116
+        },
+        {
+          "at": "phase-7-recovery-cancellation-dlq-and-outage-handling",
+          "line": 123
+        }
+      ],
+      "aliases": [
+        "scheduler/reaper.py"
       ]
     },
     {
@@ -2526,8 +2479,15 @@
       "mentions": [
         {
           "at": "phase-10-production-deployment-cicd-and-ga-hardening",
+          "line": 167
+        },
+        {
+          "at": "phase-10-production-deployment-cicd-and-ga-hardening",
           "line": 169
         }
+      ],
+      "aliases": [
+        "scheduler/retention.py"
       ]
     },
     {
@@ -2538,8 +2498,15 @@
       "mentions": [
         {
           "at": "phase-3-authentication-and-api-keys",
+          "line": 52
+        },
+        {
+          "at": "phase-3-authentication-and-api-keys",
           "line": 57
         }
+      ],
+      "aliases": [
+        "security/api_keys.py"
       ]
     },
     {
@@ -2550,12 +2517,57 @@
       "mentions": [
         {
           "at": "phase-9-observability",
+          "line": 148
+        },
+        {
+          "at": "phase-9-observability",
           "line": 154
         }
+      ],
+      "aliases": [
+        "telemetry.py"
       ]
     },
     {
-      "path": "src/taskforge/workers/",
+      "path": "src/taskforge/workers/context.py",
+      "at": [
+        "phase-6-worker-runtime"
+      ],
+      "mentions": [
+        {
+          "at": "phase-6-worker-runtime",
+          "line": 105
+        },
+        {
+          "at": "phase-6-worker-runtime",
+          "line": 106
+        }
+      ],
+      "aliases": [
+        "workers/context.py"
+      ]
+    },
+    {
+      "path": "src/taskforge/workers/lease.py",
+      "at": [
+        "phase-6-worker-runtime"
+      ],
+      "mentions": [
+        {
+          "at": "phase-6-worker-runtime",
+          "line": 103
+        },
+        {
+          "at": "phase-6-worker-runtime",
+          "line": 106
+        }
+      ],
+      "aliases": [
+        "workers/lease.py"
+      ]
+    },
+    {
+      "path": "src/taskforge/workers/main.py",
       "at": [
         "phase-6-worker-runtime"
       ],
@@ -2567,15 +2579,41 @@
       ]
     },
     {
-      "path": "telemetry.py",
+      "path": "src/taskforge/workers/registry.py",
       "at": [
-        "phase-9-observability"
+        "phase-6-worker-runtime"
       ],
       "mentions": [
         {
-          "at": "phase-9-observability",
-          "line": 148
+          "at": "phase-6-worker-runtime",
+          "line": 99
+        },
+        {
+          "at": "phase-6-worker-runtime",
+          "line": 106
         }
+      ],
+      "aliases": [
+        "workers/registry.py"
+      ]
+    },
+    {
+      "path": "src/taskforge/workers/runner.py",
+      "at": [
+        "phase-6-worker-runtime"
+      ],
+      "mentions": [
+        {
+          "at": "phase-6-worker-runtime",
+          "line": 100
+        },
+        {
+          "at": "phase-6-worker-runtime",
+          "line": 106
+        }
+      ],
+      "aliases": [
+        "workers/runner.py"
       ]
     },
     {
@@ -2831,54 +2869,6 @@
         {
           "at": "phase-2-persistence-layer-and-state-machine",
           "line": 45
-        }
-      ]
-    },
-    {
-      "path": "workers/context.py",
-      "at": [
-        "phase-6-worker-runtime"
-      ],
-      "mentions": [
-        {
-          "at": "phase-6-worker-runtime",
-          "line": 105
-        }
-      ]
-    },
-    {
-      "path": "workers/lease.py",
-      "at": [
-        "phase-6-worker-runtime"
-      ],
-      "mentions": [
-        {
-          "at": "phase-6-worker-runtime",
-          "line": 103
-        }
-      ]
-    },
-    {
-      "path": "workers/registry.py",
-      "at": [
-        "phase-6-worker-runtime"
-      ],
-      "mentions": [
-        {
-          "at": "phase-6-worker-runtime",
-          "line": 99
-        }
-      ]
-    },
-    {
-      "path": "workers/runner.py",
-      "at": [
-        "phase-6-worker-runtime"
-      ],
-      "mentions": [
-        {
-          "at": "phase-6-worker-runtime",
-          "line": 100
         }
       ]
     }

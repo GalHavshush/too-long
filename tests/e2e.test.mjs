@@ -345,6 +345,19 @@ await test("roadmap groups stages into waves when every dependency is known", as
   assert.deepEqual(p.errors, []);
 });
 
+await test("files view merges short references and shows what is on disk", async () => {
+  const p = await open(build("files", join(ROOT, "tests", "fixtures", "file-references.md"), { views: ["files"] }) + "#/document");
+  // A short reference in the text points at the full path it stands for.
+  assert.equal(await p.evaluate(`[...document.querySelectorAll("code.file-ref")].find(c => c.textContent === "config.py")?.dataset.file`), "src/app/config.py");
+  await p.go("#/files/src/app/config.py");
+  const row = await p.text('[id="file:src/app/config.py"]');
+  assert.match(row, /not on disk/i);
+  assert.match(row, /also written as config\.py/);
+  assert.match(await p.text('[id="file:main.py"]'), /ambiguous[\s\S]*could be src\/app\/cli\/main\.py or src\/app\/scheduler\/main\.py/i);
+  assert.match(await p.text(".page-head"), /0 on disk, \d+ not on disk yet, 1 ambiguous/);
+  assert.deepEqual(p.errors, []);
+});
+
 await test("invalid config is refused by build.py", async () => {
   assert.throws(() => build("bad", example, { notes: { "no-such-section": "x" } }), /unknown section id/);
 });

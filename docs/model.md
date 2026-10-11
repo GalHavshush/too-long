@@ -56,7 +56,13 @@ with an OS lock on `.<name>.too-long.lock`. `serve.py` exposes it as `POST /api/
   `status`, `mitigation`, `contingency`, `likelihood`, `impact`, `owner`, `answer`; table columns
   that are none of these keep their header as the label.
 - **diagram**: `{text, line, at, section}`.
-- **file**: `{path, at: [section id], mentions: [{at, line}]}`.
+- **file**: `{path, at: [section id], mentions: [{at, line}], aliases?, candidates?, status, resolved?}`.
+  A shortened reference ("config.py") that ends exactly one longer path in the document
+  ("src/app/config.py") is merged into it and listed in `aliases`; one that could be several
+  stays separate with `candidates`. `src/x/{a,b}.py` is expanded into two files. `status`
+  (added by `build_document`) is `exists` (found from the git repository root or the Markdown's
+  folder), `planned` (not on disk) or `ambiguous`; `resolved` is the one repository file a short
+  reference matches. `model.files_root` says what was checked: `repository` or `folder`.
 - **block**: `{type, line?, ...}` with type `heading`, `p`, `list`, `code`, `mermaid`, `table`,
   `quote`, `callout`, `hr`. List items are `{text, ordered, line, n?, task?, id?, kind?, children?, blocks?}`;
   an item with `task` (true/false) is a task and carries the same `id` as in `tasks`.

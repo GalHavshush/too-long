@@ -11,6 +11,7 @@ integration can call it directly.
 import copy
 import hashlib
 import os
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -52,6 +53,7 @@ def build_document(md_path, config, manifest, out):
     # Relative links in the Markdown are relative to the .md file, not the output folder.
     model["base"] = os.path.relpath(md_path.resolve().parent, out.resolve()).replace(os.sep, "/")
 
+    add_file_status(model, md_path)
     config, warnings = check_config(config, model, strict=new_config)
     warnings = model["warnings"] + warnings + add_dependencies(model, config)
     new_manifest = apply_identity(model, md_path, manifest, out)
@@ -67,6 +69,54 @@ def build_document(md_path, config, manifest, out):
     if model["stale"]["tldr"]:
         warnings.append("the TL;DR may be outdated: the document changed since it was written")
     return Document(model, config, warnings, new_manifest)
+
+
+def project_root(md_path):
+    """The git repository the Markdown lives in, else the Markdown's own folder."""
+    folder = Path(md_path).resolve().parent
+    for d in (folder, *folder.parents):
+        if (d / ".git").exists():
+            return d, True
+    return folder, False
+
+
+def _repo_files(root):
+    """Files git knows about (tracked or untracked, not ignored); [] if git is unavailable."""
+    try:
+        r = subprocess.run(["git", "-C", str(root), "ls-files", "--cached", "--others", "--exclude-standard"],
+                           capture_output=True, text=True, timeout=10)
+    except (OSError, subprocess.TimeoutExpired):
+        return []
+    return r.stdout.splitlines() if r.returncode == 0 else []
+
+
+def add_file_status(model, md_path):
+    """Mark each referenced file `exists` (found on disk), `planned` (not there: a file the plan will
+    create, or a wrong path), or `ambiguous` (a short name that could be several files). Relative
+    paths are looked up from the repository root and from the Markdown's folder. In a git repository,
+    a short reference that matches exactly one file there gets that file as `resolved`."""
+    root, is_git = project_root(md_path)
+    here = Path(md_path).resolve().parent
+    repo = None
+    for f in model["files"]:
+        rel = f["path"].rstrip("/")
+        if f.get("candidates"):
+            f["status"] = "ambiguous"
+            continue
+        on_disk = rel.startswith(("/", "~")) and Path(rel).expanduser().exists() or \
+            any((base / rel).exists() for base in (root, here))
+        if on_disk:
+            f["status"] = "exists"
+            continue
+        f["status"] = "planned"
+        if is_git and "/" not in rel.lstrip("./") or is_git and not (root / rel).parent.exists():
+            repo = _repo_files(root) if repo is None else repo
+            hits = [p for p in repo if p == rel or p.endswith("/" + rel)]
+            if len(hits) == 1:
+                f["status"], f["resolved"] = "exists", hits[0]
+            elif len(hits) > 1:
+                f["status"], f["candidates"] = "ambiguous", hits[:10]
+    model["files_root"] = "repository" if is_git else "folder"
 
 
 def check_invariants(model):

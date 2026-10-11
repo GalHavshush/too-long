@@ -306,11 +306,55 @@ def slugify(text, used):
     return slug
 
 
+BRACE_RE = re.compile(r"([\w@./-]*/[\w@.-]*)\{([^{}\s,][^{}]*,[^{}]*)\}([\w@.-]*)")
+
+
+def expand_braces(text):
+    """'src/app/{main,cli}.py' -> 'src/app/main.py src/app/cli.py' (shell-style shorthand in plans)."""
+    return BRACE_RE.sub(lambda m: " ".join(m[1] + part.strip() + m[3] for part in m[2].split(",")), text)
+
+
 def find_files(text):
-    text = re.sub(r"https?://\S+", " ", text)
+    text = expand_braces(re.sub(r"https?://\S+", " ", text))
     found = [p for p in PATH_RE.findall(text) if p.endswith("/") or EXT_RE.search(p)]
     found += [n for n in NAME_RE.findall(text) if not NOT_FILES.match(n)]
     return [re.sub(r"^\./", "", p) for p in found]
+
+
+def file_index(files):
+    """{path: [(at, line)]} -> model["files"]. A shortened reference ("config.py", "db/models.py") is
+    merged into the one longer path it ends with ("src/app/config.py") and listed in its `aliases`.
+    When it could be several files, it stays separate with those `candidates`."""
+    paths = sorted(files)
+    alias_of, candidates = {}, {}
+    for p in paths:
+        if p.startswith(("../", "~/", "/")):
+            continue
+        longer = [q for q in paths if q != p and q.endswith("/" + p)]
+        longest = [q for q in longer if not any(r != q and r.endswith("/" + q) for r in longer)]
+        if len(longest) == 1:
+            alias_of[p] = longest[0]
+        elif longest:
+            candidates[p] = longest
+    merged = {}
+    for p in paths:
+        target = alias_of.get(p, p)
+        entry = merged.setdefault(target, {"path": target, "mentions": [], "aliases": []})
+        entry["mentions"] += [{"at": a, "line": n} for a, n in files[p]]
+        if p != target:
+            entry["aliases"].append(p)
+    out = []
+    for p in sorted(merged):
+        e = merged[p]
+        e["mentions"].sort(key=lambda m: m["line"])
+        # at: where each file is mentioned (section ids); mentions: the same, with source lines
+        f = {"path": p, "at": list(dict.fromkeys(m["at"] for m in e["mentions"])), "mentions": e["mentions"]}
+        if e["aliases"]:
+            f["aliases"] = e["aliases"]
+        if p in candidates:
+            f["candidates"] = candidates[p]
+        out.append(f)
+    return out
 
 
 def build_model(md, name="document", track=()):
@@ -432,9 +476,7 @@ def build_model(md, name="document", track=()):
         "tasks": tasks,
         "callouts": callouts,
         "diagrams": diagrams,
-        # at: where each file is mentioned (section ids); mentions: the same, with source lines
-        "files": [{"path": p, "at": list(dict.fromkeys(a for a, _ in ms)),
-                   "mentions": [{"at": a, "line": n} for a, n in ms]} for p, ms in sorted(files.items())],
+        "files": file_index(files),
         "refs": refs,
         "warnings": warnings,
         "roadmap": roadmap,

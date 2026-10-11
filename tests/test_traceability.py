@@ -3,7 +3,7 @@
 import re
 
 from _path import ROOT
-from parse import build_model, parse_file, section_ids
+from parse import build_model, expand_braces, parse_file, section_ids
 
 docs = sorted((ROOT / "tests" / "fixtures").glob("*.md")) + [ROOT / "examples" / "trailhead-plan.md"]
 
@@ -32,7 +32,8 @@ for path in docs:
         for mention in f["mentions"]:
             # a mention is on its line, or on a later line of the same paragraph
             text = "\n".join(lines[mention["line"] - 1:mention["line"] + 5])
-            assert f["path"].rstrip("/") in text, (path.name, f["path"], mention)
+            written = [f["path"], *f.get("aliases", [])]  # as written there, or a shortened form of it
+            assert any(w.rstrip("/") in expand_braces(text) for w in written), (path.name, f["path"], mention)
             assert mention["at"] in section_ids(m)
     print(f"ok {path.name}")
 

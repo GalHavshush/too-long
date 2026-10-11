@@ -22,7 +22,8 @@
     nodes[s.id] = s;
     s.subsections.forEach(sub => { nodes[sub.id] = { ...sub, parent: s.id }; });
   });
-  const fileSet = new Set(model.files.map(f => f.path));
+  // Every way a file is written in the document ("config.py", "src/app/config.py") -> its entry's path.
+  const filePath = new Map(model.files.flatMap(f => [[f.path, f.path], ...(f.aliases || []).map(a => [a, f.path])]));
   const refs = model.refs || {};  // [label]: url definitions (older data.js files have none)
   const has = v => config.views.includes(v);
 
@@ -114,8 +115,9 @@
     s = emphasis(s);
     return s.replace(/\u0001(\d+)\u0001/g, (_, i) => html[i]).replace(/\u0000(\d+)\u0000/g, (_, i) => {
       const c = codes[i];
-      return fileSet.has(c.replace(/^\.\//, "")) && has("files")
-        ? `<code class="file-ref" data-file="${esc(c.replace(/^\.\//, ""))}" title="Show in file tree">${esc(c)}</code>`
+      const path = filePath.get(c.replace(/^\.\//, ""));
+      return path && has("files")
+        ? `<code class="file-ref" data-file="${esc(path)}" title="Show in file tree">${esc(c)}</code>`
         : `<code>${esc(c)}</code>`;
     });
   }
@@ -446,6 +448,11 @@
     return `<header class="page-head"><h1>Diagrams</h1></header>${[...fromDoc, ...fromClaude].join("") || `<p class="empty">No diagrams.</p>`}`;
   }
 
+  const FILE_STATUS = {
+    exists: ["on disk", "Found on disk"],
+    planned: ["not on disk", "Not found on disk: a file the plan will create, or a path that is written differently"],
+    ambiguous: ["ambiguous", "This short name matches more than one file"],
+  };
   function viewFiles(target) {
     const root = { dirs: {}, files: [] };
     model.files.forEach(f => {
@@ -454,16 +461,27 @@
       let node = root;
       parts.forEach(p => { node = node.dirs[p] ??= { dirs: {}, files: [] }; });
       if (name) node.files.push({ name, ...f });
-      else node.refs = f.mentions || f.at.map(at => ({ at }));
+      else node.entry = f;
     });
-    const refs = ms => (ms || []).map(m => `<a class="ref" href="#/document/${esc(m.at)}">${inline(nodes[m.at]?.title ?? m.at)}</a>${lineRef(m.line)}`).join("");
+    const refs = f => (f?.mentions || f?.at.map(at => ({ at })) || []).map(m =>
+      `<a class="ref" href="#/document/${esc(m.at)}">${inline(nodes[m.at]?.title ?? m.at)}</a>${lineRef(m.line)}`).join("");
+    const about = f => !f ? "" : [
+      f.status ? `<span class="fstatus" data-status="${esc(f.status)}" title="${esc(FILE_STATUS[f.status]?.[1] ?? "")}">${esc(FILE_STATUS[f.status]?.[0] ?? f.status)}</span>` : "",
+      f.aliases?.length ? `<span class="muted small">also written as ${f.aliases.map(a => `<code>${esc(a)}</code>`).join(", ")}</span>` : "",
+      f.resolved ? `<span class="muted small">at <code>${esc(f.resolved)}</code></span>` : "",
+      f.candidates?.length ? `<span class="muted small">could be ${f.candidates.map(c => `<code>${esc(c)}</code>`).join(" or ")}</span>` : "",
+    ].join("");
     const tree = node => `<ul class="tree">${
       Object.entries(node.dirs).sort().map(([name, d]) =>
-        `<li><details open><summary><span class="dir">${esc(name)}/</span>${refs(d.refs)}</summary>${tree(d)}</details></li>`).join("") +
+        `<li><details open><summary><span class="dir">${esc(name)}/</span>${about(d.entry)}${refs(d.entry)}</summary>${tree(d)}</details></li>`).join("") +
       node.files.sort((a, b) => a.name.localeCompare(b.name)).map(f =>
-        `<li class="file${f.path === target ? " hit" : ""}" id="file:${esc(f.path)}"><code>${esc(f.name)}</code>${refs(f.mentions || f.at.map(at => ({ at })))}</li>`).join("")
+        `<li class="file${f.path === target ? " hit" : ""}" id="file:${esc(f.path)}"><code>${esc(f.name)}</code>${about(f)}${refs(f)}</li>`).join("")
     }</ul>`;
-    return `<header class="page-head"><h1>Files</h1><p class="muted">Every file path the document mentions, and where it is mentioned.</p></header>
+    const count = st => model.files.filter(f => f.status === st).length;
+    const checked = model.files_root
+      ? ` Checked against ${model.files_root === "repository" ? "the git repository" : "the Markdown file's folder"}: ${count("exists")} on disk, ${count("planned")} not on disk yet${count("ambiguous") ? `, ${count("ambiguous")} ambiguous` : ""}. A reference is only merged with a longer path when it can mean nothing else.`
+      : "";
+    return `<header class="page-head"><h1>Files</h1><p class="muted">Every file path the document mentions, and where it is mentioned.${checked}</p></header>
       <div class="tree-wrap">${tree(root)}</div>`;
   }
 
