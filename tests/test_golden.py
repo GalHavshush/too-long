@@ -35,6 +35,7 @@ def strings(x):
 
 def check_nothing_dropped(path, model):
     words = set(re.findall(r"\w+", " ".join(strings(model)).lower()))  # labels are kept as lowercase kinds
+    words |= {c["kind"] + "s" for c in model["callouts"]}  # "Risks:" is kept as kind "risk"
     for n, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
         line = re.sub(r"\[[xX ]\]", "", line)  # task boxes are kept as `done`, not as text
         missing = [w for w in re.findall(r"\w+", line.lower()) if w not in words]

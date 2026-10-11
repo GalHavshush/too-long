@@ -17,6 +17,7 @@ from pathlib import Path
 from config import check_config, config_sha, stamps, staleness
 from identity import apply_identity
 from parse import build_model, read_markdown, section_ids
+from roadmap import add_dependencies
 
 SCHEMA_VERSION = 1
 
@@ -52,7 +53,7 @@ def build_document(md_path, config, manifest, out):
     model["base"] = os.path.relpath(md_path.resolve().parent, out.resolve()).replace(os.sep, "/")
 
     config, warnings = check_config(config, model, strict=new_config)
-    warnings = model["warnings"] + warnings
+    warnings = model["warnings"] + warnings + add_dependencies(model, config)
     new_manifest = apply_identity(model, md_path, manifest, out)
 
     now = stamps(config, model)

@@ -37,6 +37,8 @@ REF_DEF_RE = re.compile(r"""^\s{0,3}\[([^\]]+)\]:\s*<?(\S+?)>?(?:\s+(?:"([^"]*)"
 # Section titles that read like steps of a plan.
 PHASE_RE = re.compile(
     r"^\s*(?:(?:phase|stage|step|milestone|sprint|week|day|iteration|wave|part)\b|v\d+\b|\d+[.):]?\s)", re.I)
+# ...and only by a word, not just a number ("1. Executive summary" is a numbered section, not a phase).
+PHASE_WORD_RE = re.compile(r"^\s*(?:\d+[.):]?\s+)?(?:phase|stage|step|milestone|sprint|week|day|iteration|wave)\s*\d", re.I)
 
 # File references: a path with a known extension or a trailing slash, or a well-known filename.
 EXTS = ("py|js|mjs|cjs|ts|tsx|jsx|json|jsonc|md|mdx|yml|yaml|toml|ini|cfg|conf|css|scss|sass|less|"
@@ -412,7 +414,13 @@ def build_model(md, name="document", track=()):
             callouts += extract_section(sub["title"], sub["blocks"], sub["id"], s["id"], section_kind(s["title"]), sub["line"])
     callouts = dedupe(callouts)
 
+    # Stages: phase-like section titles. When the phases are subsections ("## 14. Roadmap" holding
+    # "### Phase 1 — ..."), those win over numbered top-level sections.
     phases = [s["id"] for s in sections if PHASE_RE.search(strip_md(s["title"]))]
+    named = [s["id"] for s in sections if PHASE_WORD_RE.search(strip_md(s["title"]))]
+    sub_phases = [x["id"] for s in sections for x in s["subsections"] if PHASE_WORD_RE.search(strip_md(x["title"]))]
+    if len(sub_phases) >= 2 and len(named) < 2:
+        phases = sub_phases
     roadmap = ({"ids": phases, "basis": "titles"} if len(phases) >= 2
                else {"ids": [s["id"] for s in sections], "basis": "sections"})
 
@@ -489,6 +497,18 @@ def suggest_views(model):
     return views
 
 
+def dependency_summary(model):
+    """Which stages state their dependencies (so Claude knows whether config 'dependencies' is needed)."""
+    from roadmap import add_dependencies  # imported here: roadmap imports highlights, which parse imports
+
+    warnings = add_dependencies(model, {})
+    r = model["roadmap"]
+    if not r["dependencies"]:
+        return ["Stage dependencies: none stated (the roadmap is shown in document order)"]
+    return [f"Stage dependencies: stated for {len(r['dependencies'])} of {len(r['ids'])} stages"] + \
+        [f"  {w}" for w in warnings]
+
+
 def summary(model):
     done = sum(t["done"] for t in model["tasks"])
     kinds = {}
@@ -512,6 +532,7 @@ def summary(model):
     out += [
         "",
         f"Roadmap basis: {model['roadmap']['basis']} ({len(model['roadmap']['ids'])} stages)",
+        *dependency_summary(model),
         f"Files: {', '.join(f['path'] for f in model['files'][:15])}" + (" ..." if len(model["files"]) > 15 else ""),
         f"Suggested views: {', '.join(suggest_views(model))}",
     ]

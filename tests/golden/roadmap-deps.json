@@ -1,0 +1,132 @@
+{
+  "title": "Roadmap dependencies",
+  "file": "roadmap-deps",
+  "intro": [],
+  "sections": [
+    {
+      "id": "phase-1-setup",
+      "title": "Phase 1: Setup",
+      "line": 3,
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Depends on: none.",
+          "line": 5
+        }
+      ],
+      "subsections": []
+    },
+    {
+      "id": "phase-2-data-model",
+      "title": "Phase 2: Data model",
+      "line": 7,
+      "blocks": [
+        {
+          "type": "p",
+          "text": "**Requires:** Phase 1.",
+          "line": 9
+        }
+      ],
+      "subsections": []
+    },
+    {
+      "id": "phase-3-api",
+      "title": "Phase 3: API",
+      "line": 11,
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            {
+              "text": "**Dependencies:** P1–P2. Can run in parallel with Phase 4.",
+              "ordered": false,
+              "line": 13
+            }
+          ],
+          "line": 13
+        }
+      ],
+      "subsections": []
+    },
+    {
+      "id": "phase-4-web-app",
+      "title": "Phase 4: Web app",
+      "line": 15,
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            {
+              "text": "Prerequisites: Data model, Setup",
+              "ordered": false,
+              "line": 17
+            }
+          ],
+          "line": 17
+        }
+      ],
+      "subsections": []
+    },
+    {
+      "id": "phase-5-launch",
+      "title": "Phase 5: Launch",
+      "line": 19,
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Blocked by: Phase 6 and P9.",
+          "line": 21
+        }
+      ],
+      "subsections": []
+    },
+    {
+      "id": "phase-6-docs",
+      "title": "Phase 6: Docs",
+      "line": 23,
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Dependencies: Phase 5.",
+          "line": 25
+        }
+      ],
+      "subsections": []
+    },
+    {
+      "id": "phase-7-retro",
+      "title": "Phase 7: Retro",
+      "line": 27,
+      "blocks": [
+        {
+          "type": "p",
+          "text": "No dependency line here, so its dependencies are unknown.",
+          "line": 29
+        }
+      ],
+      "subsections": []
+    }
+  ],
+  "tasks": [],
+  "callouts": [],
+  "diagrams": [],
+  "files": [],
+  "refs": {},
+  "warnings": [],
+  "roadmap": {
+    "ids": [
+      "phase-1-setup",
+      "phase-2-data-model",
+      "phase-3-api",
+      "phase-4-web-app",
+      "phase-5-launch",
+      "phase-6-docs",
+      "phase-7-retro"
+    ],
+    "basis": "titles"
+  },
+  "stats": {
+    "words": 63,
+    "code_blocks": 0
+  }
+}

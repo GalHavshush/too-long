@@ -1,0 +1,2907 @@
+{
+  "title": "TaskForge roadmap (excerpt)",
+  "file": "taskforge-roadmap",
+  "intro": [
+    {
+      "type": "p",
+      "text": "From the TaskForge implementation plan, section 14, verbatim.",
+      "line": 3
+    }
+  ],
+  "sections": [
+    {
+      "id": "implementation-roadmap",
+      "title": "Implementation Roadmap",
+      "line": 5,
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Phases 1–7 are the **MVP**. Phases 8–9 are **Beta**. Phase 10 is **GA**. Phases 8 and 9 can run in parallel with Phase 7.",
+          "line": 7
+        },
+        {
+          "type": "code",
+          "lang": "",
+          "text": "P1 → P2 → P3 → P4 → P5 → P6 → P7 → P10\n                 └──→ P8 ─────────┘\n            P4 + P6 → P9 ─────────┘",
+          "line": 9
+        }
+      ],
+      "subsections": [
+        {
+          "id": "phase-1-foundation-and-tooling",
+          "title": "Phase 1 — Foundation and tooling",
+          "line": 15,
+          "blocks": [
+            {
+              "type": "list",
+              "items": [
+                {
+                  "text": "**Objective:** A reproducible repository, configuration, logging, local infrastructure, and a CI skeleton.",
+                  "ordered": false,
+                  "line": 16
+                },
+                {
+                  "text": "**Dependencies:** None.",
+                  "ordered": false,
+                  "line": 17
+                },
+                {
+                  "text": "**Tasks:**",
+                  "ordered": false,
+                  "line": 18,
+                  "children": [
+                    {
+                      "text": "Initialize a `uv` project with Python 3.12 pinned; set up ruff, mypy (strict), and pre-commit",
+                      "ordered": false,
+                      "task": false,
+                      "line": 19,
+                      "id": "t-phase-1-foundation-and-tooling-initialize-a-uv-project-wit"
+                    },
+                    {
+                      "text": "`config.py`: `pydantic-settings` with typed settings and `SecretStr`, one settings class per component",
+                      "ordered": false,
+                      "task": false,
+                      "line": 20,
+                      "id": "t-phase-1-foundation-and-tooling-configpy-pydantic-settings"
+                    },
+                    {
+                      "text": "`logging.py`: structlog JSON configuration with request and job context binding",
+                      "ordered": false,
+                      "task": false,
+                      "line": 21,
+                      "id": "t-phase-1-foundation-and-tooling-loggingpy-structlog-json-co"
+                    },
+                    {
+                      "text": "`deploy/docker-compose.yml` with postgres and redis, using healthchecks",
+                      "ordered": false,
+                      "task": false,
+                      "line": 22,
+                      "id": "t-phase-1-foundation-and-tooling-deploydocker-composeyml-wit"
+                    },
+                    {
+                      "text": "Multi-stage `deploy/Dockerfile` with a non-root user and the `taskforge` CLI entrypoint (`api | worker | scheduler | migrate | admin`)",
+                      "ordered": false,
+                      "task": false,
+                      "line": 23,
+                      "id": "t-phase-1-foundation-and-tooling-multi-stage-deploydockerfil"
+                    },
+                    {
+                      "text": "`ci.yml`: lint, typecheck, unit tests, image build",
+                      "ordered": false,
+                      "task": false,
+                      "line": 24,
+                      "id": "t-phase-1-foundation-and-tooling-ciyml-lint-typecheck-unit-t"
+                    }
+                  ]
+                },
+                {
+                  "text": "**Files:** `pyproject.toml`, `src/taskforge/config.py`, `src/taskforge/logging.py`, `src/taskforge/cli.py`, `deploy/Dockerfile`, `.github/workflows/ci.yml`",
+                  "ordered": false,
+                  "line": 25
+                },
+                {
+                  "text": "**Deliverables:** A bootable skeleton and a green CI run.",
+                  "ordered": false,
+                  "line": 26
+                },
+                {
+                  "text": "**Acceptance criteria:** `docker compose up` gets PostgreSQL and Redis healthy in under 30 s. CI finishes in under 5 min. Misconfiguration fails at startup with a clear error.",
+                  "ordered": false,
+                  "line": 27
+                },
+                {
+                  "text": "**Testing:** Unit tests for settings parsing and secret redaction.",
+                  "ordered": false,
+                  "line": 28
+                },
+                {
+                  "text": "Over-investing in scaffolding. Keep it to the list above.",
+                  "ordered": false,
+                  "kind": "risk",
+                  "line": 29
+                }
+              ],
+              "line": 16
+            }
+          ]
+        },
+        {
+          "id": "phase-2-persistence-layer-and-state-machine",
+          "title": "Phase 2 — Persistence layer and state machine",
+          "line": 31,
+          "blocks": [
+            {
+              "type": "list",
+              "items": [
+                {
+                  "text": "**Objective:** The schema, migrations, and fenced transition functions.",
+                  "ordered": false,
+                  "line": 32
+                },
+                {
+                  "text": "**Dependencies:** P1.",
+                  "ordered": false,
+                  "line": 33
+                },
+                {
+                  "text": "**Tasks:**",
+                  "ordered": false,
+                  "line": 34,
+                  "children": [
+                    {
+                      "text": "`domain/states.py`: the allowed-transition table (pure Python) and `domain/backoff.py` (equal jitter)",
+                      "ordered": false,
+                      "task": false,
+                      "line": 35,
+                      "id": "t-phase-2-persistence-layer-and-state-machine-domainstatespy"
+                    },
+                    {
+                      "text": "`db/models.py`: SQLAlchemy 2.0 typed models for every table in §7",
+                      "ordered": false,
+                      "task": false,
+                      "line": 36,
+                      "id": "t-phase-2-persistence-layer-and-state-machine-dbmodelspy-sql"
+                    },
+                    {
+                      "text": "First Alembic migration, including enums, partial indexes, and `fillfactor`",
+                      "ordered": false,
+                      "task": false,
+                      "line": 37,
+                      "id": "t-phase-2-persistence-layer-and-state-machine-first-alembic"
+                    },
+                    {
+                      "text": "`db/jobs_repo.py`: async functions, each a single guarded statement",
+                      "ordered": false,
+                      "task": false,
+                      "line": 38,
+                      "children": [
+                        {
+                          "text": "`insert_job` (idempotent), `claim`, `renew_leases`, `complete`, `fail`, `release`",
+                          "ordered": false,
+                          "task": false,
+                          "line": 39,
+                          "id": "t-phase-2-persistence-layer-and-state-machine-insertjob-idem"
+                        },
+                        {
+                          "text": "`request_cancel`, `manual_retry`, `promote_due`, `select_undispatched`, `reap_expired`",
+                          "ordered": false,
+                          "task": false,
+                          "line": 40,
+                          "id": "t-phase-2-persistence-layer-and-state-machine-requestcancel"
+                        }
+                      ],
+                      "id": "t-phase-2-persistence-layer-and-state-machine-dbjobsrepopy-a"
+                    },
+                    {
+                      "text": "`db/session.py`: async engine, pool sizing, PgBouncer-safe settings (`prepared_statement_cache_size=0`)",
+                      "ordered": false,
+                      "task": false,
+                      "line": 41,
+                      "id": "t-phase-2-persistence-layer-and-state-machine-dbsessionpy-as"
+                    }
+                  ]
+                },
+                {
+                  "text": "**Files:** `src/taskforge/db/models.py`, `src/taskforge/db/jobs_repo.py`, `src/taskforge/db/migrations/versions/0001_initial.py`, `src/taskforge/domain/states.py`",
+                  "ordered": false,
+                  "line": 42
+                },
+                {
+                  "text": "**Deliverables:** The migrated schema and a repository with full transition coverage.",
+                  "ordered": false,
+                  "line": 43
+                },
+                {
+                  "text": "**Acceptance criteria:** `alembic upgrade head` followed by `downgrade base` succeeds on an empty database. `alembic check` reports no drift. Every transition in the diagram in §9.1 has a test, and every disallowed transition matches 0 rows.",
+                  "ordered": false,
+                  "line": 44
+                },
+                {
+                  "text": "**Testing:** `tests/unit/test_states.py`, `tests/unit/test_backoff.py`, `tests/integration/test_jobs_repo.py` against real PostgreSQL, and `tests/integration/test_claim_race.py` (50 concurrent claims result in exactly 1 winner).",
+                  "ordered": false,
+                  "line": 45
+                },
+                {
+                  "text": "Index choices hurting HOT updates. Benchmark in P10.",
+                  "ordered": false,
+                  "kind": "risk",
+                  "line": 46
+                }
+              ],
+              "line": 32
+            }
+          ]
+        },
+        {
+          "id": "phase-3-authentication-and-api-keys",
+          "title": "Phase 3 — Authentication and API keys",
+          "line": 48,
+          "blocks": [
+            {
+              "type": "list",
+              "items": [
+                {
+                  "text": "**Objective:** Tenant-scoped authentication and scope-based authorization.",
+                  "ordered": false,
+                  "line": 49
+                },
+                {
+                  "text": "**Dependencies:** P2.",
+                  "ordered": false,
+                  "line": 50
+                },
+                {
+                  "text": "**Tasks:**",
+                  "ordered": false,
+                  "line": 51,
+                  "children": [
+                    {
+                      "text": "`security/api_keys.py`: generation, HMAC hashing with `pepper_id`, constant-time verification",
+                      "ordered": false,
+                      "task": false,
+                      "line": 52,
+                      "id": "t-phase-3-authentication-and-api-keys-securityapikeyspy-gene"
+                    },
+                    {
+                      "text": "`api/deps.py`: a `Principal` dependency (tenant, key ID, scopes), a 60 s LRU cache, and a `require_scope()` dependency",
+                      "ordered": false,
+                      "task": false,
+                      "line": 53,
+                      "id": "t-phase-3-authentication-and-api-keys-apidepspy-a-principal"
+                    },
+                    {
+                      "text": "`api/routes/keys.py`: create (secret shown once), list, and revoke, all audited",
+                      "ordered": false,
+                      "task": false,
+                      "line": 54,
+                      "id": "t-phase-3-authentication-and-api-keys-apirouteskeyspy-create"
+                    },
+                    {
+                      "text": "CLI `admin create-tenant` and `admin create-key`",
+                      "ordered": false,
+                      "task": false,
+                      "line": 55,
+                      "id": "t-phase-3-authentication-and-api-keys-cli-admin-create-tenan"
+                    },
+                    {
+                      "text": "Failed-auth counter per IP (in-memory in P3, moved to Redis in P8)",
+                      "ordered": false,
+                      "task": false,
+                      "line": 56,
+                      "id": "t-phase-3-authentication-and-api-keys-failed-auth-counter-pe"
+                    }
+                  ]
+                },
+                {
+                  "text": "**Files:** `src/taskforge/security/api_keys.py`, `src/taskforge/api/deps.py`, `src/taskforge/api/routes/keys.py`, `src/taskforge/db/keys_repo.py`",
+                  "ordered": false,
+                  "line": 57
+                },
+                {
+                  "text": "**Deliverables:** Working key lifecycle and enforced authentication.",
+                  "ordered": false,
+                  "line": 58
+                },
+                {
+                  "text": "**Acceptance criteria:** A revoked key is rejected within 60 s. Cross-tenant access returns `404`. Verification adds under 1 ms at p99 on a cache hit. Secrets never appear in logs (verified by a log-capture test).",
+                  "ordered": false,
+                  "line": 59
+                },
+                {
+                  "text": "**Testing:** Unit tests for hashing and parsing. `tests/integration/test_auth.py` covers the tenant-isolation matrix across every endpoint and scope.",
+                  "ordered": false,
+                  "line": 60
+                },
+                {
+                  "text": "The revocation cache window. It is documented, and the TTL is configurable.",
+                  "ordered": false,
+                  "kind": "risk",
+                  "line": 61
+                }
+              ],
+              "line": 49
+            }
+          ]
+        },
+        {
+          "id": "phase-4-jobs-api",
+          "title": "Phase 4 — Jobs API",
+          "line": 63,
+          "blocks": [
+            {
+              "type": "list",
+              "items": [
+                {
+                  "text": "**Objective:** Submit, get, list, attempts, cancel, and retry endpoints, without dispatch.",
+                  "ordered": false,
+                  "line": 64
+                },
+                {
+                  "text": "**Dependencies:** P2, P3.",
+                  "ordered": false,
+                  "line": 65
+                },
+                {
+                  "text": "**Tasks:**",
+                  "ordered": false,
+                  "line": 66,
+                  "children": [
+                    {
+                      "text": "`api/schemas.py`: strict request and response models with every limit from §8",
+                      "ordered": false,
+                      "task": false,
+                      "line": 67,
+                      "id": "t-phase-4-jobs-api-apischemaspy-strict-request-and-res"
+                    },
+                    {
+                      "text": "`POST /v1/jobs`: idempotent insert, `request_hash` comparison, `200` replay or `409` conflict",
+                      "ordered": false,
+                      "task": false,
+                      "line": 68,
+                      "id": "t-phase-4-jobs-api-post-v1jobs-idempotent-insert-req"
+                    },
+                    {
+                      "text": "`GET /v1/jobs` keyset pagination with filters; `GET /v1/jobs/{id}` and `/attempts`",
+                      "ordered": false,
+                      "task": false,
+                      "line": 69,
+                      "id": "t-phase-4-jobs-api-get-v1jobs-keyset-pagination-with-fi"
+                    },
+                    {
+                      "text": "Cancel and retry endpoints mapped to the repository CAS results (`200`/`202`/`409`)",
+                      "ordered": false,
+                      "task": false,
+                      "line": 70,
+                      "id": "t-phase-4-jobs-api-cancel-and-retry-endpoints-mapped-to-the"
+                    },
+                    {
+                      "text": "RFC 9457 error handler, `request_id` middleware, OpenAPI published at `/v1/openapi.json`",
+                      "ordered": false,
+                      "task": false,
+                      "line": 71,
+                      "id": "t-phase-4-jobs-api-rfc-9457-error-handler-requestid-mid"
+                    },
+                    {
+                      "text": "`/healthz` and `/readyz`",
+                      "ordered": false,
+                      "task": false,
+                      "line": 72,
+                      "id": "t-phase-4-jobs-api-healthz-and-readyz"
+                    }
+                  ]
+                },
+                {
+                  "text": "**Files:** `src/taskforge/api/routes/jobs.py`, `src/taskforge/api/schemas.py`, `src/taskforge/api/errors.py`, `src/taskforge/api/routes/health.py`",
+                  "ordered": false,
+                  "line": 73
+                },
+                {
+                  "text": "**Deliverables:** A complete control-plane API with jobs persisted as `queued` or `scheduled`.",
+                  "ordered": false,
+                  "line": 74
+                },
+                {
+                  "text": "**Acceptance criteria:** 50 parallel submits with the same key create exactly 1 job. Submit p99 is under 50 ms locally. Every endpoint passes Schemathesis fuzzing with no 5xx.",
+                  "ordered": false,
+                  "line": 75
+                },
+                {
+                  "text": "**Testing:** `tests/integration/test_jobs_api.py`, `tests/integration/test_idempotency.py`, and `tests/contract/test_openapi.py` (Schemathesis).",
+                  "ordered": false,
+                  "line": 76
+                },
+                {
+                  "text": "Slow listing queries at scale. Indexes must match every filter combination; verify with `EXPLAIN` in tests.",
+                  "ordered": false,
+                  "kind": "risk",
+                  "line": 77
+                }
+              ],
+              "line": 64
+            }
+          ]
+        },
+        {
+          "id": "phase-5-redis-queue-and-scheduler-dispatch",
+          "title": "Phase 5 — Redis queue and scheduler dispatch",
+          "line": 79,
+          "blocks": [
+            {
+              "type": "list",
+              "items": [
+                {
+                  "text": "**Objective:** Move eligible jobs into Redis reliably.",
+                  "ordered": false,
+                  "line": 80
+                },
+                {
+                  "text": "**Dependencies:** P2. The API fast path needs P4.",
+                  "ordered": false,
+                  "line": 81
+                },
+                {
+                  "text": "**Tasks:**",
+                  "ordered": false,
+                  "line": 82,
+                  "children": [
+                    {
+                      "text": "`queue/redis_backend.py`: key naming, score function, pipelined `ZADD NX`, `BZPOPMIN` with rotation, `ZCARD`",
+                      "ordered": false,
+                      "task": false,
+                      "line": 83,
+                      "id": "t-phase-5-redis-queue-and-scheduler-dispatch-queueredisbacke"
+                    },
+                    {
+                      "text": "Post-commit fast-path dispatch in the API through `BackgroundTasks`, with a 50 ms timeout and errors swallowed but counted",
+                      "ordered": false,
+                      "task": false,
+                      "line": 84,
+                      "id": "t-phase-5-redis-queue-and-scheduler-dispatch-post-commit-fas"
+                    },
+                    {
+                      "text": "`scheduler/promoter.py`: `scheduled`/`retrying` jobs whose `run_at` has passed go to `queued` (`dispatched_at=NULL`)",
+                      "ordered": false,
+                      "task": false,
+                      "line": 85,
+                      "id": "t-phase-5-redis-queue-and-scheduler-dispatch-schedulerpromot"
+                    },
+                    {
+                      "text": "`scheduler/dispatcher.py`: undispatched or stale queued jobs get `ZADD NX`, then `dispatched_at=now()`",
+                      "ordered": false,
+                      "task": false,
+                      "line": 86,
+                      "children": [
+                        {
+                          "text": "Skip reconciling a queue when its ZCARD equals the PostgreSQL queued count",
+                          "ordered": false,
+                          "task": false,
+                          "line": 87,
+                          "id": "t-phase-5-redis-queue-and-scheduler-dispatch-skip-reconcilin"
+                        }
+                      ],
+                      "id": "t-phase-5-redis-queue-and-scheduler-dispatch-schedulerdispat"
+                    },
+                    {
+                      "text": "`scheduler/main.py`: asyncio loops, each with jittered intervals and its own error isolation",
+                      "ordered": false,
+                      "task": false,
+                      "line": 88,
+                      "id": "t-phase-5-redis-queue-and-scheduler-dispatch-schedulermainpy"
+                    }
+                  ]
+                },
+                {
+                  "text": "**Files:** `src/taskforge/queue/redis_backend.py`, `src/taskforge/scheduler/{main,promoter,dispatcher}.py`",
+                  "ordered": false,
+                  "line": 89
+                },
+                {
+                  "text": "**Deliverables:** Jobs reach Redis within about 1 s of becoming eligible, even if the fast path fails.",
+                  "ordered": false,
+                  "line": 90
+                },
+                {
+                  "text": "**Acceptance criteria:** After `FLUSHALL`, every queued job is back in Redis within 60 s. Two scheduler replicas never double-promote (verified through `job_attempts` and the audit counts). A scheduled job is queued within 2 s of `run_at` at p95.",
+                  "ordered": false,
+                  "line": 91
+                },
+                {
+                  "text": "**Testing:** `tests/integration/test_dispatch.py`, `tests/integration/test_redis_rebuild.py`, `tests/integration/test_scheduler_replicas.py`.",
+                  "ordered": false,
+                  "line": 92
+                },
+                {
+                  "text": "Reconciler cost when the backlog is huge. Mitigated by the ZCARD shortcut and batched scans.",
+                  "ordered": false,
+                  "kind": "risk",
+                  "line": 93
+                }
+              ],
+              "line": 80
+            }
+          ]
+        },
+        {
+          "id": "phase-6-worker-runtime",
+          "title": "Phase 6 — Worker runtime",
+          "line": 95,
+          "blocks": [
+            {
+              "type": "list",
+              "items": [
+                {
+                  "text": "**Objective:** Execute jobs safely and concurrently.",
+                  "ordered": false,
+                  "line": 96
+                },
+                {
+                  "text": "**Dependencies:** P5.",
+                  "ordered": false,
+                  "line": 97
+                },
+                {
+                  "text": "**Tasks:**",
+                  "ordered": false,
+                  "line": 98,
+                  "children": [
+                    {
+                      "text": "`workers/registry.py`: `@task(name, retryable_exceptions=...)` decorator",
+                      "ordered": false,
+                      "task": false,
+                      "line": 99,
+                      "id": "t-phase-6-worker-runtime-workersregistrypy-taskname-retr"
+                    },
+                    {
+                      "text": "`workers/runner.py`: slot semaphore, pop-then-claim, execution under timeout, writing outcomes and `job_attempts`",
+                      "ordered": false,
+                      "task": false,
+                      "line": 100,
+                      "children": [
+                        {
+                          "text": "Classify errors: retryable, non-retryable (`PermanentError`), timeout, `unknown_task`",
+                          "ordered": false,
+                          "task": false,
+                          "line": 101,
+                          "id": "t-phase-6-worker-runtime-classify-errors-retryable-non-retry"
+                        },
+                        {
+                          "text": "Sync handlers via `to_thread`, with process recycling after a timeout",
+                          "ordered": false,
+                          "task": false,
+                          "line": 102,
+                          "id": "t-phase-6-worker-runtime-sync-handlers-via-tothread-with-pro"
+                        }
+                      ],
+                      "id": "t-phase-6-worker-runtime-workersrunnerpy-slot-semaphore-pop"
+                    },
+                    {
+                      "text": "`workers/lease.py`: batched heartbeat, cancel-flag propagation, monotonic self-fencing",
+                      "ordered": false,
+                      "task": false,
+                      "line": 103,
+                      "id": "t-phase-6-worker-runtime-workersleasepy-batched-heartbeat-c"
+                    },
+                    {
+                      "text": "Worker registration, status updates, the SIGTERM/SIGINT drain, and lease release",
+                      "ordered": false,
+                      "task": false,
+                      "line": 104,
+                      "id": "t-phase-6-worker-runtime-worker-registration-status-updates"
+                    },
+                    {
+                      "text": "`workers/context.py`: a `JobContext` exposing `job_id`, `attempt`, `idempotency_token`, `lease_token`, `logger`",
+                      "ordered": false,
+                      "task": false,
+                      "line": 105,
+                      "id": "t-phase-6-worker-runtime-workerscontextpy-a-jobcontext-exp"
+                    }
+                  ]
+                },
+                {
+                  "text": "**Files:** `src/taskforge/workers/{runner,registry,lease,context,main}.py`, `src/taskforge/db/workers_repo.py`",
+                  "ordered": false,
+                  "line": 106
+                },
+                {
+                  "text": "**Deliverables:** Horizontally scalable workers running the example tasks end to end.",
+                  "ordered": false,
+                  "line": 107
+                },
+                {
+                  "text": "**Acceptance criteria:** 10,000 `demo.sleep(0)` jobs finish with 0 lost. SIGTERM during load gives 0 `lost` attempts (only `released` or `succeeded`). A timeout fires within 1 s of its configured value.",
+                  "ordered": false,
+                  "line": 108
+                },
+                {
+                  "text": "**Testing:** `tests/integration/test_worker_execution.py`, `tests/integration/test_graceful_shutdown.py`, `tests/integration/test_timeouts.py`.",
+                  "ordered": false,
+                  "line": 109
+                },
+                {
+                  "text": "Blocking sync handlers starving the event loop. Document the async-first approach and cap `to_thread` concurrency.",
+                  "ordered": false,
+                  "kind": "risk",
+                  "line": 110
+                }
+              ],
+              "line": 96
+            }
+          ]
+        },
+        {
+          "id": "phase-7-recovery-cancellation-dlq-and-outage-handling",
+          "title": "Phase 7 — Recovery, cancellation, DLQ, and outage handling",
+          "line": 112,
+          "blocks": [
+            {
+              "type": "list",
+              "items": [
+                {
+                  "text": "**Objective:** Meet the reliability targets in §4 under fault injection.",
+                  "ordered": false,
+                  "line": 113
+                },
+                {
+                  "text": "**Dependencies:** P6.",
+                  "ordered": false,
+                  "line": 114
+                },
+                {
+                  "text": "**Tasks:**",
+                  "ordered": false,
+                  "line": 115,
+                  "children": [
+                    {
+                      "text": "`scheduler/reaper.py`: reclaim expired leases (`retrying`/`dead`/`cancelled`) and record the `lost` attempt",
+                      "ordered": false,
+                      "task": false,
+                      "line": 116,
+                      "id": "t-phase-7-recovery-cancellation-dlq-and-outage-handling-sche"
+                    },
+                    {
+                      "text": "`scheduler/monitor.py`: mark lost workers",
+                      "ordered": false,
+                      "task": false,
+                      "line": 117,
+                      "id": "t-phase-7-recovery-cancellation-dlq-and-outage-handling-sche-2"
+                    },
+                    {
+                      "text": "Cooperative cancellation end to end, including the cancel-while-reaping case",
+                      "ordered": false,
+                      "task": false,
+                      "line": 118,
+                      "id": "t-phase-7-recovery-cancellation-dlq-and-outage-handling-coop"
+                    },
+                    {
+                      "text": "DLQ workflow: filtering on `dead`, manual retry with an audit entry",
+                      "ordered": false,
+                      "task": false,
+                      "line": 119,
+                      "id": "t-phase-7-recovery-cancellation-dlq-and-outage-handling-dlq"
+                    },
+                    {
+                      "text": "Redis outage handling: circuit breaker with exponential backoff in workers; API keeps accepting jobs",
+                      "ordered": false,
+                      "task": false,
+                      "line": 120,
+                      "id": "t-phase-7-recovery-cancellation-dlq-and-outage-handling-redi"
+                    },
+                    {
+                      "text": "Database outage handling: retry heartbeats and completions with backoff; API returns `503` on writes",
+                      "ordered": false,
+                      "task": false,
+                      "line": 121,
+                      "id": "t-phase-7-recovery-cancellation-dlq-and-outage-handling-data"
+                    },
+                    {
+                      "text": "`tests/chaos/invariants.py`: after a run, every job is terminal, has exactly one terminal transition, and has no more than `max_attempts` counted attempts",
+                      "ordered": false,
+                      "task": false,
+                      "line": 122,
+                      "id": "t-phase-7-recovery-cancellation-dlq-and-outage-handling-test"
+                    }
+                  ]
+                },
+                {
+                  "text": "**Files:** `src/taskforge/scheduler/{reaper,monitor}.py`, `tests/integration/test_job_recovery.py`, `tests/chaos/`",
+                  "ordered": false,
+                  "line": 123
+                },
+                {
+                  "text": "**Deliverables:** A self-healing platform. **Milestone:** M1 internal alpha (MVP complete).",
+                  "ordered": false,
+                  "line": 124
+                },
+                {
+                  "text": "**Acceptance criteria:** A worker hit with SIGKILL has its job in `retrying` within 85 s. A 30 s PostgreSQL restart under load causes 0 duplicate executions. A 2 min Redis outage loses 0 jobs, and the backlog starts draining within 10 s of recovery. A running job cancels within 20 s.",
+                  "ordered": false,
+                  "line": 125
+                },
+                {
+                  "text": "**Testing:** Chaos suite using Toxiproxy (latency, partition), `docker kill -s KILL`, `redis-cli FLUSHALL`, and `pg_ctl restart`. The invariant checker runs after each scenario.",
+                  "ordered": false,
+                  "line": 126
+                },
+                {
+                  "text": "Flaky timing-based tests. Use injectable clocks and intervals (test settings shrink them 10×).",
+                  "ordered": false,
+                  "kind": "risk",
+                  "line": 127
+                }
+              ],
+              "line": 113
+            }
+          ]
+        },
+        {
+          "id": "phase-8-rate-limiting-backpressure-and-abuse-prevention",
+          "title": "Phase 8 — Rate limiting, backpressure, and abuse prevention",
+          "line": 129,
+          "blocks": [
+            {
+              "type": "list",
+              "items": [
+                {
+                  "text": "**Objective:** Protect the shared platform from noisy tenants.",
+                  "ordered": false,
+                  "line": 130
+                },
+                {
+                  "text": "**Dependencies:** P4, P5.",
+                  "ordered": false,
+                  "line": 131
+                },
+                {
+                  "text": "**Tasks:**",
+                  "ordered": false,
+                  "line": 132,
+                  "children": [
+                    {
+                      "text": "`queue/lua/token_bucket.lua` and `queue/ratelimit.py`: limits per key and per tenant, `RateLimit-*` headers",
+                      "ordered": false,
+                      "task": false,
+                      "line": 133,
+                      "id": "t-phase-8-rate-limiting-backpressure-and-abuse-prevention-qu"
+                    },
+                    {
+                      "text": "In-process fallback limiter that applies a per-replica share of the limit when Redis is down (fail-open)",
+                      "ordered": false,
+                      "task": false,
+                      "line": 134,
+                      "id": "t-phase-8-rate-limiting-backpressure-and-abuse-prevention-in"
+                    },
+                    {
+                      "text": "Queue high-watermark check, returning `503` with `Retry-After`",
+                      "ordered": false,
+                      "task": false,
+                      "line": 135,
+                      "id": "t-phase-8-rate-limiting-backpressure-and-abuse-prevention-qu-2"
+                    },
+                    {
+                      "text": "Scheduler caches per-tenant pending counts in Redis every 15 s; API enforces the soft quota",
+                      "ordered": false,
+                      "task": false,
+                      "line": 136,
+                      "id": "t-phase-8-rate-limiting-backpressure-and-abuse-prevention-sc"
+                    },
+                    {
+                      "text": "Failed-auth throttling per IP moved to Redis; `allowed_queues` enforcement",
+                      "ordered": false,
+                      "task": false,
+                      "line": 137,
+                      "id": "t-phase-8-rate-limiting-backpressure-and-abuse-prevention-fa"
+                    }
+                  ]
+                },
+                {
+                  "text": "**Files:** `src/taskforge/queue/ratelimit.py`, `src/taskforge/queue/lua/token_bucket.lua`, `src/taskforge/api/deps.py`",
+                  "ordered": false,
+                  "line": 138
+                },
+                {
+                  "text": "**Deliverables:** Enforced limits, with clients told how long to back off.",
+                  "ordered": false,
+                  "line": 139
+                },
+                {
+                  "text": "**Acceptance criteria:** A tenant over its limit gets `429` while other tenants' p99 stays within 10% of baseline. A Redis outage does not cause API 5xx.",
+                  "ordered": false,
+                  "line": 140
+                },
+                {
+                  "text": "**Testing:** `tests/integration/test_rate_limit.py` and a noisy-neighbor scenario in `tests/load/`.",
+                  "ordered": false,
+                  "line": 141
+                },
+                {
+                  "text": "The soft quota can be overshot by up to 15 s worth of submissions. Accepted.",
+                  "ordered": false,
+                  "kind": "risk",
+                  "line": 142
+                }
+              ],
+              "line": 130
+            }
+          ]
+        },
+        {
+          "id": "phase-9-observability",
+          "title": "Phase 9 — Observability",
+          "line": 144,
+          "blocks": [
+            {
+              "type": "list",
+              "items": [
+                {
+                  "text": "**Objective:** Traces, metrics, dashboards, and alerts as specified in §12.",
+                  "ordered": false,
+                  "line": 145
+                },
+                {
+                  "text": "**Dependencies:** P4, P6. Can run in parallel with P7 and P8.",
+                  "ordered": false,
+                  "line": 146
+                },
+                {
+                  "text": "**Tasks:**",
+                  "ordered": false,
+                  "line": 147,
+                  "children": [
+                    {
+                      "text": "`telemetry.py`: OTel providers, auto-instrumentation, `traceparent` capture and span links",
+                      "ordered": false,
+                      "task": false,
+                      "line": 148,
+                      "id": "t-phase-9-observability-telemetrypy-otel-providers-auto-ins"
+                    },
+                    {
+                      "text": "Prometheus metrics per §12; scheduler exports depth, age, and status gauges",
+                      "ordered": false,
+                      "task": false,
+                      "line": 149,
+                      "id": "t-phase-9-observability-prometheus-metrics-per-12-scheduler"
+                    },
+                    {
+                      "text": "Add the OTel Collector, Jaeger, Prometheus, and Grafana to compose",
+                      "ordered": false,
+                      "task": false,
+                      "line": 150,
+                      "id": "t-phase-9-observability-add-the-otel-collector-jaeger-promet"
+                    },
+                    {
+                      "text": "`deploy/grafana/dashboards/{overview,workers}.json`, `deploy/prometheus/rules.yml`",
+                      "ordered": false,
+                      "task": false,
+                      "line": 151,
+                      "id": "t-phase-9-observability-deploygrafanadashboardsoverviewwor"
+                    },
+                    {
+                      "text": "Runbooks for each alert in `docs/runbooks/`",
+                      "ordered": false,
+                      "task": false,
+                      "line": 152,
+                      "id": "t-phase-9-observability-runbooks-for-each-alert-in-docsrunbo"
+                    },
+                    {
+                      "text": "`GET /v1/workers` and `GET /v1/queues/stats`",
+                      "ordered": false,
+                      "task": false,
+                      "line": 153,
+                      "id": "t-phase-9-observability-get-v1workers-and-get-v1queuesst"
+                    }
+                  ]
+                },
+                {
+                  "text": "**Files:** `src/taskforge/telemetry.py`, `src/taskforge/api/routes/{workers,queues}.py`, `deploy/grafana/`, `deploy/prometheus/rules.yml`",
+                  "ordered": false,
+                  "line": 154
+                },
+                {
+                  "text": "**Deliverables:** A worker-health dashboard and working alerting. **Milestone:** M2 beta.",
+                  "ordered": false,
+                  "line": 155
+                },
+                {
+                  "text": "**Acceptance criteria:** One trace connects the submit request to the execution span through a link. Each chaos scenario from P7 fires its expected alert within 2 min. Metric cardinality stays under 5,000 series at the reference scale.",
+                  "ordered": false,
+                  "line": 156
+                },
+                {
+                  "text": "**Testing:** `tests/integration/test_metrics.py` (scrape and assert), plus a promtool unit test for the alert rules.",
+                  "ordered": false,
+                  "line": 157
+                },
+                {
+                  "text": "Cardinality from the `task` label. Enforce the task-name regex and cap the number of distinct tasks.",
+                  "ordered": false,
+                  "kind": "risk",
+                  "line": 158
+                }
+              ],
+              "line": 145
+            }
+          ]
+        },
+        {
+          "id": "phase-10-production-deployment-cicd-and-ga-hardening",
+          "title": "Phase 10 — Production deployment, CI/CD, and GA hardening",
+          "line": 160,
+          "blocks": [
+            {
+              "type": "list",
+              "items": [
+                {
+                  "text": "**Objective:** A safe, repeatable production rollout that meets the targets in §4.",
+                  "ordered": false,
+                  "line": 161
+                },
+                {
+                  "text": "**Dependencies:** All prior phases.",
+                  "ordered": false,
+                  "line": 162
+                },
+                {
+                  "text": "**Tasks:**",
+                  "ordered": false,
+                  "line": 163,
+                  "children": [
+                    {
+                      "text": "Helm chart `deploy/helm/taskforge/`: api (HPA), scheduler (2 replicas, PodDisruptionBudget), worker deployments per queue group (KEDA), migration Job as a `pre-upgrade` hook, NetworkPolicies",
+                      "ordered": false,
+                      "task": false,
+                      "line": 164,
+                      "id": "t-phase-10-production-deployment-cicd-and-ga-hardening-helm"
+                    },
+                    {
+                      "text": "`release.yml`: on a tag, build, scan, and push by digest; deploy to staging; run smoke and e2e tests; get manual approval; deploy to production",
+                      "ordered": false,
+                      "task": false,
+                      "line": 165,
+                      "id": "t-phase-10-production-deployment-cicd-and-ga-hardening-relea"
+                    },
+                    {
+                      "text": "Load tests (`tests/load/locustfile.py`) at the targets in §4; tune PostgreSQL autovacuum and fillfactor",
+                      "ordered": false,
+                      "task": false,
+                      "line": 166,
+                      "id": "t-phase-10-production-deployment-cicd-and-ga-hardening-load"
+                    },
+                    {
+                      "text": "`scheduler/retention.py`: purge terminal jobs and attempts older than 30 days, expire idempotency keys",
+                      "ordered": false,
+                      "task": false,
+                      "line": 167,
+                      "id": "t-phase-10-production-deployment-cicd-and-ga-hardening-sched"
+                    },
+                    {
+                      "text": "Security review and pen-test checklist; rollback drill in staging",
+                      "ordered": false,
+                      "task": false,
+                      "line": 168,
+                      "id": "t-phase-10-production-deployment-cicd-and-ga-hardening-secur"
+                    }
+                  ]
+                },
+                {
+                  "text": "**Files:** `deploy/helm/taskforge/**`, `.github/workflows/release.yml`, `tests/load/locustfile.py`, `src/taskforge/scheduler/retention.py`",
+                  "ordered": false,
+                  "line": 169
+                },
+                {
+                  "text": "**Deliverables:** Production deployment and runbooks. **Milestone:** M3 GA.",
+                  "ordered": false,
+                  "line": 170
+                },
+                {
+                  "text": "**Acceptance criteria:** All targets in §4 are met in a staging load test for 1 h. The rollback drill finishes in under 10 min with 0 lost jobs. There are no critical or high CVEs.",
+                  "ordered": false,
+                  "line": 171
+                },
+                {
+                  "text": "**Testing:** Load tests, a 24 h soak test with background chaos, the rollback drill.",
+                  "ordered": false,
+                  "line": 172
+                },
+                {
+                  "text": "PostgreSQL write throughput turning into the ceiling (see §18).",
+                  "ordered": false,
+                  "kind": "risk",
+                  "line": 173
+                }
+              ],
+              "line": 161
+            },
+            {
+              "type": "p",
+              "text": "**Later (after GA):** cron schedules, priority aging and weighted fair queuing per tenant, partitioning `jobs` by month, an HTTP pull API for non-Python workers, completion webhooks, and payload encryption.",
+              "line": 175
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "t-phase-1-foundation-and-tooling-initialize-a-uv-project-wit",
+      "text": "Initialize a `uv` project with Python 3.12 pinned; set up ruff, mypy (strict), and pre-commit",
+      "done": false,
+      "at": "phase-1-foundation-and-tooling",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 19,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-1-foundation-and-tooling-configpy-pydantic-settings",
+      "text": "`config.py`: `pydantic-settings` with typed settings and `SecretStr`, one settings class per component",
+      "done": false,
+      "at": "phase-1-foundation-and-tooling",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 20,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-1-foundation-and-tooling-loggingpy-structlog-json-co",
+      "text": "`logging.py`: structlog JSON configuration with request and job context binding",
+      "done": false,
+      "at": "phase-1-foundation-and-tooling",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 21,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-1-foundation-and-tooling-deploydocker-composeyml-wit",
+      "text": "`deploy/docker-compose.yml` with postgres and redis, using healthchecks",
+      "done": false,
+      "at": "phase-1-foundation-and-tooling",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 22,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-1-foundation-and-tooling-multi-stage-deploydockerfil",
+      "text": "Multi-stage `deploy/Dockerfile` with a non-root user and the `taskforge` CLI entrypoint (`api | worker | scheduler | migrate | admin`)",
+      "done": false,
+      "at": "phase-1-foundation-and-tooling",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 23,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-1-foundation-and-tooling-ciyml-lint-typecheck-unit-t",
+      "text": "`ci.yml`: lint, typecheck, unit tests, image build",
+      "done": false,
+      "at": "phase-1-foundation-and-tooling",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 24,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-2-persistence-layer-and-state-machine-domainstatespy",
+      "text": "`domain/states.py`: the allowed-transition table (pure Python) and `domain/backoff.py` (equal jitter)",
+      "done": false,
+      "at": "phase-2-persistence-layer-and-state-machine",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 35,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-2-persistence-layer-and-state-machine-dbmodelspy-sql",
+      "text": "`db/models.py`: SQLAlchemy 2.0 typed models for every table in §7",
+      "done": false,
+      "at": "phase-2-persistence-layer-and-state-machine",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 36,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-2-persistence-layer-and-state-machine-first-alembic",
+      "text": "First Alembic migration, including enums, partial indexes, and `fillfactor`",
+      "done": false,
+      "at": "phase-2-persistence-layer-and-state-machine",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 37,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-2-persistence-layer-and-state-machine-dbjobsrepopy-a",
+      "text": "`db/jobs_repo.py`: async functions, each a single guarded statement",
+      "done": false,
+      "at": "phase-2-persistence-layer-and-state-machine",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 38,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-2-persistence-layer-and-state-machine-insertjob-idem",
+      "text": "`insert_job` (idempotent), `claim`, `renew_leases`, `complete`, `fail`, `release`",
+      "done": false,
+      "at": "phase-2-persistence-layer-and-state-machine",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 39,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-2-persistence-layer-and-state-machine-requestcancel",
+      "text": "`request_cancel`, `manual_retry`, `promote_due`, `select_undispatched`, `reap_expired`",
+      "done": false,
+      "at": "phase-2-persistence-layer-and-state-machine",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 40,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-2-persistence-layer-and-state-machine-dbsessionpy-as",
+      "text": "`db/session.py`: async engine, pool sizing, PgBouncer-safe settings (`prepared_statement_cache_size=0`)",
+      "done": false,
+      "at": "phase-2-persistence-layer-and-state-machine",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 41,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-3-authentication-and-api-keys-securityapikeyspy-gene",
+      "text": "`security/api_keys.py`: generation, HMAC hashing with `pepper_id`, constant-time verification",
+      "done": false,
+      "at": "phase-3-authentication-and-api-keys",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 52,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-3-authentication-and-api-keys-apidepspy-a-principal",
+      "text": "`api/deps.py`: a `Principal` dependency (tenant, key ID, scopes), a 60 s LRU cache, and a `require_scope()` dependency",
+      "done": false,
+      "at": "phase-3-authentication-and-api-keys",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 53,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-3-authentication-and-api-keys-apirouteskeyspy-create",
+      "text": "`api/routes/keys.py`: create (secret shown once), list, and revoke, all audited",
+      "done": false,
+      "at": "phase-3-authentication-and-api-keys",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 54,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-3-authentication-and-api-keys-cli-admin-create-tenan",
+      "text": "CLI `admin create-tenant` and `admin create-key`",
+      "done": false,
+      "at": "phase-3-authentication-and-api-keys",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 55,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-3-authentication-and-api-keys-failed-auth-counter-pe",
+      "text": "Failed-auth counter per IP (in-memory in P3, moved to Redis in P8)",
+      "done": false,
+      "at": "phase-3-authentication-and-api-keys",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 56,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-4-jobs-api-apischemaspy-strict-request-and-res",
+      "text": "`api/schemas.py`: strict request and response models with every limit from §8",
+      "done": false,
+      "at": "phase-4-jobs-api",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 67,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-4-jobs-api-post-v1jobs-idempotent-insert-req",
+      "text": "`POST /v1/jobs`: idempotent insert, `request_hash` comparison, `200` replay or `409` conflict",
+      "done": false,
+      "at": "phase-4-jobs-api",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 68,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-4-jobs-api-get-v1jobs-keyset-pagination-with-fi",
+      "text": "`GET /v1/jobs` keyset pagination with filters; `GET /v1/jobs/{id}` and `/attempts`",
+      "done": false,
+      "at": "phase-4-jobs-api",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 69,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-4-jobs-api-cancel-and-retry-endpoints-mapped-to-the",
+      "text": "Cancel and retry endpoints mapped to the repository CAS results (`200`/`202`/`409`)",
+      "done": false,
+      "at": "phase-4-jobs-api",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 70,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-4-jobs-api-rfc-9457-error-handler-requestid-mid",
+      "text": "RFC 9457 error handler, `request_id` middleware, OpenAPI published at `/v1/openapi.json`",
+      "done": false,
+      "at": "phase-4-jobs-api",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 71,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-4-jobs-api-healthz-and-readyz",
+      "text": "`/healthz` and `/readyz`",
+      "done": false,
+      "at": "phase-4-jobs-api",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 72,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-5-redis-queue-and-scheduler-dispatch-queueredisbacke",
+      "text": "`queue/redis_backend.py`: key naming, score function, pipelined `ZADD NX`, `BZPOPMIN` with rotation, `ZCARD`",
+      "done": false,
+      "at": "phase-5-redis-queue-and-scheduler-dispatch",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 83,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-5-redis-queue-and-scheduler-dispatch-post-commit-fas",
+      "text": "Post-commit fast-path dispatch in the API through `BackgroundTasks`, with a 50 ms timeout and errors swallowed but counted",
+      "done": false,
+      "at": "phase-5-redis-queue-and-scheduler-dispatch",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 84,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-5-redis-queue-and-scheduler-dispatch-schedulerpromot",
+      "text": "`scheduler/promoter.py`: `scheduled`/`retrying` jobs whose `run_at` has passed go to `queued` (`dispatched_at=NULL`)",
+      "done": false,
+      "at": "phase-5-redis-queue-and-scheduler-dispatch",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 85,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-5-redis-queue-and-scheduler-dispatch-schedulerdispat",
+      "text": "`scheduler/dispatcher.py`: undispatched or stale queued jobs get `ZADD NX`, then `dispatched_at=now()`",
+      "done": false,
+      "at": "phase-5-redis-queue-and-scheduler-dispatch",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 86,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-5-redis-queue-and-scheduler-dispatch-skip-reconcilin",
+      "text": "Skip reconciling a queue when its ZCARD equals the PostgreSQL queued count",
+      "done": false,
+      "at": "phase-5-redis-queue-and-scheduler-dispatch",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 87,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-5-redis-queue-and-scheduler-dispatch-schedulermainpy",
+      "text": "`scheduler/main.py`: asyncio loops, each with jittered intervals and its own error isolation",
+      "done": false,
+      "at": "phase-5-redis-queue-and-scheduler-dispatch",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 88,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-6-worker-runtime-workersregistrypy-taskname-retr",
+      "text": "`workers/registry.py`: `@task(name, retryable_exceptions=...)` decorator",
+      "done": false,
+      "at": "phase-6-worker-runtime",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 99,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-6-worker-runtime-workersrunnerpy-slot-semaphore-pop",
+      "text": "`workers/runner.py`: slot semaphore, pop-then-claim, execution under timeout, writing outcomes and `job_attempts`",
+      "done": false,
+      "at": "phase-6-worker-runtime",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 100,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-6-worker-runtime-classify-errors-retryable-non-retry",
+      "text": "Classify errors: retryable, non-retryable (`PermanentError`), timeout, `unknown_task`",
+      "done": false,
+      "at": "phase-6-worker-runtime",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 101,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-6-worker-runtime-sync-handlers-via-tothread-with-pro",
+      "text": "Sync handlers via `to_thread`, with process recycling after a timeout",
+      "done": false,
+      "at": "phase-6-worker-runtime",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 102,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-6-worker-runtime-workersleasepy-batched-heartbeat-c",
+      "text": "`workers/lease.py`: batched heartbeat, cancel-flag propagation, monotonic self-fencing",
+      "done": false,
+      "at": "phase-6-worker-runtime",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 103,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-6-worker-runtime-worker-registration-status-updates",
+      "text": "Worker registration, status updates, the SIGTERM/SIGINT drain, and lease release",
+      "done": false,
+      "at": "phase-6-worker-runtime",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 104,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-6-worker-runtime-workerscontextpy-a-jobcontext-exp",
+      "text": "`workers/context.py`: a `JobContext` exposing `job_id`, `attempt`, `idempotency_token`, `lease_token`, `logger`",
+      "done": false,
+      "at": "phase-6-worker-runtime",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 105,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-7-recovery-cancellation-dlq-and-outage-handling-sche",
+      "text": "`scheduler/reaper.py`: reclaim expired leases (`retrying`/`dead`/`cancelled`) and record the `lost` attempt",
+      "done": false,
+      "at": "phase-7-recovery-cancellation-dlq-and-outage-handling",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 116,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-7-recovery-cancellation-dlq-and-outage-handling-sche-2",
+      "text": "`scheduler/monitor.py`: mark lost workers",
+      "done": false,
+      "at": "phase-7-recovery-cancellation-dlq-and-outage-handling",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 117,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-7-recovery-cancellation-dlq-and-outage-handling-coop",
+      "text": "Cooperative cancellation end to end, including the cancel-while-reaping case",
+      "done": false,
+      "at": "phase-7-recovery-cancellation-dlq-and-outage-handling",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 118,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-7-recovery-cancellation-dlq-and-outage-handling-dlq",
+      "text": "DLQ workflow: filtering on `dead`, manual retry with an audit entry",
+      "done": false,
+      "at": "phase-7-recovery-cancellation-dlq-and-outage-handling",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 119,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-7-recovery-cancellation-dlq-and-outage-handling-redi",
+      "text": "Redis outage handling: circuit breaker with exponential backoff in workers; API keeps accepting jobs",
+      "done": false,
+      "at": "phase-7-recovery-cancellation-dlq-and-outage-handling",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 120,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-7-recovery-cancellation-dlq-and-outage-handling-data",
+      "text": "Database outage handling: retry heartbeats and completions with backoff; API returns `503` on writes",
+      "done": false,
+      "at": "phase-7-recovery-cancellation-dlq-and-outage-handling",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 121,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-7-recovery-cancellation-dlq-and-outage-handling-test",
+      "text": "`tests/chaos/invariants.py`: after a run, every job is terminal, has exactly one terminal transition, and has no more than `max_attempts` counted attempts",
+      "done": false,
+      "at": "phase-7-recovery-cancellation-dlq-and-outage-handling",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 122,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-8-rate-limiting-backpressure-and-abuse-prevention-qu",
+      "text": "`queue/lua/token_bucket.lua` and `queue/ratelimit.py`: limits per key and per tenant, `RateLimit-*` headers",
+      "done": false,
+      "at": "phase-8-rate-limiting-backpressure-and-abuse-prevention",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 133,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-8-rate-limiting-backpressure-and-abuse-prevention-in",
+      "text": "In-process fallback limiter that applies a per-replica share of the limit when Redis is down (fail-open)",
+      "done": false,
+      "at": "phase-8-rate-limiting-backpressure-and-abuse-prevention",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 134,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-8-rate-limiting-backpressure-and-abuse-prevention-qu-2",
+      "text": "Queue high-watermark check, returning `503` with `Retry-After`",
+      "done": false,
+      "at": "phase-8-rate-limiting-backpressure-and-abuse-prevention",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 135,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-8-rate-limiting-backpressure-and-abuse-prevention-sc",
+      "text": "Scheduler caches per-tenant pending counts in Redis every 15 s; API enforces the soft quota",
+      "done": false,
+      "at": "phase-8-rate-limiting-backpressure-and-abuse-prevention",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 136,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-8-rate-limiting-backpressure-and-abuse-prevention-fa",
+      "text": "Failed-auth throttling per IP moved to Redis; `allowed_queues` enforcement",
+      "done": false,
+      "at": "phase-8-rate-limiting-backpressure-and-abuse-prevention",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 137,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-9-observability-telemetrypy-otel-providers-auto-ins",
+      "text": "`telemetry.py`: OTel providers, auto-instrumentation, `traceparent` capture and span links",
+      "done": false,
+      "at": "phase-9-observability",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 148,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-9-observability-prometheus-metrics-per-12-scheduler",
+      "text": "Prometheus metrics per §12; scheduler exports depth, age, and status gauges",
+      "done": false,
+      "at": "phase-9-observability",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 149,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-9-observability-add-the-otel-collector-jaeger-promet",
+      "text": "Add the OTel Collector, Jaeger, Prometheus, and Grafana to compose",
+      "done": false,
+      "at": "phase-9-observability",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 150,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-9-observability-deploygrafanadashboardsoverviewwor",
+      "text": "`deploy/grafana/dashboards/{overview,workers}.json`, `deploy/prometheus/rules.yml`",
+      "done": false,
+      "at": "phase-9-observability",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 151,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-9-observability-runbooks-for-each-alert-in-docsrunbo",
+      "text": "Runbooks for each alert in `docs/runbooks/`",
+      "done": false,
+      "at": "phase-9-observability",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 152,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-9-observability-get-v1workers-and-get-v1queuesst",
+      "text": "`GET /v1/workers` and `GET /v1/queues/stats`",
+      "done": false,
+      "at": "phase-9-observability",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 153,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-10-production-deployment-cicd-and-ga-hardening-helm",
+      "text": "Helm chart `deploy/helm/taskforge/`: api (HPA), scheduler (2 replicas, PodDisruptionBudget), worker deployments per queue group (KEDA), migration Job as a `pre-upgrade` hook, NetworkPolicies",
+      "done": false,
+      "at": "phase-10-production-deployment-cicd-and-ga-hardening",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 164,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-10-production-deployment-cicd-and-ga-hardening-relea",
+      "text": "`release.yml`: on a tag, build, scan, and push by digest; deploy to staging; run smoke and e2e tests; get manual approval; deploy to production",
+      "done": false,
+      "at": "phase-10-production-deployment-cicd-and-ga-hardening",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 165,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-10-production-deployment-cicd-and-ga-hardening-load",
+      "text": "Load tests (`tests/load/locustfile.py`) at the targets in §4; tune PostgreSQL autovacuum and fillfactor",
+      "done": false,
+      "at": "phase-10-production-deployment-cicd-and-ga-hardening",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 166,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-10-production-deployment-cicd-and-ga-hardening-sched",
+      "text": "`scheduler/retention.py`: purge terminal jobs and attempts older than 30 days, expire idempotency keys",
+      "done": false,
+      "at": "phase-10-production-deployment-cicd-and-ga-hardening",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 167,
+      "browser_only": false
+    },
+    {
+      "id": "t-phase-10-production-deployment-cicd-and-ga-hardening-secur",
+      "text": "Security review and pen-test checklist; rollback drill in staging",
+      "done": false,
+      "at": "phase-10-production-deployment-cicd-and-ga-hardening",
+      "section": "implementation-roadmap",
+      "n": null,
+      "line": 168,
+      "browser_only": false
+    }
+  ],
+  "callouts": [
+    {
+      "kind": "risk",
+      "title": "Over-investing in scaffolding.",
+      "details": [],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Over-investing in scaffolding. Keep it to the list above."
+        }
+      ],
+      "at": "phase-1-foundation-and-tooling",
+      "section": "implementation-roadmap",
+      "line": 29,
+      "body": [
+        {
+          "type": "p",
+          "text": "Keep it to the list above.",
+          "line": 29
+        }
+      ]
+    },
+    {
+      "kind": "risk",
+      "title": "Index choices hurting HOT updates.",
+      "details": [],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Index choices hurting HOT updates. Benchmark in P10."
+        }
+      ],
+      "at": "phase-2-persistence-layer-and-state-machine",
+      "section": "implementation-roadmap",
+      "line": 46,
+      "body": [
+        {
+          "type": "p",
+          "text": "Benchmark in P10.",
+          "line": 46
+        }
+      ]
+    },
+    {
+      "kind": "risk",
+      "title": "The revocation cache window.",
+      "details": [],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "The revocation cache window. It is documented, and the TTL is configurable."
+        }
+      ],
+      "at": "phase-3-authentication-and-api-keys",
+      "section": "implementation-roadmap",
+      "line": 61,
+      "body": [
+        {
+          "type": "p",
+          "text": "It is documented, and the TTL is configurable.",
+          "line": 61
+        }
+      ]
+    },
+    {
+      "kind": "risk",
+      "title": "Slow listing queries at scale.",
+      "details": [],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Slow listing queries at scale. Indexes must match every filter combination; verify with `EXPLAIN` in tests."
+        }
+      ],
+      "at": "phase-4-jobs-api",
+      "section": "implementation-roadmap",
+      "line": 77,
+      "body": [
+        {
+          "type": "p",
+          "text": "Indexes must match every filter combination; verify with `EXPLAIN` in tests.",
+          "line": 77
+        }
+      ]
+    },
+    {
+      "kind": "risk",
+      "title": "Reconciler cost when the backlog is huge.",
+      "details": [],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Reconciler cost when the backlog is huge. Mitigated by the ZCARD shortcut and batched scans."
+        }
+      ],
+      "at": "phase-5-redis-queue-and-scheduler-dispatch",
+      "section": "implementation-roadmap",
+      "line": 93,
+      "body": [
+        {
+          "type": "p",
+          "text": "Mitigated by the ZCARD shortcut and batched scans.",
+          "line": 93
+        }
+      ]
+    },
+    {
+      "kind": "risk",
+      "title": "Blocking sync handlers starving the event loop.",
+      "details": [],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Blocking sync handlers starving the event loop. Document the async-first approach and cap `to_thread` concurrency."
+        }
+      ],
+      "at": "phase-6-worker-runtime",
+      "section": "implementation-roadmap",
+      "line": 110,
+      "body": [
+        {
+          "type": "p",
+          "text": "Document the async-first approach and cap `to_thread` concurrency.",
+          "line": 110
+        }
+      ]
+    },
+    {
+      "kind": "milestone",
+      "title": "M1 internal alpha (MVP complete).",
+      "details": [],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "M1 internal alpha (MVP complete)."
+        }
+      ],
+      "at": "phase-7-recovery-cancellation-dlq-and-outage-handling",
+      "section": "implementation-roadmap",
+      "line": 124,
+      "inline": true
+    },
+    {
+      "kind": "risk",
+      "title": "Flaky timing-based tests.",
+      "details": [],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Flaky timing-based tests. Use injectable clocks and intervals (test settings shrink them 10×)."
+        }
+      ],
+      "at": "phase-7-recovery-cancellation-dlq-and-outage-handling",
+      "section": "implementation-roadmap",
+      "line": 127,
+      "body": [
+        {
+          "type": "p",
+          "text": "Use injectable clocks and intervals (test settings shrink them 10×).",
+          "line": 127
+        }
+      ]
+    },
+    {
+      "kind": "risk",
+      "title": "The soft quota can be overshot by up to 15 s worth of submissions.",
+      "details": [],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "The soft quota can be overshot by up to 15 s worth of submissions. Accepted."
+        }
+      ],
+      "at": "phase-8-rate-limiting-backpressure-and-abuse-prevention",
+      "section": "implementation-roadmap",
+      "line": 142,
+      "body": [
+        {
+          "type": "p",
+          "text": "Accepted.",
+          "line": 142
+        }
+      ]
+    },
+    {
+      "kind": "milestone",
+      "title": "M2 beta.",
+      "details": [],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "M2 beta."
+        }
+      ],
+      "at": "phase-9-observability",
+      "section": "implementation-roadmap",
+      "line": 155,
+      "inline": true
+    },
+    {
+      "kind": "risk",
+      "title": "Cardinality from the `task` label.",
+      "details": [],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Cardinality from the `task` label. Enforce the task-name regex and cap the number of distinct tasks."
+        }
+      ],
+      "at": "phase-9-observability",
+      "section": "implementation-roadmap",
+      "line": 158,
+      "body": [
+        {
+          "type": "p",
+          "text": "Enforce the task-name regex and cap the number of distinct tasks.",
+          "line": 158
+        }
+      ]
+    },
+    {
+      "kind": "milestone",
+      "title": "M3 GA.",
+      "details": [],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "M3 GA."
+        }
+      ],
+      "at": "phase-10-production-deployment-cicd-and-ga-hardening",
+      "section": "implementation-roadmap",
+      "line": 170,
+      "inline": true
+    },
+    {
+      "kind": "risk",
+      "title": "PostgreSQL write throughput turning into the ceiling (see §18).",
+      "details": [],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "PostgreSQL write throughput turning into the ceiling (see §18)."
+        }
+      ],
+      "at": "phase-10-production-deployment-cicd-and-ga-hardening",
+      "section": "implementation-roadmap",
+      "line": 173
+    }
+  ],
+  "diagrams": [],
+  "files": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "at": [
+        "phase-1-foundation-and-tooling"
+      ],
+      "mentions": [
+        {
+          "at": "phase-1-foundation-and-tooling",
+          "line": 25
+        }
+      ]
+    },
+    {
+      "path": ".github/workflows/release.yml",
+      "at": [
+        "phase-10-production-deployment-cicd-and-ga-hardening"
+      ],
+      "mentions": [
+        {
+          "at": "phase-10-production-deployment-cicd-and-ga-hardening",
+          "line": 169
+        }
+      ]
+    },
+    {
+      "path": "api/deps.py",
+      "at": [
+        "phase-3-authentication-and-api-keys"
+      ],
+      "mentions": [
+        {
+          "at": "phase-3-authentication-and-api-keys",
+          "line": 53
+        }
+      ]
+    },
+    {
+      "path": "api/routes/keys.py",
+      "at": [
+        "phase-3-authentication-and-api-keys"
+      ],
+      "mentions": [
+        {
+          "at": "phase-3-authentication-and-api-keys",
+          "line": 54
+        }
+      ]
+    },
+    {
+      "path": "api/schemas.py",
+      "at": [
+        "phase-4-jobs-api"
+      ],
+      "mentions": [
+        {
+          "at": "phase-4-jobs-api",
+          "line": 67
+        }
+      ]
+    },
+    {
+      "path": "ci.yml",
+      "at": [
+        "phase-1-foundation-and-tooling"
+      ],
+      "mentions": [
+        {
+          "at": "phase-1-foundation-and-tooling",
+          "line": 24
+        }
+      ]
+    },
+    {
+      "path": "config.py",
+      "at": [
+        "phase-1-foundation-and-tooling"
+      ],
+      "mentions": [
+        {
+          "at": "phase-1-foundation-and-tooling",
+          "line": 20
+        }
+      ]
+    },
+    {
+      "path": "db/jobs_repo.py",
+      "at": [
+        "phase-2-persistence-layer-and-state-machine"
+      ],
+      "mentions": [
+        {
+          "at": "phase-2-persistence-layer-and-state-machine",
+          "line": 38
+        }
+      ]
+    },
+    {
+      "path": "db/models.py",
+      "at": [
+        "phase-2-persistence-layer-and-state-machine"
+      ],
+      "mentions": [
+        {
+          "at": "phase-2-persistence-layer-and-state-machine",
+          "line": 36
+        }
+      ]
+    },
+    {
+      "path": "db/session.py",
+      "at": [
+        "phase-2-persistence-layer-and-state-machine"
+      ],
+      "mentions": [
+        {
+          "at": "phase-2-persistence-layer-and-state-machine",
+          "line": 41
+        }
+      ]
+    },
+    {
+      "path": "deploy/docker-compose.yml",
+      "at": [
+        "phase-1-foundation-and-tooling"
+      ],
+      "mentions": [
+        {
+          "at": "phase-1-foundation-and-tooling",
+          "line": 22
+        }
+      ]
+    },
+    {
+      "path": "deploy/grafana/",
+      "at": [
+        "phase-9-observability"
+      ],
+      "mentions": [
+        {
+          "at": "phase-9-observability",
+          "line": 154
+        }
+      ]
+    },
+    {
+      "path": "deploy/grafana/dashboards/",
+      "at": [
+        "phase-9-observability"
+      ],
+      "mentions": [
+        {
+          "at": "phase-9-observability",
+          "line": 151
+        }
+      ]
+    },
+    {
+      "path": "deploy/helm/taskforge/",
+      "at": [
+        "phase-10-production-deployment-cicd-and-ga-hardening"
+      ],
+      "mentions": [
+        {
+          "at": "phase-10-production-deployment-cicd-and-ga-hardening",
+          "line": 164
+        },
+        {
+          "at": "phase-10-production-deployment-cicd-and-ga-hardening",
+          "line": 169
+        }
+      ]
+    },
+    {
+      "path": "deploy/prometheus/rules.yml",
+      "at": [
+        "phase-9-observability"
+      ],
+      "mentions": [
+        {
+          "at": "phase-9-observability",
+          "line": 151
+        },
+        {
+          "at": "phase-9-observability",
+          "line": 154
+        }
+      ]
+    },
+    {
+      "path": "docs/runbooks/",
+      "at": [
+        "phase-9-observability"
+      ],
+      "mentions": [
+        {
+          "at": "phase-9-observability",
+          "line": 152
+        }
+      ]
+    },
+    {
+      "path": "domain/backoff.py",
+      "at": [
+        "phase-2-persistence-layer-and-state-machine"
+      ],
+      "mentions": [
+        {
+          "at": "phase-2-persistence-layer-and-state-machine",
+          "line": 35
+        }
+      ]
+    },
+    {
+      "path": "domain/states.py",
+      "at": [
+        "phase-2-persistence-layer-and-state-machine"
+      ],
+      "mentions": [
+        {
+          "at": "phase-2-persistence-layer-and-state-machine",
+          "line": 35
+        }
+      ]
+    },
+    {
+      "path": "logging.py",
+      "at": [
+        "phase-1-foundation-and-tooling"
+      ],
+      "mentions": [
+        {
+          "at": "phase-1-foundation-and-tooling",
+          "line": 21
+        }
+      ]
+    },
+    {
+      "path": "pyproject.toml",
+      "at": [
+        "phase-1-foundation-and-tooling"
+      ],
+      "mentions": [
+        {
+          "at": "phase-1-foundation-and-tooling",
+          "line": 25
+        }
+      ]
+    },
+    {
+      "path": "queue/lua/token_bucket.lua",
+      "at": [
+        "phase-8-rate-limiting-backpressure-and-abuse-prevention"
+      ],
+      "mentions": [
+        {
+          "at": "phase-8-rate-limiting-backpressure-and-abuse-prevention",
+          "line": 133
+        }
+      ]
+    },
+    {
+      "path": "queue/ratelimit.py",
+      "at": [
+        "phase-8-rate-limiting-backpressure-and-abuse-prevention"
+      ],
+      "mentions": [
+        {
+          "at": "phase-8-rate-limiting-backpressure-and-abuse-prevention",
+          "line": 133
+        }
+      ]
+    },
+    {
+      "path": "queue/redis_backend.py",
+      "at": [
+        "phase-5-redis-queue-and-scheduler-dispatch"
+      ],
+      "mentions": [
+        {
+          "at": "phase-5-redis-queue-and-scheduler-dispatch",
+          "line": 83
+        }
+      ]
+    },
+    {
+      "path": "release.yml",
+      "at": [
+        "phase-10-production-deployment-cicd-and-ga-hardening"
+      ],
+      "mentions": [
+        {
+          "at": "phase-10-production-deployment-cicd-and-ga-hardening",
+          "line": 165
+        }
+      ]
+    },
+    {
+      "path": "scheduler/dispatcher.py",
+      "at": [
+        "phase-5-redis-queue-and-scheduler-dispatch"
+      ],
+      "mentions": [
+        {
+          "at": "phase-5-redis-queue-and-scheduler-dispatch",
+          "line": 86
+        }
+      ]
+    },
+    {
+      "path": "scheduler/main.py",
+      "at": [
+        "phase-5-redis-queue-and-scheduler-dispatch"
+      ],
+      "mentions": [
+        {
+          "at": "phase-5-redis-queue-and-scheduler-dispatch",
+          "line": 88
+        }
+      ]
+    },
+    {
+      "path": "scheduler/monitor.py",
+      "at": [
+        "phase-7-recovery-cancellation-dlq-and-outage-handling"
+      ],
+      "mentions": [
+        {
+          "at": "phase-7-recovery-cancellation-dlq-and-outage-handling",
+          "line": 117
+        }
+      ]
+    },
+    {
+      "path": "scheduler/promoter.py",
+      "at": [
+        "phase-5-redis-queue-and-scheduler-dispatch"
+      ],
+      "mentions": [
+        {
+          "at": "phase-5-redis-queue-and-scheduler-dispatch",
+          "line": 85
+        }
+      ]
+    },
+    {
+      "path": "scheduler/reaper.py",
+      "at": [
+        "phase-7-recovery-cancellation-dlq-and-outage-handling"
+      ],
+      "mentions": [
+        {
+          "at": "phase-7-recovery-cancellation-dlq-and-outage-handling",
+          "line": 116
+        }
+      ]
+    },
+    {
+      "path": "scheduler/retention.py",
+      "at": [
+        "phase-10-production-deployment-cicd-and-ga-hardening"
+      ],
+      "mentions": [
+        {
+          "at": "phase-10-production-deployment-cicd-and-ga-hardening",
+          "line": 167
+        }
+      ]
+    },
+    {
+      "path": "security/api_keys.py",
+      "at": [
+        "phase-3-authentication-and-api-keys"
+      ],
+      "mentions": [
+        {
+          "at": "phase-3-authentication-and-api-keys",
+          "line": 52
+        }
+      ]
+    },
+    {
+      "path": "src/taskforge/api/deps.py",
+      "at": [
+        "phase-3-authentication-and-api-keys",
+        "phase-8-rate-limiting-backpressure-and-abuse-prevention"
+      ],
+      "mentions": [
+        {
+          "at": "phase-3-authentication-and-api-keys",
+          "line": 57
+        },
+        {
+          "at": "phase-8-rate-limiting-backpressure-and-abuse-prevention",
+          "line": 138
+        }
+      ]
+    },
+    {
+      "path": "src/taskforge/api/errors.py",
+      "at": [
+        "phase-4-jobs-api"
+      ],
+      "mentions": [
+        {
+          "at": "phase-4-jobs-api",
+          "line": 73
+        }
+      ]
+    },
+    {
+      "path": "src/taskforge/api/routes/",
+      "at": [
+        "phase-9-observability"
+      ],
+      "mentions": [
+        {
+          "at": "phase-9-observability",
+          "line": 154
+        }
+      ]
+    },
+    {
+      "path": "src/taskforge/api/routes/health.py",
+      "at": [
+        "phase-4-jobs-api"
+      ],
+      "mentions": [
+        {
+          "at": "phase-4-jobs-api",
+          "line": 73
+        }
+      ]
+    },
+    {
+      "path": "src/taskforge/api/routes/jobs.py",
+      "at": [
+        "phase-4-jobs-api"
+      ],
+      "mentions": [
+        {
+          "at": "phase-4-jobs-api",
+          "line": 73
+        }
+      ]
+    },
+    {
+      "path": "src/taskforge/api/routes/keys.py",
+      "at": [
+        "phase-3-authentication-and-api-keys"
+      ],
+      "mentions": [
+        {
+          "at": "phase-3-authentication-and-api-keys",
+          "line": 57
+        }
+      ]
+    },
+    {
+      "path": "src/taskforge/api/schemas.py",
+      "at": [
+        "phase-4-jobs-api"
+      ],
+      "mentions": [
+        {
+          "at": "phase-4-jobs-api",
+          "line": 73
+        }
+      ]
+    },
+    {
+      "path": "src/taskforge/cli.py",
+      "at": [
+        "phase-1-foundation-and-tooling"
+      ],
+      "mentions": [
+        {
+          "at": "phase-1-foundation-and-tooling",
+          "line": 25
+        }
+      ]
+    },
+    {
+      "path": "src/taskforge/config.py",
+      "at": [
+        "phase-1-foundation-and-tooling"
+      ],
+      "mentions": [
+        {
+          "at": "phase-1-foundation-and-tooling",
+          "line": 25
+        }
+      ]
+    },
+    {
+      "path": "src/taskforge/db/jobs_repo.py",
+      "at": [
+        "phase-2-persistence-layer-and-state-machine"
+      ],
+      "mentions": [
+        {
+          "at": "phase-2-persistence-layer-and-state-machine",
+          "line": 42
+        }
+      ]
+    },
+    {
+      "path": "src/taskforge/db/keys_repo.py",
+      "at": [
+        "phase-3-authentication-and-api-keys"
+      ],
+      "mentions": [
+        {
+          "at": "phase-3-authentication-and-api-keys",
+          "line": 57
+        }
+      ]
+    },
+    {
+      "path": "src/taskforge/db/migrations/versions/0001_initial.py",
+      "at": [
+        "phase-2-persistence-layer-and-state-machine"
+      ],
+      "mentions": [
+        {
+          "at": "phase-2-persistence-layer-and-state-machine",
+          "line": 42
+        }
+      ]
+    },
+    {
+      "path": "src/taskforge/db/models.py",
+      "at": [
+        "phase-2-persistence-layer-and-state-machine"
+      ],
+      "mentions": [
+        {
+          "at": "phase-2-persistence-layer-and-state-machine",
+          "line": 42
+        }
+      ]
+    },
+    {
+      "path": "src/taskforge/db/workers_repo.py",
+      "at": [
+        "phase-6-worker-runtime"
+      ],
+      "mentions": [
+        {
+          "at": "phase-6-worker-runtime",
+          "line": 106
+        }
+      ]
+    },
+    {
+      "path": "src/taskforge/domain/states.py",
+      "at": [
+        "phase-2-persistence-layer-and-state-machine"
+      ],
+      "mentions": [
+        {
+          "at": "phase-2-persistence-layer-and-state-machine",
+          "line": 42
+        }
+      ]
+    },
+    {
+      "path": "src/taskforge/logging.py",
+      "at": [
+        "phase-1-foundation-and-tooling"
+      ],
+      "mentions": [
+        {
+          "at": "phase-1-foundation-and-tooling",
+          "line": 25
+        }
+      ]
+    },
+    {
+      "path": "src/taskforge/queue/lua/token_bucket.lua",
+      "at": [
+        "phase-8-rate-limiting-backpressure-and-abuse-prevention"
+      ],
+      "mentions": [
+        {
+          "at": "phase-8-rate-limiting-backpressure-and-abuse-prevention",
+          "line": 138
+        }
+      ]
+    },
+    {
+      "path": "src/taskforge/queue/ratelimit.py",
+      "at": [
+        "phase-8-rate-limiting-backpressure-and-abuse-prevention"
+      ],
+      "mentions": [
+        {
+          "at": "phase-8-rate-limiting-backpressure-and-abuse-prevention",
+          "line": 138
+        }
+      ]
+    },
+    {
+      "path": "src/taskforge/queue/redis_backend.py",
+      "at": [
+        "phase-5-redis-queue-and-scheduler-dispatch"
+      ],
+      "mentions": [
+        {
+          "at": "phase-5-redis-queue-and-scheduler-dispatch",
+          "line": 89
+        }
+      ]
+    },
+    {
+      "path": "src/taskforge/scheduler/",
+      "at": [
+        "phase-5-redis-queue-and-scheduler-dispatch",
+        "phase-7-recovery-cancellation-dlq-and-outage-handling"
+      ],
+      "mentions": [
+        {
+          "at": "phase-5-redis-queue-and-scheduler-dispatch",
+          "line": 89
+        },
+        {
+          "at": "phase-7-recovery-cancellation-dlq-and-outage-handling",
+          "line": 123
+        }
+      ]
+    },
+    {
+      "path": "src/taskforge/scheduler/retention.py",
+      "at": [
+        "phase-10-production-deployment-cicd-and-ga-hardening"
+      ],
+      "mentions": [
+        {
+          "at": "phase-10-production-deployment-cicd-and-ga-hardening",
+          "line": 169
+        }
+      ]
+    },
+    {
+      "path": "src/taskforge/security/api_keys.py",
+      "at": [
+        "phase-3-authentication-and-api-keys"
+      ],
+      "mentions": [
+        {
+          "at": "phase-3-authentication-and-api-keys",
+          "line": 57
+        }
+      ]
+    },
+    {
+      "path": "src/taskforge/telemetry.py",
+      "at": [
+        "phase-9-observability"
+      ],
+      "mentions": [
+        {
+          "at": "phase-9-observability",
+          "line": 154
+        }
+      ]
+    },
+    {
+      "path": "src/taskforge/workers/",
+      "at": [
+        "phase-6-worker-runtime"
+      ],
+      "mentions": [
+        {
+          "at": "phase-6-worker-runtime",
+          "line": 106
+        }
+      ]
+    },
+    {
+      "path": "telemetry.py",
+      "at": [
+        "phase-9-observability"
+      ],
+      "mentions": [
+        {
+          "at": "phase-9-observability",
+          "line": 148
+        }
+      ]
+    },
+    {
+      "path": "tests/chaos/",
+      "at": [
+        "phase-7-recovery-cancellation-dlq-and-outage-handling"
+      ],
+      "mentions": [
+        {
+          "at": "phase-7-recovery-cancellation-dlq-and-outage-handling",
+          "line": 123
+        }
+      ]
+    },
+    {
+      "path": "tests/chaos/invariants.py",
+      "at": [
+        "phase-7-recovery-cancellation-dlq-and-outage-handling"
+      ],
+      "mentions": [
+        {
+          "at": "phase-7-recovery-cancellation-dlq-and-outage-handling",
+          "line": 122
+        }
+      ]
+    },
+    {
+      "path": "tests/contract/test_openapi.py",
+      "at": [
+        "phase-4-jobs-api"
+      ],
+      "mentions": [
+        {
+          "at": "phase-4-jobs-api",
+          "line": 76
+        }
+      ]
+    },
+    {
+      "path": "tests/integration/test_auth.py",
+      "at": [
+        "phase-3-authentication-and-api-keys"
+      ],
+      "mentions": [
+        {
+          "at": "phase-3-authentication-and-api-keys",
+          "line": 60
+        }
+      ]
+    },
+    {
+      "path": "tests/integration/test_claim_race.py",
+      "at": [
+        "phase-2-persistence-layer-and-state-machine"
+      ],
+      "mentions": [
+        {
+          "at": "phase-2-persistence-layer-and-state-machine",
+          "line": 45
+        }
+      ]
+    },
+    {
+      "path": "tests/integration/test_dispatch.py",
+      "at": [
+        "phase-5-redis-queue-and-scheduler-dispatch"
+      ],
+      "mentions": [
+        {
+          "at": "phase-5-redis-queue-and-scheduler-dispatch",
+          "line": 92
+        }
+      ]
+    },
+    {
+      "path": "tests/integration/test_graceful_shutdown.py",
+      "at": [
+        "phase-6-worker-runtime"
+      ],
+      "mentions": [
+        {
+          "at": "phase-6-worker-runtime",
+          "line": 109
+        }
+      ]
+    },
+    {
+      "path": "tests/integration/test_idempotency.py",
+      "at": [
+        "phase-4-jobs-api"
+      ],
+      "mentions": [
+        {
+          "at": "phase-4-jobs-api",
+          "line": 76
+        }
+      ]
+    },
+    {
+      "path": "tests/integration/test_job_recovery.py",
+      "at": [
+        "phase-7-recovery-cancellation-dlq-and-outage-handling"
+      ],
+      "mentions": [
+        {
+          "at": "phase-7-recovery-cancellation-dlq-and-outage-handling",
+          "line": 123
+        }
+      ]
+    },
+    {
+      "path": "tests/integration/test_jobs_api.py",
+      "at": [
+        "phase-4-jobs-api"
+      ],
+      "mentions": [
+        {
+          "at": "phase-4-jobs-api",
+          "line": 76
+        }
+      ]
+    },
+    {
+      "path": "tests/integration/test_jobs_repo.py",
+      "at": [
+        "phase-2-persistence-layer-and-state-machine"
+      ],
+      "mentions": [
+        {
+          "at": "phase-2-persistence-layer-and-state-machine",
+          "line": 45
+        }
+      ]
+    },
+    {
+      "path": "tests/integration/test_metrics.py",
+      "at": [
+        "phase-9-observability"
+      ],
+      "mentions": [
+        {
+          "at": "phase-9-observability",
+          "line": 157
+        }
+      ]
+    },
+    {
+      "path": "tests/integration/test_rate_limit.py",
+      "at": [
+        "phase-8-rate-limiting-backpressure-and-abuse-prevention"
+      ],
+      "mentions": [
+        {
+          "at": "phase-8-rate-limiting-backpressure-and-abuse-prevention",
+          "line": 141
+        }
+      ]
+    },
+    {
+      "path": "tests/integration/test_redis_rebuild.py",
+      "at": [
+        "phase-5-redis-queue-and-scheduler-dispatch"
+      ],
+      "mentions": [
+        {
+          "at": "phase-5-redis-queue-and-scheduler-dispatch",
+          "line": 92
+        }
+      ]
+    },
+    {
+      "path": "tests/integration/test_scheduler_replicas.py",
+      "at": [
+        "phase-5-redis-queue-and-scheduler-dispatch"
+      ],
+      "mentions": [
+        {
+          "at": "phase-5-redis-queue-and-scheduler-dispatch",
+          "line": 92
+        }
+      ]
+    },
+    {
+      "path": "tests/integration/test_timeouts.py",
+      "at": [
+        "phase-6-worker-runtime"
+      ],
+      "mentions": [
+        {
+          "at": "phase-6-worker-runtime",
+          "line": 109
+        }
+      ]
+    },
+    {
+      "path": "tests/integration/test_worker_execution.py",
+      "at": [
+        "phase-6-worker-runtime"
+      ],
+      "mentions": [
+        {
+          "at": "phase-6-worker-runtime",
+          "line": 109
+        }
+      ]
+    },
+    {
+      "path": "tests/load/",
+      "at": [
+        "phase-8-rate-limiting-backpressure-and-abuse-prevention"
+      ],
+      "mentions": [
+        {
+          "at": "phase-8-rate-limiting-backpressure-and-abuse-prevention",
+          "line": 141
+        }
+      ]
+    },
+    {
+      "path": "tests/load/locustfile.py",
+      "at": [
+        "phase-10-production-deployment-cicd-and-ga-hardening"
+      ],
+      "mentions": [
+        {
+          "at": "phase-10-production-deployment-cicd-and-ga-hardening",
+          "line": 166
+        },
+        {
+          "at": "phase-10-production-deployment-cicd-and-ga-hardening",
+          "line": 169
+        }
+      ]
+    },
+    {
+      "path": "tests/unit/test_backoff.py",
+      "at": [
+        "phase-2-persistence-layer-and-state-machine"
+      ],
+      "mentions": [
+        {
+          "at": "phase-2-persistence-layer-and-state-machine",
+          "line": 45
+        }
+      ]
+    },
+    {
+      "path": "tests/unit/test_states.py",
+      "at": [
+        "phase-2-persistence-layer-and-state-machine"
+      ],
+      "mentions": [
+        {
+          "at": "phase-2-persistence-layer-and-state-machine",
+          "line": 45
+        }
+      ]
+    },
+    {
+      "path": "workers/context.py",
+      "at": [
+        "phase-6-worker-runtime"
+      ],
+      "mentions": [
+        {
+          "at": "phase-6-worker-runtime",
+          "line": 105
+        }
+      ]
+    },
+    {
+      "path": "workers/lease.py",
+      "at": [
+        "phase-6-worker-runtime"
+      ],
+      "mentions": [
+        {
+          "at": "phase-6-worker-runtime",
+          "line": 103
+        }
+      ]
+    },
+    {
+      "path": "workers/registry.py",
+      "at": [
+        "phase-6-worker-runtime"
+      ],
+      "mentions": [
+        {
+          "at": "phase-6-worker-runtime",
+          "line": 99
+        }
+      ]
+    },
+    {
+      "path": "workers/runner.py",
+      "at": [
+        "phase-6-worker-runtime"
+      ],
+      "mentions": [
+        {
+          "at": "phase-6-worker-runtime",
+          "line": 100
+        }
+      ]
+    }
+  ],
+  "refs": {},
+  "warnings": [],
+  "roadmap": {
+    "ids": [
+      "phase-1-foundation-and-tooling",
+      "phase-2-persistence-layer-and-state-machine",
+      "phase-3-authentication-and-api-keys",
+      "phase-4-jobs-api",
+      "phase-5-redis-queue-and-scheduler-dispatch",
+      "phase-6-worker-runtime",
+      "phase-7-recovery-cancellation-dlq-and-outage-handling",
+      "phase-8-rate-limiting-backpressure-and-abuse-prevention",
+      "phase-9-observability",
+      "phase-10-production-deployment-cicd-and-ga-hardening"
+    ],
+    "basis": "titles"
+  },
+  "stats": {
+    "words": 1991,
+    "code_blocks": 1
+  }
+}

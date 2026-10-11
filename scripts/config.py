@@ -87,6 +87,21 @@ def check_config(config, model, strict=True):
     if config.get("roadmap"):  # stages picked by Claude instead of detected from titles
         model["roadmap"] = {"ids": config["roadmap"], "basis": "config"}
 
+    deps = config.get("dependencies")
+    if deps is not None:  # {stage: [stages it needs]}, for when the document is not explicit enough
+        if not isinstance(deps, dict) or not all(isinstance(v, list) for v in deps.values()):
+            raise ConfigError('config \'dependencies\' must look like {"phase-2": ["phase-1"]}')
+        stages = model["roadmap"]["ids"]
+        for stage in list(deps):
+            for i in [stage, *deps[stage]]:
+                if i not in ids:
+                    unknown_id("'dependencies'", i)
+                elif i not in stages:
+                    warnings.append(f"config 'dependencies' mentions '{i}', which is not a roadmap stage; ignored")
+            deps[stage] = [i for i in deps[stage] if i in stages and i != stage]
+            if stage not in stages:
+                deps.pop(stage)
+
     for d in config.get("diagrams", []):
         if not d.get("title") or not d.get("mermaid"):
             raise ConfigError("Each config diagram needs 'title' and 'mermaid'.")

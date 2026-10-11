@@ -23,7 +23,7 @@ Fields not listed here are internal and may change.
 | `diagrams` | [diagram] | Mermaid blocks found in the document. |
 | `files` | [file] | File paths the document mentions. |
 | `refs` | {label: {url, title?}} | `[label]: url` reference definitions. |
-| `roadmap` | {ids, basis} | Section ids shown as stages; basis `titles`, `sections` or `config`. |
+| `roadmap` | {ids, basis, dependencies, parallel, cycles} | Section ids shown as stages (basis `titles`, `sections` or `config`), and what each stage needs (see below). |
 | `stats` | {words, code_blocks} | |
 | `warnings` | [string] | Problems found while parsing (unclosed fence, unclosed front matter). |
 | `stale` | {tldr, notes, diagrams} | Inferred content whose source changed since it was written (see below). |
@@ -60,6 +60,16 @@ with an OS lock on `.<name>.too-long.lock`. `serve.py` exposes it as `POST /api/
 - **block**: `{type, line?, ...}` with type `heading`, `p`, `list`, `code`, `mermaid`, `table`,
   `quote`, `callout`, `hr`. List items are `{text, ordered, line, n?, task?, id?, kind?, children?, blocks?}`;
   an item with `task` (true/false) is a task and carries the same `id` as in `tasks`.
+
+## Roadmap dependencies
+
+`roadmap.dependencies` is `{stage: [{id, line?, source, qualified?}]}`. A stage is a key only when its
+dependencies are known: from a labeled line in the stage (`Dependencies:`, `Depends on:`,
+`Requires:`, `Prerequisites:`, `Blocked by:`; `None` means known to have none) or from config
+`dependencies`. `source` is `document` or `config`. `qualified` holds the sentence when a
+dependency applies to part of the stage ("The API fast path needs P4."). `roadmap.parallel` is
+`{stage: [stage]}` from sentences about running in parallel. `roadmap.cycles` lists dependency
+cycles. These keys are added by `model.build_document` (not by `parse.build_model` alone).
 
 ## Invariants
 
