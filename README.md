@@ -173,6 +173,8 @@ too-long/
 ├── scripts/
 │   ├── parse.py        # Markdown → content model
 │   ├── build.py        # content model + config → site
+│   ├── watch.py        # rebuild on every save
+│   ├── config.py identity.py model.py regen.py website.py  # the reusable core (see docs/model.md)
 │   ├── args.py         # parses "<file.md> [--video]"
 │   ├── video.py        # storyboard → narration → timing → mp4 (video mode)
 │   ├── render_video.mjs# frame capture via headless Chrome

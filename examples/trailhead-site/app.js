@@ -170,10 +170,13 @@
   const callout = (kind, html) =>
     `<aside class="callout" data-kind="${esc(kind)}"><div class="callout-label">${esc(cap(kind))}</div><div class="callout-body">${html}</div></aside>`;
 
-  // Everything Claude wrote (config) is labelled as inferred.
-  const inferred = (label, html) =>
-    `<aside class="callout inferred"><div class="callout-label">${label} <span class="badge">Inferred · not in the original</span></div><div class="callout-body">${html}</div></aside>`;
-  const note = id => config.notes?.[id] ? inferred("Claude's note", paragraphs(config.notes[id])) : "";
+  // Everything Claude wrote (config) is labelled as inferred, and as possibly outdated once the part of the
+  // Markdown it was based on has changed (model.stale, computed by build.py; nothing is rewritten for you).
+  const stale = model.stale || { tldr: false, notes: [], diagrams: [] };
+  const staleBadge = on => on ? ` <span class="badge stale" title="The Markdown this was based on changed after it was written. Ask Claude to update the config.">May be outdated</span>` : "";
+  const inferred = (label, html, isStale = false) =>
+    `<aside class="callout inferred"><div class="callout-label">${label} <span class="badge">Inferred · not in the original</span>${staleBadge(isStale)}</div><div class="callout-body">${html}</div></aside>`;
+  const note = id => config.notes?.[id] ? inferred("Claude's note", paragraphs(config.notes[id]), stale.notes.includes(id)) : "";
   const paragraphs = t => Array.isArray(t)
     ? `<ul>${t.map(x => `<li>${inline(x)}</li>`).join("")}</ul>`
     : String(t).split(/\n{2,}/).map(p => `<p>${inline(p)}</p>`).join("");
@@ -219,7 +222,7 @@
         <p class="eyebrow">${esc(model.file)} · ${mins} min read</p>
         <h1 dir="auto">${inline(model.title)}</h1>
       </header>
-      ${config.tldr ? inferred("TL;DR", paragraphs(config.tldr)) : ""}
+      ${config.tldr ? inferred("TL;DR", paragraphs(config.tldr), stale.tldr) : ""}
       <div class="stats">${stats.map(([n, l]) => `<div class="stat"><strong>${n}</strong><span>${esc(l)}</span></div>`).join("")}</div>
       ${p.total ? `<div class="overall">${progressEl("all")}</div>` : ""}
       ${model.intro.length ? `<section class="prose intro">${blocks(model.intro)}</section>` : ""}
@@ -357,8 +360,8 @@
     const fromDoc = model.diagrams.map(d => `<section class="diagram-card">
       <header><h2 dir="auto">${link(d.at)} ${lineRef(d.line)}</h2><span class="badge source">From the document</span></header>
       ${diagram(d.text)}</section>`);
-    const fromClaude = (config.diagrams || []).map(d => `<section class="diagram-card inferred">
-      <header><h2 dir="auto">${inline(d.title)}</h2><span class="badge">Inferred · drawn by Claude</span></header>
+    const fromClaude = (config.diagrams || []).map((d, k) => `<section class="diagram-card inferred">
+      <header><h2 dir="auto">${inline(d.title)}</h2><span class="badge">Inferred · drawn by Claude</span>${staleBadge(stale.diagrams.includes(k))}</header>
       ${d.description ? `<p class="muted" dir="auto">${inline(d.description)}</p>` : ""}
       ${diagram(d.mermaid)}
       ${d.sources?.length ? `<p class="small muted">Based on: ${d.sources.map(link).join(", ")}</p>` : ""}

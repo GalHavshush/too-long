@@ -30,10 +30,6 @@ def load_manifest(out):
         return {}
 
 
-def save_manifest(out, manifest):
-    (Path(out) / MANIFEST).write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-
-
 def source_ref(md_path, out):
     """The Markdown path as stored in build.json: relative to the output folder, so moving both
     together (or committing an example) keeps it valid and no absolute path is written."""

@@ -82,5 +82,19 @@
       "text": "Public launch post",
       "at": "phase-4-launch"
     }
-  ]
+  ],
+  "config_sha": "085c15fe5bcec6270aba65bdd43231561c7976a915045cb7865b48a947d06447",
+  "stamps": {
+    "tldr": "eadd5071ac102766",
+    "notes": {
+      "phase-2-reporting": "1a5d8dd0878a12b4"
+    },
+    "diagrams": [
+      {
+        "phase-1-foundations": "5ab1ffb4c425621e",
+        "phase-2-reporting": "1a5d8dd0878a12b4",
+        "phase-3-map-freshness": "97ae93fc77e14ee7"
+      }
+    ]
+  }
 }

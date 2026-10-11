@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Config validation:  python3 tests/test_build.py"""
 import _path  # noqa: F401
-from build import check_config
+from config import ConfigError, check_config
 from parse import build_model
 
 MD = "# P\n\n## Setup\n\n- [ ] Install\n\n## Launch\n\nShip it.\n"
@@ -10,7 +10,7 @@ MD = "# P\n\n## Setup\n\n- [ ] Install\n\n## Launch\n\nShip it.\n"
 def rejects(config, needle):
     try:
         check_config(config, build_model(MD, "p"))
-    except SystemExit as e:
+    except ConfigError as e:
         assert needle in str(e), e
         return
     raise AssertionError(f"config should be rejected: {config}")

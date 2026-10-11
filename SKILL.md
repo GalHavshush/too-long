@@ -158,6 +158,13 @@ open .too-long/index.html
 (`xdg-open` on Linux, `start` on Windows.) If you can view it in a browser
 tool, check the landing view and one more view for broken rendering.
 
+To keep the site current while the Markdown is being edited:
+`python3 <skill-dir>/scripts/watch.py path/to/plan.md [--out DIR]` rebuilds on every
+save (no LLM involved). When a section that your TL;DR, a note or a diagram is based
+on changes, build.py and watch.py report it and the site marks that item "May be
+outdated". Nothing is rewritten automatically: update config.json yourself when the
+user wants it refreshed (a changed config clears the flags).
+
 ### 6. Report
 
 Two or three lines: where the site is, which views it has, and exactly what
@@ -211,7 +218,10 @@ The Markdown is the source of truth.
 ## Files
 
 - `scripts/parse.py`: Markdown → content model. Run alone for a summary, `--json` for the model.
-- `scripts/build.py`: model + config → site. Validates the config.
+- `scripts/build.py`: model + config → site (thin command over `regen.py`). `scripts/watch.py`: rebuild on change.
+- Core modules (no HTTP, no browser): `config.py` (load/validate config, staleness), `identity.py`
+  (doc and task ids, `build.json`), `model.py` (`build_document`, schema in `docs/model.md`),
+  `regen.py` (`Regenerator`), `website.py` (writes the site files).
 - `scripts/run_tests.py`: runs every test in `tests/` (`python3 scripts/run_tests.py`).
 - `video.md`, `scripts/video.py`, `scripts/render_video.mjs`, `scripts/args.py`, `assets/video/`: video mode (`--video`).
 - `assets/index.html`, `assets/styles.css`, `assets/app.js`: the site template, copied as is. `app.js` renders `data.js` into the chosen views.

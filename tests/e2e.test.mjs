@@ -250,6 +250,24 @@ await test("hostile Markdown and config cannot run script or inject attributes",
     blocked: ["control char", "data", "js", "mixed case", "ref link", "vbscript"] });
 });
 
+await test("inferred content is flagged when its source changes", async () => {
+  const f = join(tmp, "stale.md");
+  writeFileSync(f, "# Stale\n\n## Alpha\n\nA.\n\n## Beta\n\nB.\n");
+  const cfg = { views: ["overview", "diagrams"], tldr: ["Short."], notes: { alpha: "About alpha." },
+    diagrams: [{ title: "D", mermaid: "flowchart TD\n A-->B", sources: ["beta"] }] };
+  const url = build("stale", f, cfg);
+  const p = await open(url + "#/overview", { blockCdn: true });
+  assert.equal(await p.count(".badge.stale"), 0);
+  writeFileSync(f, "# Stale\n\n## Alpha\n\nA.\n\n## Beta\n\nB, changed.\n");
+  build("stale", f);  // same output folder, config unchanged
+  await p.reload();
+  assert.equal(await p.count(".badge.stale"), 1);  // the TL;DR
+  await p.go("#/diagrams");
+  assert.equal(await p.count(".diagram-card .badge.stale"), 1);
+  await p.go("#/document");
+  assert.equal(await p.count(".badge.stale"), 0);  // the note on Alpha is still current
+});
+
 await test("invalid config is refused by build.py", async () => {
   assert.throws(() => build("bad", example, { notes: { "no-such-section": "x" } }), /unknown section id/);
 });

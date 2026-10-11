@@ -25,7 +25,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from build import is_css_color
+from config import is_css_color
 from parse import parse_file, section_ids
 
 HERE = Path(__file__).resolve().parent

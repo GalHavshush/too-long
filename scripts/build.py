@@ -3,76 +3,19 @@
 
     python3 build.py plan.md [--out .too-long] [--config path/to/config.json]
 
-Writes <out>/index.html, styles.css, app.js (copied from ../assets) and
-data.js (window.TOO_LONG = {model, config}). data.js is a script, not JSON,
-so the site works from file:// with no server.
+Writes <out>/index.html, styles.css, app.js (copied from ../assets), data.js
+(window.TOO_LONG = {model, config}) and build.json (ids kept between builds).
+data.js is a script, not JSON, so the site works from file:// with no server.
 
 The config is step 2 (visualization selection), written by Claude. Defaults
 to <out>/config.json when it exists; without one, suggested views are used.
+
+This is a thin command over regen.Regenerator (see also watch.py).
 """
 import argparse
-import json
-import os
-import re
-import shutil
 import sys
-from pathlib import Path
 
-from identity import apply_identity, load_manifest, save_manifest
-from parse import parse_file, section_ids, suggest_views
-
-ASSETS = Path(__file__).resolve().parent.parent / "assets"
-# A CSS color and nothing else: hex, a color function with plain arguments, or a color name.
-# (No url(), no ';', so an accent can never load a resource or add other styles.)
-CSS_COLOR_RE = re.compile(r"^(#[0-9a-f]{3,8}|[a-z]{3,30}|(rgba?|hsla?|hwb|lab|lch|oklab|oklch)\([\d\s.,%/+-]*(deg|turn|rad)?[\d\s.,%/+-]*\))$", re.I)
-
-
-def is_css_color(value):
-    return isinstance(value, str) and bool(CSS_COLOR_RE.match(value.strip()))
-
-
-VIEWS = ["overview", "document", "roadmap", "tasks", "highlights", "diagrams", "files", "steps"]
-
-
-def check_config(config, model):
-    """Validate the config and enforce the fidelity rules. Returns (config, warnings)."""
-    warnings = []
-    ids = section_ids(model)
-
-    views = config.get("views") or suggest_views(model)
-    unknown = [v for v in views if v not in VIEWS]
-    if unknown:
-        sys.exit(f"Unknown view(s): {', '.join(unknown)}. Choose from: {', '.join(VIEWS)}")
-    if "document" not in views:  # the full, faithful document is always reachable
-        views.append("document")
-        warnings.append("added 'document' view (always included so no content is hidden)")
-    config["views"] = list(dict.fromkeys(views))
-
-    # Inferred content must cite real sections, or it could not be traced back to the source.
-    for key in config.get("notes", {}):
-        if key not in ids:
-            sys.exit(f"config 'notes' has unknown section id '{key}'. Use an id from parse.py.")
-
-    if "accent" in config and not is_css_color(config["accent"]):
-        sys.exit(f"config 'accent' must be a CSS color like \"#0f766e\", got {config['accent']!r}")
-
-    for key in ("roadmap", "track"):
-        for i in config.get(key, []):
-            if i not in ids:
-                sys.exit(f"config '{key}' has unknown section id '{i}'")
-    if config.get("roadmap"):  # stages picked by Claude instead of detected from titles
-        model["roadmap"] = {"ids": config["roadmap"], "basis": "config"}
-
-    for d in config.get("diagrams", []):
-        if not d.get("title") or not d.get("mermaid"):
-            sys.exit("Each config diagram needs 'title' and 'mermaid'.")
-        d["inferred"] = True  # anything in the config was written by Claude, not the document
-        for src in d.get("sources", []):
-            if src not in ids:
-                sys.exit(f"diagram '{d['title']}' cites unknown section id '{src}'. Use an id from parse.py.")
-    if config.get("diagrams") and "diagrams" not in config["views"]:
-        warnings.append("config has diagrams but the 'diagrams' view is not enabled")
-    return config, warnings
+from regen import Regenerator
 
 
 def main():
@@ -82,29 +25,15 @@ def main():
     ap.add_argument("--config")
     args = ap.parse_args()
 
-    md = Path(args.markdown)
-    out = Path(args.out)
-    cfg_path = Path(args.config) if args.config else out / "config.json"
-    config = json.loads(cfg_path.read_text(encoding="utf-8")) if cfg_path.exists() else {}
-    model = parse_file(md, config.get("track", []))
-    # Relative links in the Markdown are relative to the .md file, not the output folder.
-    model["base"] = os.path.relpath(md.resolve().parent, out.resolve()).replace(os.sep, "/")
-
-    config, warnings = check_config(config, model)
-    warnings = model["warnings"] + warnings
-    manifest = apply_identity(model, md, load_manifest(out), out)  # doc_id + task ids stable across builds
-
-    out.mkdir(parents=True, exist_ok=True)
-    for name in ("index.html", "styles.css", "app.js"):
-        shutil.copy(ASSETS / name, out / name)
-    data = json.dumps({"model": model, "config": config}, ensure_ascii=False)
-    (out / "data.js").write_text(f"window.TOO_LONG = {data};\n", encoding="utf-8")
-    save_manifest(out, manifest)
-
-    for w in warnings:
+    regen = Regenerator(args.markdown, args.out, args.config)
+    result = regen.refresh(force=True)
+    if not result.ok:
+        sys.exit(result.error)
+    for w in result.warnings:
         print(f"warning: {w}")
-    print(f"Built {out / 'index.html'}  views: {', '.join(config['views'])}"
-          f"  ({len(model['sections'])} sections, {len(model['tasks'])} tasks)")
+    doc = regen.document
+    print(f"Built {regen.out / 'index.html'}  views: {', '.join(doc.config['views'])}"
+          f"  ({len(doc.model['sections'])} sections, {len(doc.model['tasks'])} tasks)")
 
 
 if __name__ == "__main__":
