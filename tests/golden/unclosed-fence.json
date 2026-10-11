@@ -6,16 +6,19 @@
     {
       "id": "before",
       "title": "Before",
+      "line": 3,
       "blocks": [
         {
           "type": "p",
-          "text": "Text before the fence."
+          "text": "Text before the fence.",
+          "line": 5
         },
         {
           "type": "code",
           "lang": "js",
           "text": "const a = 1;\n## not a heading, still inside the fence",
-          "unclosed": true
+          "unclosed": true,
+          "line": 7
         }
       ],
       "subsections": []
@@ -27,7 +30,7 @@
   "files": [],
   "refs": {},
   "warnings": [
-    "a code fence in 'before' is never closed; everything after it is shown as code"
+    "the code fence on line 7 is never closed; everything after it is shown as code"
   ],
   "roadmap": {
     "ids": [

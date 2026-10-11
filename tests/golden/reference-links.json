@@ -4,12 +4,14 @@
   "intro": [
     {
       "type": "p",
-      "text": "See [the guide][guide], [Docs][] and [home]. Text in brackets [like this] stays text."
+      "text": "See [the guide][guide], [Docs][] and [home]. Text in brackets [like this] stays text.",
+      "line": 3
     },
     {
       "type": "code",
       "lang": "",
-      "text": "[not-a-def]: inside a fence"
+      "text": "[not-a-def]: inside a fence",
+      "line": 10
     }
   ],
   "sections": [],

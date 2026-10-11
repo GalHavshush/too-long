@@ -3,15 +3,18 @@
   "file": "frontmatter-unclosed",
   "intro": [
     {
-      "type": "hr"
+      "type": "hr",
+      "line": 1
     },
     {
       "type": "p",
-      "text": "title: never closed"
+      "text": "title: never closed",
+      "line": 2
     },
     {
       "type": "p",
-      "text": "Body."
+      "text": "Body.",
+      "line": 6
     }
   ],
   "sections": [],

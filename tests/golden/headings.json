@@ -4,13 +4,15 @@
   "intro": [
     {
       "type": "p",
-      "text": "Intro paragraph before any section."
+      "text": "Intro paragraph before any section.",
+      "line": 3
     }
   ],
   "sections": [
     {
       "id": "setup",
       "title": "Setup",
+      "line": 5,
       "blocks": [
         {
           "type": "list",
@@ -19,25 +21,30 @@
               "text": "Install dependencies",
               "ordered": false,
               "task": false,
+              "line": 7,
               "id": "t-setup-install-dependencies"
             },
             {
               "text": "Install dependencies",
               "ordered": false,
               "task": false,
+              "line": 8,
               "id": "t-setup-install-dependencies-2"
             }
-          ]
+          ],
+          "line": 7
         }
       ],
       "subsections": [
         {
           "id": "notes",
           "title": "Notes",
+          "line": 10,
           "blocks": [
             {
               "type": "p",
-              "text": "Plain text."
+              "text": "Plain text.",
+              "line": 12
             }
           ]
         }
@@ -46,6 +53,7 @@
     {
       "id": "setup-2",
       "title": "Setup",
+      "line": 14,
       "blocks": [
         {
           "type": "list",
@@ -54,28 +62,34 @@
               "text": "Install dependencies",
               "ordered": false,
               "task": false,
+              "line": 16,
               "id": "t-setup-2-install-dependencies"
             }
-          ]
+          ],
+          "line": 16
         }
       ],
       "subsections": [
         {
           "id": "notes-2",
           "title": "Notes",
+          "line": 18,
           "blocks": [
             {
               "type": "p",
-              "text": "Same subsection title again."
+              "text": "Same subsection title again.",
+              "line": 20
             },
             {
               "type": "heading",
               "level": 4,
-              "text": "Deep heading stays inside the subsection"
+              "text": "Deep heading stays inside the subsection",
+              "line": 22
             },
             {
               "type": "p",
-              "text": "Text under the deep heading."
+              "text": "Text under the deep heading.",
+              "line": 24
             }
           ]
         }
@@ -84,10 +98,12 @@
     {
       "id": "setext-section",
       "title": "Setext section",
+      "line": 26,
       "blocks": [
         {
           "type": "p",
-          "text": "Body of the setext section."
+          "text": "Body of the setext section.",
+          "line": 29
         }
       ],
       "subsections": []
@@ -100,7 +116,8 @@
       "done": false,
       "at": "setup",
       "section": "setup",
-      "n": null
+      "n": null,
+      "line": 7
     },
     {
       "id": "t-setup-install-dependencies-2",
@@ -108,7 +125,8 @@
       "done": false,
       "at": "setup",
       "section": "setup",
-      "n": null
+      "n": null,
+      "line": 8
     },
     {
       "id": "t-setup-2-install-dependencies",
@@ -116,7 +134,8 @@
       "done": false,
       "at": "setup-2",
       "section": "setup-2",
-      "n": null
+      "n": null,
+      "line": 16
     }
   ],
   "callouts": [],

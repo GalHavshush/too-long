@@ -304,6 +304,14 @@ details.sec > summary .progress { min-width: 160px; flex: none; }
 .ref { font-size: .74rem; color: var(--muted); text-decoration: none; border: 1px solid var(--border); border-radius: 99px; padding: 0 8px; }
 .ref:hover { color: var(--accent); border-color: var(--accent); }
 
+/* ---------- source ---------- */
+.src { font: .82rem/1.6 var(--mono); background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 12px 12px 4.2em; margin: 0; overflow-x: auto; }
+.src li { white-space: pre-wrap; overflow-wrap: anywhere; padding-left: 8px; }
+.src li::marker { color: var(--muted); font-size: .9em; }
+.src li code { background: none; padding: 0; font: inherit; }
+.src li.hit { background: color-mix(in srgb, var(--accent) 18%, transparent); border-radius: 4px; }
+a.where:hover { color: var(--accent); border-color: var(--accent); }
+
 /* ---------- steps ---------- */
 .dots { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 22px; }
 .dots a { width: 28px; height: 6px; border-radius: 99px; background: var(--border); }

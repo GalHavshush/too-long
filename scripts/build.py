@@ -17,7 +17,7 @@ import shutil
 import sys
 from pathlib import Path
 
-from parse import parse_file, suggest_views
+from parse import parse_file, section_ids, suggest_views
 
 ASSETS = Path(__file__).resolve().parent.parent / "assets"
 VIEWS = ["overview", "document", "roadmap", "tasks", "highlights", "diagrams", "files", "steps"]
@@ -26,8 +26,7 @@ VIEWS = ["overview", "document", "roadmap", "tasks", "highlights", "diagrams", "
 def check_config(config, model):
     """Validate the config and enforce the fidelity rules. Returns (config, warnings)."""
     warnings = []
-    ids = {"intro"} | {s["id"] for s in model["sections"]} | {
-        sub["id"] for s in model["sections"] for sub in s["subsections"]}
+    ids = section_ids(model)
 
     views = config.get("views") or suggest_views(model)
     unknown = [v for v in views if v not in VIEWS]
@@ -38,9 +37,10 @@ def check_config(config, model):
         warnings.append("added 'document' view (always included so no content is hidden)")
     config["views"] = list(dict.fromkeys(views))
 
+    # Inferred content must cite real sections, or it could not be traced back to the source.
     for key in config.get("notes", {}):
         if key not in ids:
-            warnings.append(f"note for unknown section id '{key}' will not be shown")
+            sys.exit(f"config 'notes' has unknown section id '{key}'. Use an id from parse.py.")
 
     for key in ("roadmap", "track"):
         for i in config.get(key, []):
@@ -55,7 +55,7 @@ def check_config(config, model):
         d["inferred"] = True  # anything in the config was written by Claude, not the document
         for src in d.get("sources", []):
             if src not in ids:
-                warnings.append(f"diagram '{d['title']}' cites unknown section id '{src}'")
+                sys.exit(f"diagram '{d['title']}' cites unknown section id '{src}'. Use an id from parse.py.")
     if config.get("diagrams") and "diagrams" not in config["views"]:
         warnings.append("config has diagrams but the 'diagrams' view is not enabled")
     return config, warnings

@@ -6,6 +6,7 @@
     {
       "id": "decisions",
       "title": "Decisions",
+      "line": 3,
       "blocks": [
         {
           "type": "table",
@@ -25,7 +26,8 @@
               "`SQS`",
               "Managed"
             ]
-          ]
+          ],
+          "line": 5
         }
       ],
       "subsections": []
@@ -33,6 +35,7 @@
     {
       "id": "plain-table",
       "title": "Plain table",
+      "line": 10,
       "blocks": [
         {
           "type": "table",
@@ -49,7 +52,8 @@
               "Web",
               "frontend"
             ]
-          ]
+          ],
+          "line": 12
         }
       ],
       "subsections": []
@@ -67,6 +71,7 @@
       ],
       "at": "decisions",
       "section": "decisions",
+      "line": 7,
       "from_heading": true
     },
     {
@@ -79,6 +84,7 @@
       ],
       "at": "decisions",
       "section": "decisions",
+      "line": 8,
       "from_heading": true
     }
   ],

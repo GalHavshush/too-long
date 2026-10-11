@@ -6,17 +6,20 @@
       "type": "code",
       "lang": "yaml",
       "label": "Front matter",
-      "text": "title: Front matter plan\nowner: platform"
+      "text": "title: Front matter plan\nowner: platform",
+      "line": 1
     }
   ],
   "sections": [
     {
       "id": "only-section",
       "title": "Only section",
+      "line": 8,
       "blocks": [
         {
           "type": "p",
-          "text": "Body."
+          "text": "Body.",
+          "line": 10
         }
       ],
       "subsections": []

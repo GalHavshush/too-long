@@ -6,6 +6,7 @@
     {
       "id": "lists",
       "title": "Lists",
+      "line": 3,
       "blocks": [
         {
           "type": "list",
@@ -13,20 +14,24 @@
             {
               "text": "Top item",
               "ordered": false,
+              "line": 5,
               "children": [
                 {
                   "text": "Child item",
                   "ordered": false,
+                  "line": 6,
                   "children": [
                     {
                       "text": "Grandchild with `code`",
-                      "ordered": false
+                      "ordered": false,
+                      "line": 7
                     }
                   ]
                 },
                 {
                   "text": "Second child",
-                  "ordered": false
+                  "ordered": false,
+                  "line": 8
                 }
               ]
             },
@@ -34,21 +39,25 @@
               "text": "Task with children",
               "ordered": false,
               "task": false,
+              "line": 9,
               "children": [
                 {
                   "text": "Done subtask",
                   "ordered": false,
                   "task": true,
+                  "line": 10,
                   "id": "t-lists-done-subtask"
                 },
                 {
                   "text": "Open subtask",
                   "ordered": false,
                   "task": false,
+                  "line": 11,
                   "children": [
                     {
                       "text": "Tab-indented child of the open subtask",
-                      "ordered": false
+                      "ordered": false,
+                      "line": 12
                     }
                   ],
                   "id": "t-lists-open-subtask"
@@ -56,7 +65,8 @@
               ],
               "id": "t-lists-task-with-children"
             }
-          ]
+          ],
+          "line": 5
         },
         {
           "type": "list",
@@ -64,26 +74,31 @@
             {
               "text": "Starts at three",
               "ordered": true,
-              "n": 3
+              "n": 3,
+              "line": 14
             },
             {
               "text": "Then four",
               "ordered": true,
               "n": 4,
+              "line": 15,
               "children": [
                 {
                   "text": "Nested ordered",
                   "ordered": true,
-                  "n": 1
+                  "n": 1,
+                  "line": 16
                 },
                 {
                   "text": "Nested ordered two",
                   "ordered": true,
-                  "n": 2
+                  "n": 2,
+                  "line": 17
                 }
               ]
             }
-          ]
+          ],
+          "line": 14
         }
       ],
       "subsections": []
@@ -91,6 +106,7 @@
     {
       "id": "code-in-lists",
       "title": "Code in lists",
+      "line": 19,
       "blocks": [
         {
           "type": "list",
@@ -99,11 +115,13 @@
               "text": "Install:",
               "ordered": true,
               "n": 1,
+              "line": 21,
               "blocks": [
                 {
                   "type": "code",
                   "lang": "bash",
-                  "text": "npm install\nnpm run build"
+                  "text": "npm install\nnpm run build",
+                  "line": 23
                 }
               ]
             },
@@ -111,14 +129,17 @@
               "text": "Configure, with a paragraph after a blank line.",
               "ordered": true,
               "n": 2,
+              "line": 28,
               "blocks": [
                 {
                   "type": "p",
-                  "text": "Second paragraph of step two."
+                  "text": "Second paragraph of step two.",
+                  "line": 30
                 }
               ]
             }
-          ]
+          ],
+          "line": 21
         },
         {
           "type": "list",
@@ -126,15 +147,18 @@
             {
               "text": "Bullet with a fence",
               "ordered": false,
+              "line": 32,
               "blocks": [
                 {
                   "type": "code",
                   "lang": "python",
-                  "text": "print(\"tilde fence\")"
+                  "text": "print(\"tilde fence\")",
+                  "line": 33
                 }
               ]
             }
-          ]
+          ],
+          "line": 32
         }
       ],
       "subsections": []
@@ -147,7 +171,8 @@
       "done": false,
       "at": "lists",
       "section": "lists",
-      "n": null
+      "n": null,
+      "line": 9
     },
     {
       "id": "t-lists-done-subtask",
@@ -155,7 +180,8 @@
       "done": true,
       "at": "lists",
       "section": "lists",
-      "n": null
+      "n": null,
+      "line": 10
     },
     {
       "id": "t-lists-open-subtask",
@@ -163,7 +189,8 @@
       "done": false,
       "at": "lists",
       "section": "lists",
-      "n": null
+      "n": null,
+      "line": 11
     }
   ],
   "callouts": [],

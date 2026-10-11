@@ -25,7 +25,8 @@
           "trailing |",
           "escaped pipe at the end |"
         ]
-      ]
+      ],
+      "line": 3
     }
   ],
   "sections": [],

@@ -136,6 +136,10 @@ Choosing the rest:
 Everything from the config is rendered with an "Inferred · not in the
 original" label. That is what makes adding it safe.
 
+Everything extracted from the Markdown (tasks, highlights, diagrams, file
+mentions) links to its source line ("L42"), which opens `#/source/42`: the
+Markdown exactly as written, with that line highlighted.
+
 ### 5. Build
 
 ```bash
@@ -143,8 +147,9 @@ python3 <skill-dir>/scripts/build.py path/to/plan.md
 ```
 
 Options: `--out DIR` (default `.too-long`; use `.too-long/<name>` for several
-documents), `--config FILE` (default `<out>/config.json`). Fix any warnings it
-prints (unknown section ids, missing view for diagrams). Then open it:
+documents), `--config FILE` (default `<out>/config.json`). It refuses a config
+whose notes, diagram sources, roadmap or track cite an unknown section id; fix
+it and re-run. Fix any warnings it prints too. Then open it:
 
 ```bash
 open .too-long/index.html

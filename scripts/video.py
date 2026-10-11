@@ -25,7 +25,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from parse import parse_file
+from parse import parse_file, section_ids
 
 HERE = Path(__file__).resolve().parent
 ASSETS = HERE.parent / "assets" / "video"
@@ -90,8 +90,7 @@ def norm(s):
 def validate(model, sb):
     """Fidelity checks. Returns (errors, warnings). Errors stop the render."""
     errors, warnings = [], []
-    ids = {"intro"} | {s["id"] for s in model["sections"]} | {
-        sub["id"] for s in model["sections"] for sub in s["subsections"]}
+    ids = section_ids(model)
     source = norm(model["source"])
     scenes = sb.get("scenes") or []
     if len(scenes) < 3:

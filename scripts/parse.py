@@ -91,10 +91,11 @@ def text_block(text):
     return {"type": "p", "text": text}
 
 
-def parse_blocks(lines):
+def parse_blocks(lines, base=0):
+    """base: how many source lines come before lines[0], so every block gets its 1-based source `line`."""
     blocks, i = [], 0
     while i < len(lines):
-        line = lines[i]
+        line, start, count = lines[i], i, len(blocks)
         if not line.strip():
             i += 1
         elif m := FENCE_RE.match(line):
@@ -107,10 +108,10 @@ def parse_blocks(lines):
             blocks.append({"type": "hr"})
             i += 1
         elif LIST_RE.match(line):
-            i, b = parse_list(lines, i)
+            i, b = parse_list(lines, i, base)
             blocks.append(b)
         elif line.lstrip().startswith(">"):
-            i, b = parse_quote(lines, i)
+            i, b = parse_quote(lines, i, base)
             blocks.append(b)
         elif "|" in line and i + 1 < len(lines) and TABLE_SEP_RE.match(lines[i + 1]):
             i, b = parse_table(lines, i)
@@ -121,6 +122,8 @@ def parse_blocks(lines):
         else:
             i, b = parse_paragraph(lines, i)
             blocks.append(b)
+        if len(blocks) > count:
+            blocks[-1]["line"] = base + start + 1
     return blocks
 
 
@@ -163,15 +166,15 @@ def parse_paragraph(lines, i):
     return i, text_block(" ".join(buf))
 
 
-def parse_quote(lines, i):
-    inner = []
+def parse_quote(lines, i, base):
+    first, inner = i, []
     while i < len(lines) and lines[i].lstrip().startswith(">"):
         inner.append(re.sub(r"^\s*> ?", "", lines[i]))
         i += 1
     m = ALERT_RE.match(inner[0].strip())
     if m:  # GitHub alert: > [!WARNING]
-        return i, {"type": "callout", "kind": m[1].lower(), "blocks": parse_blocks([m[2]] + inner[1:])}
-    blocks = parse_blocks(inner)
+        return i, {"type": "callout", "kind": m[1].lower(), "blocks": parse_blocks([m[2]] + inner[1:], base + first)}
+    blocks = parse_blocks(inner, base + first)
     if len(blocks) == 1 and blocks[0]["type"] == "callout":
         return i, blocks[0]
     return i, {"type": "quote", "blocks": blocks}
@@ -225,29 +228,29 @@ def make_item(marker, text):
     return item
 
 
-def add_text(item, text, new_para):
+def add_text(item, text, new_para, line):
     """Continuation line of a list item: extend its text or start a paragraph inside it."""
     blocks = item.get("blocks")
     if new_para or (blocks and blocks[-1]["type"] != "p"):
-        item.setdefault("blocks", []).append({"type": "p", "text": text})
+        item.setdefault("blocks", []).append({"type": "p", "text": text, "line": line})
     elif blocks:
         blocks[-1]["text"] += " " + text
     else:
         item["text"] += " " + text
 
 
-def parse_list(lines, i):
-    """Nested lists by indentation. Items: {text, ordered, n?, task?, kind?, children?, blocks?}."""
-    base = indent_of(LIST_RE.match(lines[i])[1])
+def parse_list(lines, i, base=0):
+    """Nested lists by indentation (base: source line offset, as in parse_blocks). Items: {text, ordered, n?, task?, kind?, children?, blocks?}."""
+    indent = indent_of(LIST_RE.match(lines[i])[1])
     items = []
-    stack = [(base, items)]  # (indent of the items in this list, the list)
+    stack = [(indent, items)]  # (indent of the items in this list, the list)
     last, after_blank = None, False
     while i < len(lines):
         line = lines[i]
         m = LIST_RE.match(line)
         if m and not HR_RE.match(line):
             d = indent_of(m[1])
-            if d <= base and items and items[0]["ordered"] != m[2][0].isdigit():
+            if d <= indent and items and items[0]["ordered"] != m[2][0].isdigit():
                 break  # "-" list followed by "1." list: two separate lists
             if d >= stack[-1][0] + 2 and last is not None:
                 last["children"] = []
@@ -256,6 +259,7 @@ def parse_list(lines, i):
                 while len(stack) > 1 and d < stack[-1][0]:
                     stack.pop()
             last = make_item(m[2], m[3])
+            last["line"] = base + i + 1
             stack[-1][1].append(last)
             after_blank = False
             i += 1
@@ -264,16 +268,18 @@ def parse_list(lines, i):
             while j < len(lines) and not lines[j].strip():
                 j += 1
             nxt = lines[j] if j < len(lines) else ""
-            if (LIST_RE.match(nxt) and not HR_RE.match(nxt)) or indent_of(nxt) > base:
+            if (LIST_RE.match(nxt) and not HR_RE.match(nxt)) or indent_of(nxt) > indent:
                 after_blank, i = True, j
             else:
                 break
-        elif indent_of(line) > base and (fm := FENCE_RE.match(line)):
+        elif indent_of(line) > indent and (fm := FENCE_RE.match(line)):
+            b_line = base + i + 1
             i, b = parse_fence(lines, i, fm)
+            b["line"] = b_line
             last.setdefault("blocks", []).append(b)
             after_blank = False
-        elif indent_of(line) > base or (not after_blank and not is_block_start(line)):
-            add_text(last, line.strip(), after_blank)
+        elif indent_of(line) > indent or (not after_blank and not is_block_start(line)):
+            add_text(last, line.strip(), after_blank, base + i + 1)
             after_blank = False
             i += 1
         else:
@@ -326,16 +332,16 @@ def find_files(text):
 def build_model(md, name="document", track=()):
     """track: section ids whose top-level numbered items should be tracked as tasks."""
     lines = md.splitlines()
-    front, warnings = [], []
+    front, warnings, offset = [], [], 0
     if lines and lines[0].strip() == "---":  # YAML front matter: keep it, as a code block
         end = next((k for k in range(1, len(lines)) if lines[k].strip() in ("---", "...")), None)
         if end:
-            front = [{"type": "code", "lang": "yaml", "label": "Front matter", "text": "\n".join(lines[1:end])}]
-            lines = lines[end + 1:]
+            front = [{"type": "code", "lang": "yaml", "label": "Front matter", "text": "\n".join(lines[1:end]), "line": 1}]
+            lines, offset = lines[end + 1:], end + 1
         else:
             warnings.append("front matter '---' on the first line is never closed; it is shown as text")
     lines, refs = take_ref_defs(lines)
-    blocks = front + parse_blocks(lines)
+    blocks = front + parse_blocks(lines, offset)
 
     # Heading levels: a single H1 is the title; the next level used is "section", the one below "subsection".
     headings = [b for b in blocks if b["type"] == "heading"]
@@ -350,7 +356,7 @@ def build_model(md, name="document", track=()):
         if b is title_block:
             continue
         if b["type"] == "heading" and b["level"] <= top + 1:
-            node = {"id": slugify(b["text"], used), "title": b["text"], "blocks": []}
+            node = {"id": slugify(b["text"], used), "title": b["text"], "line": b["line"], "blocks": []}
             if b["level"] == top or not sections:
                 node["subsections"] = []
                 sections.append(node)
@@ -365,60 +371,65 @@ def build_model(md, name="document", track=()):
     task_ids = set()
     code_blocks = 0
 
-    def note_files(text, at):
+    def note_files(text, at, line):
         for p in find_files(text):
-            files.setdefault(p, [])
-            if at not in files[p]:
-                files[p].append(at)
+            mentions = files.setdefault(p, [])
+            if (at, line) not in mentions:
+                mentions.append((at, line))
 
-    def walk(blocks, at, sec, kind):
+    def walk(blocks, at, sec, kind, line=None):
+        """line: the enclosing block's line, for inner blocks that have none of their own."""
         nonlocal code_blocks
         for b in blocks:
             t = b["type"]
+            b_line = b.get("line", line)
             if t in ("p", "heading"):
-                note_files(b["text"], at)
+                note_files(b["text"], at, b_line)
             elif t == "list":
                 walk_items(b["items"], at, sec, kind, True)
             elif t == "table":
-                for cell in b["header"] + [c for row in b["rows"] for c in row]:
-                    note_files(cell, at)
-                for row in b["rows"] if kind else []:  # a table under "Decisions": one highlight per row
+                for cell in b["header"]:
+                    note_files(cell, at, b["line"])
+                for k, row in enumerate(b["rows"]):  # row k is source line table + 2 + k
+                    for cell in row:
+                        note_files(cell, at, b["line"] + 2 + k)
+                for k, row in enumerate(b["rows"] if kind else []):  # a table under "Decisions": one highlight per row
                     text = f"**{row[0]}**" + "".join(
                         f" · {h + ': ' if len(row) > 2 and h else ''}{c}" for h, c in zip(b["header"][1:], row[1:]))
                     callouts.append({"kind": kind, "blocks": [{"type": "p", "text": text}],
-                                     "at": at, "section": sec, "from_heading": True})
+                                     "at": at, "section": sec, "line": b["line"] + 2 + k, "from_heading": True})
             elif t == "quote":
-                walk(b["blocks"], at, sec, None)
+                walk(b["blocks"], at, sec, None, b_line)
             elif t == "callout":
-                callouts.append({"kind": b["kind"], "blocks": b["blocks"], "at": at, "section": sec})
-                walk(b["blocks"], at, sec, None)
+                callouts.append({"kind": b["kind"], "blocks": b["blocks"], "at": at, "section": sec, "line": b_line})
+                walk(b["blocks"], at, sec, None, b_line)
             elif t == "mermaid":
-                diagrams.append({"text": b["text"], "at": at, "section": sec})
+                diagrams.append({"text": b["text"], "at": at, "section": sec, "line": b["line"]})
             elif t == "code":
                 code_blocks += 1
             if b.get("unclosed"):
-                warnings.append(f"a code fence in '{at}' is never closed; everything after it is shown as code")
+                warnings.append(f"the code fence on line {b['line']} is never closed; everything after it is shown as code")
 
     def walk_items(items, at, sec, kind, top_level):
         for it in items:
-            note_files(it["text"], at)
+            note_files(it["text"], at, it["line"])
             if top_level and it["ordered"] and "task" not in it and (at in track or sec in track):
                 it["task"] = False  # a numbered step the reader asked to track (config "track")
             if "task" in it:
                 it["id"] = slugify(f"t-{at}-{it['text'][:40]}", task_ids)
                 tasks.append({"id": it["id"], "text": it["text"], "done": it["task"], "at": at, "section": sec,
-                              "n": it.get("n")})
+                              "n": it.get("n"), "line": it["line"]})
             item_kind = it.get("kind") or (kind if top_level else None)
             if item_kind:
                 body = [{"type": "p", "text": it["text"]}]
                 if it.get("children"):
                     body.append({"type": "list", "items": it["children"]})
-                entry = {"kind": item_kind, "blocks": body, "at": at, "section": sec}
+                entry = {"kind": item_kind, "blocks": body, "at": at, "section": sec, "line": it["line"]}
                 if not it.get("kind"):
                     entry["from_heading"] = True  # it is a highlight because of the section it sits in
                 callouts.append(entry)
             walk_items(it.get("children", []), at, sec, kind, False)
-            walk(it.get("blocks", []), at, sec, None)
+            walk(it.get("blocks", []), at, sec, None, it["line"])
 
     def section_kind(title):
         m = SECTION_KIND_RE.search(strip_md(title))
@@ -442,13 +453,21 @@ def build_model(md, name="document", track=()):
         "tasks": tasks,
         "callouts": callouts,
         "diagrams": diagrams,
-        "files": [{"path": p, "at": at} for p, at in sorted(files.items())],
+        # at: where each file is mentioned (section ids); mentions: the same, with source lines
+        "files": [{"path": p, "at": list(dict.fromkeys(a for a, _ in ms)),
+                   "mentions": [{"at": a, "line": n} for a, n in ms]} for p, ms in sorted(files.items())],
         "refs": refs,
         "warnings": warnings,
         "roadmap": roadmap,
         "stats": {"words": len(re.findall(r"\w+", md)), "code_blocks": code_blocks},
         "source": md,
     }
+
+
+def section_ids(model):
+    """Every id a config, storyboard or link may cite: intro, sections, subsections."""
+    return {"intro"} | {s["id"] for s in model["sections"]} | {
+        sub["id"] for s in model["sections"] for sub in s["subsections"]}
 
 
 def parse_file(path, track=()):

@@ -155,6 +155,8 @@
   }
 
   const link = id => `<a href="#/document/${id}">${inline(nodes[id]?.title ?? id)}</a>`;
+  // Where an item came from in the Markdown: "L42" opens the source at that line.
+  const lineRef = n => n ? `<a class="where" href="#/source/${n}" title="Line ${n} of ${esc(model.file)}">L${n}</a>` : "";
   const plainText = b => !b ? "" :
     b.type === "list" ? b.items.map(i => [i.text, ...(i.blocks || []).map(plainText), plainText({ type: "list", items: i.children || [] })].join(" ")).join(" ") :
     b.type === "table" ? [...b.header, ...b.rows.flat()].join(" ") :
@@ -286,7 +288,7 @@
       </header>
       ${groups.length ? groups.map(g => `<section class="task-group">
         <div class="group-head"><h2 dir="auto">${nodes[g.id].parent ? `<span class="muted">${inline(nodes[nodes[g.id].parent].title)} ›</span> ` : ""}${link(g.id)}</h2>${progressEl(g.id)}</div>
-        <ul class="tasklist">${g.ts.map(t => `<li class="task">${checkbox(t.id, isDone(t))}<div><span class="t">${num(t.n)}${inline(t.text)}</span></div></li>`).join("")}</ul>
+        <ul class="tasklist">${g.ts.map(t => `<li class="task">${checkbox(t.id, isDone(t))}<div><span class="t">${num(t.n)}${inline(t.text)}</span> ${lineRef(t.line)}</div></li>`).join("")}</ul>
       </section>`).join("") : `<p class="empty">Nothing here.</p>`}`;
   }
 
@@ -306,14 +308,14 @@
         <div class="hl-grid">${model.callouts.filter(c => c.kind === k).map(c => `
           <article class="hl" data-kind="${k}">
             <div class="hl-body">${blocks(c.blocks)}</div>
-            <footer>${link(c.at)}${c.from_heading ? ` <span class="muted small">· listed under that heading</span>` : ""}</footer>
+            <footer>${link(c.at)} ${lineRef(c.line)}${c.from_heading ? ` <span class="muted small">· listed under that heading</span>` : ""}</footer>
           </article>`).join("")}</div>
       </section>`).join("")}`;
   }
 
   function viewDiagrams() {
     const fromDoc = model.diagrams.map(d => `<section class="diagram-card">
-      <header><h2 dir="auto">${link(d.at)}</h2><span class="badge source">From the document</span></header>
+      <header><h2 dir="auto">${link(d.at)} ${lineRef(d.line)}</h2><span class="badge source">From the document</span></header>
       ${diagram(d.text)}</section>`);
     const fromClaude = (config.diagrams || []).map(d => `<section class="diagram-card inferred">
       <header><h2 dir="auto">${inline(d.title)}</h2><span class="badge">Inferred · drawn by Claude</span></header>
@@ -332,14 +334,14 @@
       let node = root;
       parts.forEach(p => { node = node.dirs[p] ??= { dirs: {}, files: [] }; });
       if (name) node.files.push({ name, ...f });
-      else node.refs = f.at;
+      else node.refs = f.mentions || f.at.map(at => ({ at }));
     });
-    const refs = at => (at || []).map(id => `<a class="ref" href="#/document/${id}">${inline(nodes[id]?.title ?? id)}</a>`).join("");
+    const refs = ms => (ms || []).map(m => `<a class="ref" href="#/document/${m.at}">${inline(nodes[m.at]?.title ?? m.at)}</a>${lineRef(m.line)}`).join("");
     const tree = node => `<ul class="tree">${
       Object.entries(node.dirs).sort().map(([name, d]) =>
         `<li><details open><summary><span class="dir">${esc(name)}/</span>${refs(d.refs)}</summary>${tree(d)}</details></li>`).join("") +
       node.files.sort((a, b) => a.name.localeCompare(b.name)).map(f =>
-        `<li class="file${f.path === target ? " hit" : ""}" id="file:${esc(f.path)}"><code>${esc(f.name)}</code>${refs(f.at)}</li>`).join("")
+        `<li class="file${f.path === target ? " hit" : ""}" id="file:${esc(f.path)}"><code>${esc(f.name)}</code>${refs(f.mentions || f.at.map(at => ({ at })))}</li>`).join("")
     }</ul>`;
     return `<header class="page-head"><h1>Files</h1><p class="muted">Every file path the document mentions, and where it is mentioned.</p></header>
       <div class="tree-wrap">${tree(root)}</div>`;
@@ -388,9 +390,17 @@
         <strong dir="auto">${inline(nodes[h.id].title)}</strong>${h.snippet ? `<span dir="auto">…${mark(h.snippet)}…</span>` : ""}</a>`).join("")}</div>`;
   }
 
+  // Always available (not a menu view): the Markdown with line numbers, one line highlighted.
+  function viewSource(n) {
+    const hit = parseInt(n, 10) || 0;
+    return `<header class="page-head"><h1>Source</h1><p class="muted">${esc(model.file)}${hit ? ` · line ${hit}` : ""} · exactly as written</p></header>
+      <ol class="src">${model.source.split("\n").map((l, k) =>
+        `<li id="L${k + 1}"${k + 1 === hit ? ' class="hit"' : ""}><code dir="auto">${esc(l) || " "}</code></li>`).join("")}</ol>`;
+  }
+
   const VIEWS = {
     overview: viewOverview, document: viewDocument, roadmap: viewRoadmap, tasks: viewTasks,
-    highlights: viewHighlights, diagrams: viewDiagrams, files: viewFiles, steps: viewSteps,
+    highlights: viewHighlights, diagrams: viewDiagrams, files: viewFiles, steps: viewSteps, source: viewSource,
   };
 
   // ---------- chrome: sidebar, routing, events ----------
@@ -415,7 +425,7 @@
     const h = decodeURIComponent(location.hash);
     if (h.length > 1 && !h.startsWith("#/")) return { view: "document", arg: h.slice(1) };  // plain #anchor from the Markdown
     const [view, ...rest] = h.replace(/^#\/?/, "").split("/");
-    return { view: has(view) ? view : config.views[0], arg: rest.join("/") };
+    return { view: has(view) || view === "source" ? view : config.views[0], arg: rest.join("/") };
   }
 
   let spy;
@@ -430,10 +440,11 @@
     renderMermaid();
     scrollSpy(view === "document");
     const target = view === "document" && arg ? document.getElementById(arg)
-      : view === "files" && arg ? document.getElementById("file:" + arg) : null;
+      : view === "files" && arg ? document.getElementById("file:" + arg)
+      : view === "source" && arg ? document.getElementById("L" + arg) : null;
     if (target) {
       for (let d = target.closest("details"); d; d = d.parentElement.closest("details")) d.open = true;
-      target.scrollIntoView({ block: "start" });
+      target.scrollIntoView({ block: view === "source" ? "center" : "start" });
     } else window.scrollTo(0, keepScroll ? y : 0);
   }
 

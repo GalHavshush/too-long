@@ -6,10 +6,12 @@
     {
       "id": "files",
       "title": "Files",
+      "line": 3,
       "blocks": [
         {
           "type": "p",
-          "text": "Edit `src/app.ts`, `./config/settings.json` and `../shared/types.d.ts`. Keep `docs/` and the `Dockerfile` in sync. React is `react.js`, not a file."
+          "text": "Edit `src/app.ts`, `./config/settings.json` and `../shared/types.d.ts`. Keep `docs/` and the `Dockerfile` in sync. React is `react.js`, not a file.",
+          "line": 5
         }
       ],
       "subsections": []
@@ -17,14 +19,17 @@
     {
       "id": "links",
       "title": "Links",
+      "line": 8,
       "blocks": [
         {
           "type": "p",
-          "text": "See [the guide](docs/guide.md), [an anchor](#files) and <https://example.com>. Visit https://example.com/path?q=1 directly."
+          "text": "See [the guide](docs/guide.md), [an anchor](#files) and <https://example.com>. Visit https://example.com/path?q=1 directly.",
+          "line": 10
         },
         {
           "type": "p",
-          "text": "![diagram](img/arch.png)"
+          "text": "![diagram](img/arch.png)",
+          "line": 13
         }
       ],
       "subsections": []
@@ -38,36 +43,72 @@
       "path": "../shared/types.d.ts",
       "at": [
         "files"
+      ],
+      "mentions": [
+        {
+          "at": "files",
+          "line": 5
+        }
       ]
     },
     {
       "path": "Dockerfile",
       "at": [
         "files"
+      ],
+      "mentions": [
+        {
+          "at": "files",
+          "line": 5
+        }
       ]
     },
     {
       "path": "config/settings.json",
       "at": [
         "files"
+      ],
+      "mentions": [
+        {
+          "at": "files",
+          "line": 5
+        }
       ]
     },
     {
       "path": "docs/",
       "at": [
         "files"
+      ],
+      "mentions": [
+        {
+          "at": "files",
+          "line": 5
+        }
       ]
     },
     {
       "path": "docs/guide.md",
       "at": [
         "links"
+      ],
+      "mentions": [
+        {
+          "at": "links",
+          "line": 10
+        }
       ]
     },
     {
       "path": "src/app.ts",
       "at": [
         "files"
+      ],
+      "mentions": [
+        {
+          "at": "files",
+          "line": 5
+        }
       ]
     }
   ],

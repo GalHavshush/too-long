@@ -4,16 +4,19 @@
   "intro": [
     {
       "type": "p",
-      "text": "Paragraph before."
+      "text": "Paragraph before.",
+      "line": 3
     },
     {
       "type": "code",
       "lang": "",
-      "text": "def hello():\n    return \"indented code block\"\n\nstill_code = True"
+      "text": "def hello():\n    return \"indented code block\"\n\nstill_code = True",
+      "line": 5
     },
     {
       "type": "p",
-      "text": "A paragraph with an indented continuation line stays a paragraph."
+      "text": "A paragraph with an indented continuation line stays a paragraph.",
+      "line": 10
     }
   ],
   "sections": [],

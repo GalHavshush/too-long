@@ -4,49 +4,60 @@
   "intro": [
     {
       "type": "p",
-      "text": "#"
+      "text": "#",
+      "line": 1
     },
     {
       "type": "p",
-      "text": "##No space after hashes"
+      "text": "##No space after hashes",
+      "line": 3
     },
     {
       "type": "list",
       "items": [
         {
           "text": "",
-          "ordered": false
+          "ordered": false,
+          "line": 5
         },
         {
           "text": "[ ]",
-          "ordered": false
+          "ordered": false,
+          "line": 6
         },
         {
           "text": "",
           "ordered": false,
           "task": true,
+          "line": 7,
           "id": "t-intro"
         }
-      ]
+      ],
+      "line": 5
     },
     {
       "type": "quote",
-      "blocks": []
+      "blocks": [],
+      "line": 9
     },
     {
       "type": "p",
-      "text": "| only one pipe"
+      "text": "| only one pipe",
+      "line": 12
     },
     {
-      "type": "hr"
+      "type": "hr",
+      "line": 14
     },
     {
       "type": "p",
-      "text": "[ ] not a list item"
+      "text": "[ ] not a list item",
+      "line": 16
     },
     {
       "type": "p",
-      "text": "**unclosed bold and `unclosed code"
+      "text": "**unclosed bold and `unclosed code",
+      "line": 18
     },
     {
       "type": "list",
@@ -54,14 +65,17 @@
         {
           "text": "paren ordered",
           "ordered": true,
-          "n": 1
+          "n": 1,
+          "line": 20
         },
         {
           "text": "second",
           "ordered": true,
-          "n": 2
+          "n": 2,
+          "line": 21
         }
-      ]
+      ],
+      "line": 20
     }
   ],
   "sections": [],
@@ -72,7 +86,8 @@
       "done": true,
       "at": "intro",
       "section": "intro",
-      "n": null
+      "n": null,
+      "line": 7
     }
   ],
   "callouts": [],
