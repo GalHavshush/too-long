@@ -29,6 +29,8 @@ SETEXT_RE = re.compile(r"^\s*(=+|-+)\s*$")
 LIST_RE = re.compile(r"^(\s*)([-*+]|\d+[.)])\s+(.*)$")
 TASK_RE = re.compile(r"^\[([ xX])\]\s+(.*)$")
 TABLE_SEP_RE = re.compile(r"^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$")
+# "[label]: https://url 'optional title'" - a link reference definition.
+REF_DEF_RE = re.compile(r"""^\s{0,3}\[([^\]]+)\]:\s*<?(\S+?)>?(?:\s+(?:"([^"]*)"|'([^']*)'|\(([^)]*)\)))?\s*$""")
 
 # "Decision: ...", "**Risk:** ...", "Open question: ...", "> [!WARNING]"
 KINDS = "decision|risk|warning|caution|question|note|tip|important|assumption|milestone"
@@ -113,6 +115,9 @@ def parse_blocks(lines):
         elif "|" in line and i + 1 < len(lines) and TABLE_SEP_RE.match(lines[i + 1]):
             i, b = parse_table(lines, i)
             blocks.append(b)
+        elif indent_of(line) >= 4:  # indented code (it can't interrupt a paragraph, so it starts a block here)
+            i, b = parse_indented_code(lines, i)
+            blocks.append(b)
         else:
             i, b = parse_paragraph(lines, i)
             blocks.append(b)
@@ -129,7 +134,20 @@ def parse_fence(lines, i, m):
         body.append(dedent(lines[i], indent))
         i += 1
     kind = "mermaid" if lang.lower() == "mermaid" else "code"
-    return i + 1, {"type": kind, "lang": lang, "text": "\n".join(body)}
+    block = {"type": kind, "lang": lang, "text": "\n".join(body)}
+    if i >= len(lines):
+        block["unclosed"] = True  # runs to the end of the document, as in CommonMark
+    return i + 1, block
+
+
+def parse_indented_code(lines, i):
+    body = []
+    while i < len(lines) and (indent_of(lines[i]) >= 4 or not lines[i].strip()):
+        body.append(dedent(lines[i], 4))
+        i += 1
+    while body and not body[-1].strip():
+        body.pop()
+    return i, {"type": "code", "lang": "", "text": "\n".join(body)}
 
 
 def parse_paragraph(lines, i):
@@ -160,7 +178,30 @@ def parse_quote(lines, i):
 
 
 def split_row(line):
-    return [c.strip() for c in line.strip().strip("|").split("|")]
+    """Cells of a table row. `\\|` and pipes inside `code spans` are part of a cell."""
+    line = line.strip()
+    if line.startswith("|"):
+        line = line[1:]
+    if line.endswith("|") and not line.endswith("\\|"):
+        line = line[:-1]
+    cells, cur, tick, k = [], "", 0, 0
+    while k < len(line):
+        c = line[k]
+        if c == "\\" and line[k + 1:k + 2] == "|":
+            cur, k = cur + "|", k + 2
+            continue
+        if c == "`":
+            run = len(line[k:]) - len(line[k:].lstrip("`"))
+            tick = 0 if tick == run else (tick or run)
+            cur, k = cur + "`" * run, k + run
+            continue
+        if c == "|" and not tick:
+            cells.append(cur.strip())
+            cur = ""
+        else:
+            cur += c
+        k += 1
+    return cells + [cur.strip()]
 
 
 def parse_table(lines, i):
@@ -240,6 +281,24 @@ def parse_list(lines, i):
     return i, {"type": "list", "items": items}
 
 
+def take_ref_defs(lines):
+    """Pull out "[label]: url" definitions (outside code fences). They become model["refs"];
+    the line is left blank so the rest of the document keeps its shape."""
+    refs, out, fence = {}, [], None
+    for line in lines:
+        m = FENCE_RE.match(line)
+        if m and (fence is None or line.strip().startswith(fence)):
+            fence = m[1][0] * 3 if fence is None else None
+        d = None if fence or (m and fence is None) else REF_DEF_RE.match(line)
+        if d:
+            title = d[3] or d[4] or d[5]
+            refs.setdefault(d[1].strip().lower(), {"url": d[2], **({"title": title} if title else {})})
+            out.append("")
+        else:
+            out.append(line)
+    return out, refs
+
+
 # ---------- content model ----------
 
 def strip_md(text):
@@ -267,12 +326,15 @@ def find_files(text):
 def build_model(md, name="document", track=()):
     """track: section ids whose top-level numbered items should be tracked as tasks."""
     lines = md.splitlines()
-    front = []
+    front, warnings = [], []
     if lines and lines[0].strip() == "---":  # YAML front matter: keep it, as a code block
         end = next((k for k in range(1, len(lines)) if lines[k].strip() in ("---", "...")), None)
         if end:
             front = [{"type": "code", "lang": "yaml", "label": "Front matter", "text": "\n".join(lines[1:end])}]
             lines = lines[end + 1:]
+        else:
+            warnings.append("front matter '---' on the first line is never closed; it is shown as text")
+    lines, refs = take_ref_defs(lines)
     blocks = front + parse_blocks(lines)
 
     # Heading levels: a single H1 is the title; the next level used is "section", the one below "subsection".
@@ -334,6 +396,8 @@ def build_model(md, name="document", track=()):
                 diagrams.append({"text": b["text"], "at": at, "section": sec})
             elif t == "code":
                 code_blocks += 1
+            if b.get("unclosed"):
+                warnings.append(f"a code fence in '{at}' is never closed; everything after it is shown as code")
 
     def walk_items(items, at, sec, kind, top_level):
         for it in items:
@@ -379,6 +443,8 @@ def build_model(md, name="document", track=()):
         "callouts": callouts,
         "diagrams": diagrams,
         "files": [{"path": p, "at": at} for p, at in sorted(files.items())],
+        "refs": refs,
+        "warnings": warnings,
         "roadmap": roadmap,
         "stats": {"words": len(re.findall(r"\w+", md)), "code_blocks": code_blocks},
         "source": md,
@@ -421,6 +487,7 @@ def summary(model):
         f"Sections: {len(model['sections'])}  Tasks: {done}/{len(model['tasks'])} done  "
         f"Code blocks: {model['stats']['code_blocks']}  Mermaid: {len(model['diagrams'])}  Files: {len(model['files'])}",
         "Highlights: " + (", ".join(f"{k} {n}" for k, n in kinds.items()) or "none"),
+        *[f"Warning: {w}" for w in model["warnings"]],
         "",
         "Section ids (use these in config notes / diagram sources):",
     ]

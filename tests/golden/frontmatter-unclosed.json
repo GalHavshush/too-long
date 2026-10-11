@@ -19,6 +19,10 @@
   "callouts": [],
   "diagrams": [],
   "files": [],
+  "refs": {},
+  "warnings": [
+    "front matter '---' on the first line is never closed; it is shown as text"
+  ],
   "roadmap": {
     "ids": [],
     "basis": "sections"

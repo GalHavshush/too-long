@@ -1,0 +1,41 @@
+{
+  "title": "Reference links",
+  "file": "reference-links",
+  "intro": [
+    {
+      "type": "p",
+      "text": "See [the guide][guide], [Docs][] and [home]. Text in brackets [like this] stays text."
+    },
+    {
+      "type": "code",
+      "lang": "",
+      "text": "[not-a-def]: inside a fence"
+    }
+  ],
+  "sections": [],
+  "tasks": [],
+  "callouts": [],
+  "diagrams": [],
+  "files": [],
+  "refs": {
+    "guide": {
+      "url": "docs/guide.md",
+      "title": "Guide"
+    },
+    "docs": {
+      "url": "https://example.com/docs"
+    },
+    "home": {
+      "url": "https://example.com"
+    }
+  },
+  "warnings": [],
+  "roadmap": {
+    "ids": [],
+    "basis": "sections"
+  },
+  "stats": {
+    "words": 36,
+    "code_blocks": 1
+  }
+}

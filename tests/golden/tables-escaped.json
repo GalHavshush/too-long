@@ -1,0 +1,46 @@
+{
+  "title": "Escaped table cells",
+  "file": "tables-escaped",
+  "intro": [
+    {
+      "type": "table",
+      "header": [
+        "Syntax",
+        "Meaning"
+      ],
+      "rows": [
+        [
+          "`a|b`",
+          "pipe inside code"
+        ],
+        [
+          "x | y",
+          "escaped pipe"
+        ],
+        [
+          "`` `|` ``",
+          "double-backtick code with a pipe"
+        ],
+        [
+          "trailing |",
+          "escaped pipe at the end |"
+        ]
+      ]
+    }
+  ],
+  "sections": [],
+  "tasks": [],
+  "callouts": [],
+  "diagrams": [],
+  "files": [],
+  "refs": {},
+  "warnings": [],
+  "roadmap": {
+    "ids": [],
+    "basis": "sections"
+  },
+  "stats": {
+    "words": 26,
+    "code_blocks": 0
+  }
+}

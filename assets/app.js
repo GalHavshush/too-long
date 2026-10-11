@@ -21,6 +21,7 @@
     s.subsections.forEach(sub => { nodes[sub.id] = { ...sub, parent: s.id }; });
   });
   const fileSet = new Set(model.files.map(f => f.path));
+  const refs = model.refs || {};  // [label]: url definitions (older data.js files have none)
   const has = v => config.views.includes(v);
 
   // ---------- per-browser state (never written back to the Markdown) ----------
@@ -51,6 +52,11 @@
   function inline(md) {
     const codes = [];
     let s = String(md).replace(/(`+)([\s\S]*?[^`])\1(?!`)/g, (_, __, c) => `\u0000${codes.push(c.trim()) - 1}\u0000`);
+    s = s.replace(/<(https?:\/\/[^>\s]+)>/g, "[$1]($1)");  // <https://...> autolinks
+    s = s.replace(/(!?)\[([^\]]+)\](?:\[([^\]]*)\])?(?![(:])/g, (m, bang, text, ref) => {  // [text][ref], [text][], [ref]
+      const u = refs[(ref || text).trim().toLowerCase()]?.url;
+      return u ? `${bang}[${text}](${u})` : m;
+    });
     s = esc(s);
     s = s.replace(/!\[([^\]]*)\]\(([^)\s]+)[^)]*\)/g, (_, alt, src) => `<img src="${href(src)}" alt="${alt}">`);
     s = s.replace(/\[([^\]]+)\]\(([^)\s]+)[^)]*\)/g, (_, text, u) =>

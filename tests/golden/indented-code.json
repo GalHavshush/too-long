@@ -1,0 +1,34 @@
+{
+  "title": "Indented code",
+  "file": "indented-code",
+  "intro": [
+    {
+      "type": "p",
+      "text": "Paragraph before."
+    },
+    {
+      "type": "code",
+      "lang": "",
+      "text": "def hello():\n    return \"indented code block\"\n\nstill_code = True"
+    },
+    {
+      "type": "p",
+      "text": "A paragraph with an indented continuation line stays a paragraph."
+    }
+  ],
+  "sections": [],
+  "tasks": [],
+  "callouts": [],
+  "diagrams": [],
+  "files": [],
+  "refs": {},
+  "warnings": [],
+  "roadmap": {
+    "ids": [],
+    "basis": "sections"
+  },
+  "stats": {
+    "words": 22,
+    "code_blocks": 1
+  }
+}

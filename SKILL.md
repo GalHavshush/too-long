@@ -179,7 +179,9 @@ The Markdown is the source of truth.
   the level below as subsections. Documents using only `##`/`###`, or several
   `#`s, also work.
 - `- [ ]` / `- [x]` tasks, nested lists, ordered lists, tables, blockquotes,
-  fenced code (long blocks fold), ```` ```mermaid ```` diagrams, YAML front matter.
+  fenced and 4-space indented code (long blocks fold), ```` ```mermaid ```` diagrams, YAML front
+  matter, `[text][ref]` reference links, `\|` and `` `a|b` `` inside table cells. Unclosed fences or
+  front matter are kept and reported as warnings by parse.py and build.py.
 - Callouts: paragraphs or bullets starting with `Decision:`, `Risk:`,
   `Warning:`, `Question:`, `Note:`, `Assumption:`, `Milestone:` (bold or not),
   and GitHub alerts `> [!WARNING]`.

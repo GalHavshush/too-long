@@ -77,6 +77,7 @@ def main():
     model["base"] = os.path.relpath(md.resolve().parent, out.resolve()).replace(os.sep, "/")
 
     config, warnings = check_config(config, model)
+    warnings = model["warnings"] + warnings
 
     out.mkdir(parents=True, exist_ok=True)
     for name in ("index.html", "styles.css", "app.js"):

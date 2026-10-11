@@ -14,7 +14,8 @@
         {
           "type": "code",
           "lang": "js",
-          "text": "const a = 1;\n## not a heading, still inside the fence"
+          "text": "const a = 1;\n## not a heading, still inside the fence",
+          "unclosed": true
         }
       ],
       "subsections": []
@@ -24,6 +25,10 @@
   "callouts": [],
   "diagrams": [],
   "files": [],
+  "refs": {},
+  "warnings": [
+    "a code fence in 'before' is never closed; everything after it is shown as code"
+  ],
   "roadmap": {
     "ids": [
       "before"
