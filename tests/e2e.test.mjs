@@ -309,6 +309,42 @@ await test("served mode writes checks to the Markdown and follows edits", async 
   }
 });
 
+await test("roadmap status follows tasks and stated dependencies", async () => {
+  const f = join(tmp, "deps.md");
+  writeFileSync(f, [
+    "# Deps", "", "## Phase 1: Setup", "", "Dependencies: none.", "", "- [x] a", "- [x] b", "",
+    "## Phase 2: Data", "", "Dependencies: P1.", "", "- [x] c", "- [ ] d", "",
+    "## Phase 3: API", "", "Dependencies: P1. Can run in parallel with Phase 2.", "", "- [ ] e", "",
+    "## Phase 4: Web", "", "Dependencies: P2, P3. The demo needs P5.", "", "- [ ] f", "",
+    "## Phase 5: Demo", "", "- [ ] g", "",
+  ].join("\n"));
+  const p = await open(build("deps", f) + "#/roadmap");
+  const st = await p.evaluate(`Object.fromEntries([...document.querySelectorAll(".phase")].map(li =>
+    [li.querySelector("h3").textContent.trim(), li.querySelector(".status")?.textContent || ""]))`);
+  assert.deepEqual(st, { "Phase 1: Setup": "done", "Phase 2: Data": "in progress", "Phase 3: API": "ready",
+    "Phase 4: Web": "blocked", "Phase 5: Demo": "not started" });  // phase 5 states nothing: no ready/blocked claim
+  assert.equal(await p.count(".wave"), 0);  // phase 5's dependencies are unknown, so no parallel waves
+  assert.match(await p.text(".focus"), /Phase 2: Data/);
+  assert.match(await p.text(".ready-list"), /Phase 3/);
+  assert.match(await p.text(".phase.blocked"), /Waiting for Phase 2, Phase 3/);
+  assert.equal(await p.count(".dep.qualified"), 1);  // "the demo needs P5" is shown, never blocks
+  // Completing a dependency through the page changes what is ready.
+  await p.evaluate(`document.querySelector('.focus input[type=checkbox]').click()`);
+  await p.evaluate("new Promise(r => setTimeout(r, 50))");
+  assert.equal((await p.text('.phase:nth-child(2) .status')).toLowerCase(), "done");
+  assert.deepEqual(p.errors, []);
+});
+
+await test("roadmap groups stages into waves when every dependency is known", async () => {
+  const p = await open(build("tf-roadmap", join(ROOT, "tests", "fixtures", "taskforge-roadmap.md")) + "#/roadmap");
+  const waves = await p.evaluate(`[...document.querySelectorAll(".wave")].map(w =>
+    [...w.querySelectorAll("h3")].map(h => h.textContent.match(/Phase (\\d+)/)[1]).join(","))`);
+  assert.deepEqual(waves, ["1", "2", "3,5", "4,6", "7,8,9", "10"]);
+  assert.equal((await p.text(".phase.ready .status")).toLowerCase(), "ready");  // phase 1
+  assert.equal(await p.count(".phase.blocked"), 9);
+  assert.deepEqual(p.errors, []);
+});
+
 await test("invalid config is refused by build.py", async () => {
   assert.throws(() => build("bad", example, { notes: { "no-such-section": "x" } }), /unknown section id/);
 });

@@ -280,41 +280,110 @@
     </article>`;
   }
 
+  // ---------- roadmap status ----------
+  // done: every task checked. in progress: some checked. With stated dependencies (model.roadmap.dependencies),
+  // an unstarted stage is ready when every stage it needs is done, blocked when one is not. A stage whose
+  // dependencies are unknown, that sits in a cycle, or that needs a stage without tasks gets no ready/blocked
+  // claim. Qualified dependencies ("the fast path needs P4") are shown but never block.
+  const R = model.roadmap;
+  const DEPS = R.dependencies || {};
+  const hasDeps = Object.keys(DEPS).length > 0;
+  const inCycle = new Set((R.cycles || []).flat());
+  const shortName = id => {
+    const t = plain(nodes[id]?.title ?? id);
+    const m = t.match(/\b(phase|stage|step|sprint|week|milestone|iteration|wave)\s*(\d+)/i);
+    return m ? `${cap(m[1].toLowerCase())} ${m[2]}` : t;
+  };
+  function stageStatus(id, seen = new Set()) {
+    const p = progress(tasksIn(id));
+    if (p.total && p.done === p.total) return "done";
+    if (p.done > 0) return "in progress";
+    if (!(id in DEPS) || inCycle.has(id) || seen.has(id)) return "not started";
+    const hard = DEPS[id].filter(d => !d.qualified).map(d => d.id);
+    const states = hard.map(d => stageStatus(d, new Set([...seen, id])));
+    if (states.every(st => st === "done")) return "ready";
+    if (hard.some((d, k) => states[k] !== "done" && tasksIn(d).length)) return "blocked";
+    return "not started";  // waiting on a stage that has no tasks to check: can't tell
+  }
+
+  // Waves: stages at the same depth of the stated dependency graph can run at the same time.
+  // Only when every stage's dependencies are known and there is no cycle.
+  function waves() {
+    if (!R.ids.every(id => id in DEPS) || inCycle.size) return null;
+    const level = {};
+    const depth = id => level[id] ??= 1 + Math.max(0, ...DEPS[id].filter(d => !d.qualified).map(d => depth(d.id)));
+    const out = [];
+    R.ids.forEach(id => { (out[depth(id) - 1] ??= []).push(id); });
+    return out.filter(Boolean);
+  }
+
   function viewRoadmap() {
-    const phases = model.roadmap.ids.map(id => ({ s: nodes[id], p: progress(tasksIn(id)) }));
-    let current = null;
-    phases.forEach(x => {
-      x.status = !x.p.total ? "" : x.p.done === x.p.total ? "done" : current ? "upcoming" : "current";
-      if (x.status === "current") current = x;
-    });
+    const status = {};
+    if (hasDeps) R.ids.forEach(id => { status[id] = tasksIn(id).length || id in DEPS ? stageStatus(id) : ""; });
+    else {  // no stated dependencies: document order, the first unfinished stage is the current one
+      let current = null;
+      R.ids.forEach(id => {
+        const p = progress(tasksIn(id));
+        status[id] = !p.total ? "" : p.done === p.total ? "done" : current ? "upcoming" : "current";
+        if (status[id] === "current") current = id;
+      });
+    }
+    const focus = R.ids.filter(id => status[id] === "current" || status[id] === "in progress");
+    const ready = R.ids.filter(id => status[id] === "ready");
     const basis = {
       titles: "Stages are the sections whose titles read like phases or steps.",
       sections: "Each top-level section is shown as a stage, in document order.",
       config: "Stages are the parts of the document chosen for this roadmap, in document order.",
-    }[model.roadmap.basis];
-    const open = current ? tasksIn(current.s.id).filter(t => !isDone(t)).slice(0, 4) : [];
+    }[R.basis];
+    const rules = hasDeps
+      ? "Status comes from the task checkboxes and the dependencies each stage states: <b>ready</b> means everything it needs is done, <b>blocked</b> that something it needs is not."
+      : "The plan states no dependencies between stages, so they are shown in document order.";
+    const chip = (d, cls = "") => {
+      const st = status[d.id] ?? "";
+      const inferredDep = d.source === "config";
+      const title = [d.qualified ? `Only partly: ${d.qualified}` : "", inferredDep ? "Inferred: from config.json, not stated in the document" : ""].filter(Boolean).join(" · ");
+      return `<a class="dep ${cls} ${d.qualified ? "qualified" : ""} ${inferredDep ? "inferred" : ""}" data-status="${esc(st)}" href="#/document/${esc(d.id)}"${title ? ` title="${esc(title)}"` : ""}>${st === "done" ? "✓ " : ""}${esc(shortName(d.id))}${d.qualified ? " (partly)" : ""}</a>`;
+    };
+    const card = id => {
+      const i = R.ids.indexOf(id);
+      const s = nodes[id], st = status[id];
+      const deps = DEPS[id];
+      const hard = (deps || []).filter(d => !d.qualified && status[d.id] !== "done" && tasksIn(d.id).length).map(d => shortName(d.id));
+      const milestones = model.callouts.filter(c => c.kind === "milestone" && (c.at === id || c.section === id));
+      const subs = s.subsections || [];
+      const depLine = deps?.find(d => d.line)?.line;
+      return `<li class="phase ${st.replace(" ", "-")}">
+        <span class="node">${st === "done" ? "✓" : i + 1}</span>
+        <div class="phase-body">
+          <div class="phase-head"><h3 dir="auto">${link(id)}</h3>${st ? `<span class="status">${st}</span>` : ""}</div>
+          ${excerpt(s, 220)}
+          ${progressEl(id)}
+          ${hasDeps ? `<p class="deps small">${deps === undefined ? `<span class="muted">Dependencies not stated</span>`
+            : deps.length ? `<span class="muted">Needs</span> ${deps.map(d => chip(d)).join("")} ${lineRef(depLine)}`
+            : `<span class="muted">Needs nothing before it</span> ${lineRef(depLine)}`}
+            ${(R.parallel?.[id] || []).length ? `<span class="muted">· parallel with</span> ${R.parallel[id].map(p => chip({ id: p }, "par")).join("")}` : ""}
+            ${inCycle.has(id) ? `<span class="warn">· in a dependency cycle, status unclear</span>` : ""}</p>` : ""}
+          ${st === "blocked" ? `<p class="small blocked-by">Waiting for ${esc(hard.join(", "))}</p>` : ""}
+          ${subs.length ? `<div class="subs">${subs.map(sub => `<a class="sub-chip" href="#/document/${esc(sub.id)}">${inline(sub.title)}</a>`).join("")}</div>` : ""}
+          ${milestones.map(m => `<p class="milestone" dir="auto">◆ ${inline(m.title || plainText(m))} ${lineRef(m.line)}</p>`).join("")}
+        </div>
+      </li>`;
+    };
+    const w = hasDeps ? waves() : null;
+    const timeline = w
+      ? w.map((ids, k) => `<li class="wave"><p class="wave-head">Wave ${k + 1}${ids.length > 1 ? ` · ${ids.length} stages can run in parallel` : ""}</p>
+          <ol class="timeline">${ids.map(card).join("")}</ol></li>`).join("")
+      : R.ids.map(card).join("");
     return `
-      <header class="page-head"><h1>Roadmap</h1><p class="muted">${basis}</p></header>
-      ${current ? `<section class="focus">
-        <p class="eyebrow">Current focus</p>
-        <h2 dir="auto">${link(current.s.id)}</h2>
-        ${progressEl(current.s.id)}
-        <ul class="tasklist">${open.map(t => `<li class="task">${checkbox(t.id, false)}<div><span class="t">${num(t.n)}${inline(t.text)}</span></div></li>`).join("")}</ul>
+      <header class="page-head"><h1>Roadmap</h1><p class="muted">${basis} ${rules}</p></header>
+      ${focus.length ? `<section class="focus">
+        <p class="eyebrow">${focus.length > 1 ? "In progress" : "Current focus"}</p>
+        ${focus.map(id => `<h2 dir="auto">${link(id)}</h2>${progressEl(id)}
+          <ul class="tasklist">${tasksIn(id).filter(t => !isDone(t)).slice(0, focus.length > 1 ? 3 : 4).map(t =>
+            `<li class="task">${checkbox(t.id, false)}<div><span class="t">${num(t.n)}${inline(t.text)}</span></div></li>`).join("")}</ul>`).join("")}
       </section>` : ""}
-      <ol class="timeline">${phases.map(({ s, status }, i) => {
-        const milestones = model.callouts.filter(c => c.kind === "milestone" && (c.at === s.id || c.section === s.id));
-        const subs = s.subsections || [];
-        return `<li class="phase ${status}">
-          <span class="node">${status === "done" ? "✓" : i + 1}</span>
-          <div class="phase-body">
-            <div class="phase-head"><h3 dir="auto">${link(s.id)}</h3>${status ? `<span class="status">${status}</span>` : ""}</div>
-            ${excerpt(s, 220)}
-            ${progressEl(s.id)}
-            ${subs.length ? `<div class="subs">${subs.map(sub => `<a class="sub-chip" href="#/document/${esc(sub.id)}">${inline(sub.title)}</a>`).join("")}</div>` : ""}
-            ${milestones.map(m => `<p class="milestone" dir="auto">◆ ${inline(plainText(m))}</p>`).join("")}
-          </div>
-        </li>`;
-      }).join("")}</ol>`;
+      ${ready.length ? `<p class="ready-list"><span class="eyebrow">Ready to start</span> ${ready.map(id => chip({ id })).join("")}</p>` : ""}
+      ${w ? `<ol class="waves">${timeline}</ol>` : `<ol class="timeline">${timeline}</ol>`}`;
   }
 
   function viewTasks(filter = "all") {
