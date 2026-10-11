@@ -1,0 +1,102 @@
+{
+  "title": "ADR 7: Use event sourcing for billing",
+  "file": "adr",
+  "intro": [],
+  "sections": [
+    {
+      "id": "status",
+      "title": "Status",
+      "line": 3,
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Accepted",
+          "line": 5
+        }
+      ],
+      "subsections": []
+    },
+    {
+      "id": "context",
+      "title": "Context",
+      "line": 7,
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Invoices must be auditable.",
+          "line": 9
+        }
+      ],
+      "subsections": []
+    },
+    {
+      "id": "decision",
+      "title": "Decision",
+      "line": 11,
+      "blocks": [
+        {
+          "type": "p",
+          "text": "We will store billing changes as an append-only event log. Projections build the current state.",
+          "line": 13
+        }
+      ],
+      "subsections": []
+    },
+    {
+      "id": "consequences",
+      "title": "Consequences",
+      "line": 15,
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Replays are slower as the log grows.",
+          "line": 17
+        }
+      ],
+      "subsections": []
+    }
+  ],
+  "tasks": [],
+  "callouts": [
+    {
+      "kind": "decision",
+      "title": "We will store billing changes as an append-only event log.",
+      "details": [],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "We will store billing changes as an append-only event log. Projections build the current state.",
+          "line": 13
+        }
+      ],
+      "at": "decision",
+      "section": "decision",
+      "line": 11,
+      "body": [
+        {
+          "type": "p",
+          "text": "Projections build the current state.",
+          "line": 13
+        }
+      ]
+    }
+  ],
+  "diagrams": [],
+  "files": [],
+  "refs": {},
+  "warnings": [],
+  "roadmap": {
+    "ids": [
+      "status",
+      "context",
+      "decision",
+      "consequences"
+    ],
+    "basis": "sections"
+  },
+  "stats": {
+    "words": 39,
+    "code_blocks": 0
+  }
+}

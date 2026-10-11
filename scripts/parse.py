@@ -20,6 +20,8 @@ import re
 import sys
 from pathlib import Path
 
+from highlights import ALERT_RE, extract_section, match_callout, section_kind, strip_md
+
 # ---------- line patterns ----------
 
 FENCE_RE = re.compile(r"^\s*(`{3,}|~{3,})\s*([^`\s]*)")
@@ -32,16 +34,6 @@ TABLE_SEP_RE = re.compile(r"^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$")
 # "[label]: https://url 'optional title'" - a link reference definition.
 REF_DEF_RE = re.compile(r"""^\s{0,3}\[([^\]]+)\]:\s*<?(\S+?)>?(?:\s+(?:"([^"]*)"|'([^']*)'|\(([^)]*)\)))?\s*$""")
 
-# "Decision: ...", "**Risk:** ...", "Open question: ...", "> [!WARNING]"
-KINDS = "decision|risk|warning|caution|question|note|tip|important|assumption|milestone"
-# Also "**★ Milestone 1: ...**": an optional symbol before the word and a number after it.
-CALLOUT_RE = re.compile(
-    rf"^(\*\*|__)?(?:[^\w\s*_]\s*)?(?:open |key )?({KINDS})s?(?:\s+\d+)?(\*\*|__)?\s*:\s*(\*\*|__)?\s*(.*)$", re.I | re.S)
-ALERT_RE = re.compile(rf"^\[!({KINDS})\]\s*(.*)$", re.I)
-# A section titled "Risks" or "Open Questions" turns its top-level bullets into highlights.
-# Only when the title is about that kind: it starts with the word, or uses the plural.
-SECTION_KIND_RE = re.compile(
-    r"^(?:open |key )?(decision|risk|question|assumption|milestone)s?\b|\b(decision|risk|question|assumption|milestone)s\b", re.I)
 # Section titles that read like steps of a plan.
 PHASE_RE = re.compile(
     r"^\s*(?:(?:phase|stage|step|milestone|sprint|week|day|iteration|wave|part)\b|v\d+\b|\d+[.):]?\s)", re.I)
@@ -72,22 +64,14 @@ def is_block_start(line):
                 or LIST_RE.match(line) or line.lstrip().startswith(">"))
 
 
-def match_callout(text):
-    """('risk', rest) for 'Risk: rest', '**Risk:** rest', ...; else None."""
-    m = CALLOUT_RE.match(text)
-    if not m:
-        return None
-    rest = m[5]
-    if m[1] and not (m[3] or m[4]):  # "**Milestone 1: title.** more": keep the bold on "title."
-        rest = m[1] + rest
-    return m[2].lower(), rest
-
-
 def text_block(text):
     """A paragraph, or a callout if it starts with 'Decision:', 'Risk:', ..."""
     c = match_callout(text)
     if c:
-        return {"type": "callout", "kind": c[0], "blocks": [{"type": "p", "text": c[1]}]}
+        block = {"type": "callout", "kind": c[0], "blocks": [{"type": "p", "text": c[1]}]}
+        if c[2] is not None:
+            block["number"] = c[2]  # "Decision 3 — ..."
+        return block
     return {"type": "p", "text": text}
 
 
@@ -173,7 +157,8 @@ def parse_quote(lines, i, base):
         i += 1
     m = ALERT_RE.match(inner[0].strip())
     if m:  # GitHub alert: > [!WARNING]
-        return i, {"type": "callout", "kind": m[1].lower(), "blocks": parse_blocks([m[2]] + inner[1:], base + first)}
+        return i, {"type": "callout", "kind": m[1].lower(), "alert": True,
+                   "blocks": parse_blocks([m[2]] + inner[1:], base + first)}
     blocks = parse_blocks(inner, base + first)
     if len(blocks) == 1 and blocks[0]["type"] == "callout":
         return i, blocks[0]
@@ -224,7 +209,9 @@ def make_item(marker, text):
         item["task"] = m[1] != " "
         item["text"] = m[2]
     if c := match_callout(item["text"]):
-        item["kind"], item["text"] = c
+        item["kind"], item["text"] = c[0], c[1]
+        if c[2] is not None:
+            item["number"] = c[2]
     return item
 
 
@@ -307,11 +294,6 @@ def take_ref_defs(lines):
 
 # ---------- content model ----------
 
-def strip_md(text):
-    text = re.sub(r"!?\[([^\]]*)\]\([^)]*\)", r"\1", text)
-    return re.sub(r"[*_`~]", "", text).strip()
-
-
 def slugify(text, used):
     base = re.sub(r"[^\w\s-]", "", strip_md(text).lower()).strip()
     base = re.sub(r"[\s_-]+", "-", base)[:60].strip("-") or "section"
@@ -367,7 +349,7 @@ def build_model(md, name="document", track=()):
             container.append(b)
 
     # Indexes. Every entry points back to where it lives: at = section/subsection id, section = top-level id.
-    tasks, callouts, diagrams, files = [], [], [], {}
+    tasks, diagrams, files = [], [], {}
     task_ids = set()
     code_blocks = 0
 
@@ -377,8 +359,8 @@ def build_model(md, name="document", track=()):
             if (at, line) not in mentions:
                 mentions.append((at, line))
 
-    def walk(blocks, at, sec, kind, line=None):
-        """line: the enclosing block's line, for inner blocks that have none of their own."""
+    def walk(blocks, at, sec, line=None):
+        """Tasks, files and diagrams. line: the enclosing block's line, for inner blocks without one."""
         nonlocal code_blocks
         for b in blocks:
             t = b["type"]
@@ -386,23 +368,15 @@ def build_model(md, name="document", track=()):
             if t in ("p", "heading"):
                 note_files(b["text"], at, b_line)
             elif t == "list":
-                walk_items(b["items"], at, sec, kind, True)
+                walk_items(b["items"], at, sec, True)
             elif t == "table":
                 for cell in b["header"]:
                     note_files(cell, at, b["line"])
                 for k, row in enumerate(b["rows"]):  # row k is source line table + 2 + k
                     for cell in row:
                         note_files(cell, at, b["line"] + 2 + k)
-                for k, row in enumerate(b["rows"] if kind else []):  # a table under "Decisions": one highlight per row
-                    text = f"**{row[0]}**" + "".join(
-                        f" · {h + ': ' if len(row) > 2 and h else ''}{c}" for h, c in zip(b["header"][1:], row[1:]))
-                    callouts.append({"kind": kind, "blocks": [{"type": "p", "text": text}],
-                                     "at": at, "section": sec, "line": b["line"] + 2 + k, "from_heading": True})
-            elif t == "quote":
-                walk(b["blocks"], at, sec, None, b_line)
-            elif t == "callout":
-                callouts.append({"kind": b["kind"], "blocks": b["blocks"], "at": at, "section": sec, "line": b_line})
-                walk(b["blocks"], at, sec, None, b_line)
+            elif t in ("quote", "callout"):
+                walk(b["blocks"], at, sec, b_line)
             elif t == "mermaid":
                 diagrams.append({"text": b["text"], "at": at, "section": sec, "line": b["line"]})
             elif t == "code":
@@ -410,7 +384,7 @@ def build_model(md, name="document", track=()):
             if b.get("unclosed"):
                 warnings.append(f"the code fence on line {b['line']} is never closed; everything after it is shown as code")
 
-    def walk_items(items, at, sec, kind, top_level):
+    def walk_items(items, at, sec, top_level):
         for it in items:
             note_files(it["text"], at, it["line"])
             browser_only = False
@@ -421,27 +395,21 @@ def build_model(md, name="document", track=()):
                 it["id"] = slugify(f"t-{at}-{it['text'][:40]}", task_ids)
                 tasks.append({"id": it["id"], "text": it["text"], "done": it["task"], "at": at, "section": sec,
                               "n": it.get("n"), "line": it["line"], "browser_only": browser_only})
-            item_kind = it.get("kind") or (kind if top_level else None)
-            if item_kind:
-                body = [{"type": "p", "text": it["text"]}]
-                if it.get("children"):
-                    body.append({"type": "list", "items": it["children"]})
-                entry = {"kind": item_kind, "blocks": body, "at": at, "section": sec, "line": it["line"]}
-                if not it.get("kind"):
-                    entry["from_heading"] = True  # it is a highlight because of the section it sits in
-                callouts.append(entry)
-            walk_items(it.get("children", []), at, sec, kind, False)
-            walk(it.get("blocks", []), at, sec, None, it["line"])
+            walk_items(it.get("children", []), at, sec, False)
+            walk(it.get("blocks", []), at, sec, it["line"])
 
-    def section_kind(title):
-        m = SECTION_KIND_RE.search(strip_md(title))
-        return (m[1] or m[2]).lower() if m else None
-
-    walk(intro, "intro", "intro", None)
+    walk(intro, "intro", "intro")
     for s in sections:
-        walk(s["blocks"], s["id"], s["id"], section_kind(s["title"]))
+        walk(s["blocks"], s["id"], s["id"])
         for sub in s["subsections"]:
-            walk(sub["blocks"], sub["id"], s["id"], section_kind(sub["title"]) or section_kind(s["title"]))
+            walk(sub["blocks"], sub["id"], s["id"])
+
+    # Highlights (decisions, risks, questions...): see highlights.py.
+    callouts = extract_section("", intro, "intro", "intro")
+    for s in sections:
+        callouts += extract_section(s["title"], s["blocks"], s["id"], s["id"], line=s["line"])
+        for sub in s["subsections"]:
+            callouts += extract_section(sub["title"], sub["blocks"], sub["id"], s["id"], section_kind(s["title"]), sub["line"])
 
     phases = [s["id"] for s in sections if PHASE_RE.search(strip_md(s["title"]))]
     roadmap = ({"ids": phases, "basis": "titles"} if len(phases) >= 2

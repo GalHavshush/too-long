@@ -45,8 +45,12 @@ Fields not listed here are internal and may change.
 nothing written) or `Busy()` (another too-long writer held the lock past the timeout), and raises
 `TaskNotFound` / `NotATask`. It changes one character, writes atomically, and serialises writers
 with an OS lock on `.<name>.too-long.lock`. `serve.py` exposes it as `POST /api/task`.
-- **highlight**: `{kind, blocks, line, at, section, from_heading?}`. `from_heading` means it is a
-  highlight because of the heading it sits under ("Risks"), not because of its own text.
+- **highlight**: `{kind, title, number?, body?, details, rejected, blocks, line, at, section, from_heading?}`.
+  `title` is the labeled statement ("Claims are fenced by a CAS update."), `number` the label's
+  number ("Decision 2 —"), `body` unlabeled blocks that belong to it, `details` labeled parts
+  (`[{label, text, line}]`, e.g. `tradeoff`, `rationale`), `rejected` the alternatives listed under
+  "Rejected:" (`[{text, line}]`). `blocks` is the original content. `from_heading` means it is a
+  highlight because of the heading it sits under ("Risks"), not because of its own label.
 - **diagram**: `{text, line, at, section}`.
 - **file**: `{path, at: [section id], mentions: [{at, line}]}`.
 - **block**: `{type, line?, ...}` with type `heading`, `p`, `list`, `code`, `mermaid`, `table`,

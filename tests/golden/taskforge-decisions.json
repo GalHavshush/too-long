@@ -1,0 +1,679 @@
+{
+  "title": "TaskForge decisions (excerpt)",
+  "file": "taskforge-decisions",
+  "intro": [
+    {
+      "type": "p",
+      "text": "From the TaskForge implementation plan, section 17, verbatim.",
+      "line": 3
+    }
+  ],
+  "sections": [
+    {
+      "id": "architectural-decisions",
+      "title": "Architectural Decisions",
+      "line": 5,
+      "blocks": [
+        {
+          "type": "callout",
+          "kind": "decision",
+          "blocks": [
+            {
+              "type": "p",
+              "text": "**PostgreSQL is the source of truth; Redis is a rebuildable dispatch index.** Tradeoff: two writes per dispatch, plus reconciler complexity. **Rejected:**"
+            }
+          ],
+          "number": 1,
+          "line": 7
+        },
+        {
+          "type": "list",
+          "items": [
+            {
+              "text": "*Redis-only state (RQ/Celery style).* State is lost on Redis failover, and querying and listing are weak.",
+              "ordered": false,
+              "line": 9
+            },
+            {
+              "text": "*PostgreSQL-only queue using `SKIP LOCKED` polling.* Simpler, but worker polling puts load on the primary at scale, and the requirements call for Redis. It stays as a possible degraded mode.",
+              "ordered": false,
+              "line": 10
+            }
+          ],
+          "line": 9
+        },
+        {
+          "type": "callout",
+          "kind": "decision",
+          "blocks": [
+            {
+              "type": "p",
+              "text": "**Claims are fenced by a CAS `UPDATE` in PostgreSQL with a per-claim `lease_token`.** **Rejected:**"
+            }
+          ],
+          "number": 2,
+          "line": 12
+        },
+        {
+          "type": "list",
+          "items": [
+            {
+              "text": "*Redis reliable queue (`LMOVE` into a processing list).* Redis isn't durable enough to act as the authority.",
+              "ordered": false,
+              "line": 14
+            },
+            {
+              "text": "*Redlock.* Unsafe under clock jumps and GC pauses.",
+              "ordered": false,
+              "line": 15
+            }
+          ],
+          "line": 14
+        },
+        {
+          "type": "callout",
+          "kind": "decision",
+          "blocks": [
+            {
+              "type": "p",
+              "text": "**Short leases with heartbeat renewal, kept separate from the job timeout.** Crashes are detected in about 80 s whether a job lasts 10 s or an hour. **Rejected:** *an SQS-style visibility timeout equal to the job timeout*, where a crashed hour-long job would sit locked for an hour. Tradeoff: heartbeat write load, about `running_jobs / 15` updates per second."
+            }
+          ],
+          "number": 3,
+          "line": 17
+        },
+        {
+          "type": "callout",
+          "kind": "decision",
+          "blocks": [
+            {
+              "type": "p",
+              "text": "**Delayed, scheduled, and retrying jobs live only in PostgreSQL and are promoted by the scheduler.** **Rejected:** *a Redis delayed ZSET*, which would create a second source of truth for timing. Tradeoff: about 1 s of scheduling precision."
+            }
+          ],
+          "number": 4,
+          "line": 20
+        },
+        {
+          "type": "callout",
+          "kind": "decision",
+          "blocks": [
+            {
+              "type": "p",
+              "text": "**Leaderless scheduler loops using `FOR UPDATE SKIP LOCKED`.** **Rejected:** *leader election with an advisory lock or a Redis lock.* It adds failover gaps and split-brain cases. Tradeoff: every loop must be idempotent, which is enforced in review and tests."
+            }
+          ],
+          "number": 5,
+          "line": 23
+        },
+        {
+          "type": "callout",
+          "kind": "decision",
+          "blocks": [
+            {
+              "type": "p",
+              "text": "**One Redis sorted set per queue, with a composite priority and FIFO score.** **Rejected:**"
+            }
+          ],
+          "number": 6,
+          "line": 26
+        },
+        {
+          "type": "list",
+          "items": [
+            {
+              "text": "*Redis Streams.* The consumer-group PEL duplicates the PostgreSQL leasing, and Streams have no priority.",
+              "ordered": false,
+              "line": 28
+            },
+            {
+              "text": "*One list per priority level.* More keys, and every level has to be blocked on.",
+              "ordered": false,
+              "line": 29
+            }
+          ],
+          "line": 28
+        },
+        {
+          "type": "p",
+          "text": "Tradeoff: low priorities can starve. Aging is deferred to Later.",
+          "line": 31
+        },
+        {
+          "type": "callout",
+          "kind": "decision",
+          "blocks": [
+            {
+              "type": "p",
+              "text": "**Async-first worker runtime: one event loop per process with M slots, scaled out by processes.** Sync handlers run in threads, and the process is recycled after a timeout. **Rejected:**"
+            }
+          ],
+          "number": 7,
+          "line": 33
+        },
+        {
+          "type": "list",
+          "items": [
+            {
+              "text": "*Prefork process pools.* Complex supervision and IPC.",
+              "ordered": false,
+              "line": 35
+            },
+            {
+              "text": "*Killing threads.* Python can't do it.",
+              "ordered": false,
+              "line": 36
+            }
+          ],
+          "line": 35
+        },
+        {
+          "type": "callout",
+          "kind": "decision",
+          "blocks": [
+            {
+              "type": "p",
+              "text": "**At-least-once execution with an idempotent-handler contract.** **Rejected:** *exactly-once through distributed transactions.* It isn't achievable with arbitrary external side effects."
+            }
+          ],
+          "number": 8,
+          "line": 38
+        },
+        {
+          "type": "callout",
+          "kind": "decision",
+          "blocks": [
+            {
+              "type": "p",
+              "text": "**Prefixed API keys stored as HMAC-SHA256 with a versioned pepper.** High-entropy secrets don't need a slow KDF. **Rejected:**"
+            }
+          ],
+          "number": 9,
+          "line": 41
+        },
+        {
+          "type": "list",
+          "items": [
+            {
+              "text": "*bcrypt or argon2.* Adds around 50 ms to every request.",
+              "ordered": false,
+              "line": 43
+            },
+            {
+              "text": "*JWT.* Revocation is hard.",
+              "ordered": false,
+              "line": 44
+            }
+          ],
+          "line": 43
+        },
+        {
+          "type": "callout",
+          "kind": "decision",
+          "blocks": [
+            {
+              "type": "p",
+              "text": "**The DLQ is the `dead` status in PostgreSQL, not a separate queue.** It can be queried and filtered, and retried with one CAS."
+            }
+          ],
+          "number": 10,
+          "line": 46
+        },
+        {
+          "type": "callout",
+          "kind": "decision",
+          "blocks": [
+            {
+              "type": "p",
+              "text": "**Running jobs are cancelled cooperatively, on a best-effort basis.** **Rejected:** *hard-killing worker tasks.* It corrupts handler state and shared connections."
+            }
+          ],
+          "number": 11,
+          "line": 49
+        },
+        {
+          "type": "callout",
+          "kind": "decision",
+          "blocks": [
+            {
+              "type": "p",
+              "text": "**The worker dashboard is built in Grafana, not as a custom UI.** Lower cost to build, and it reuses the existing alerting stack."
+            }
+          ],
+          "number": 12,
+          "line": 52
+        }
+      ],
+      "subsections": []
+    }
+  ],
+  "tasks": [],
+  "callouts": [
+    {
+      "kind": "decision",
+      "title": "PostgreSQL is the source of truth; Redis is a rebuildable dispatch index.",
+      "details": [
+        {
+          "label": "tradeoff",
+          "text": "two writes per dispatch, plus reconciler complexity.",
+          "line": 7
+        }
+      ],
+      "rejected": [
+        {
+          "text": "*Redis-only state (RQ/Celery style).* State is lost on Redis failover, and querying and listing are weak.",
+          "line": 9
+        },
+        {
+          "text": "*PostgreSQL-only queue using `SKIP LOCKED` polling.* Simpler, but worker polling puts load on the primary at scale, and the requirements call for Redis. It stays as a possible degraded mode.",
+          "line": 10
+        }
+      ],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "**PostgreSQL is the source of truth; Redis is a rebuildable dispatch index.** Tradeoff: two writes per dispatch, plus reconciler complexity. **Rejected:**"
+        },
+        {
+          "type": "list",
+          "items": [
+            {
+              "text": "*Redis-only state (RQ/Celery style).* State is lost on Redis failover, and querying and listing are weak.",
+              "ordered": false,
+              "line": 9
+            },
+            {
+              "text": "*PostgreSQL-only queue using `SKIP LOCKED` polling.* Simpler, but worker polling puts load on the primary at scale, and the requirements call for Redis. It stays as a possible degraded mode.",
+              "ordered": false,
+              "line": 10
+            }
+          ],
+          "line": 9
+        }
+      ],
+      "at": "architectural-decisions",
+      "section": "architectural-decisions",
+      "line": 7,
+      "number": 1
+    },
+    {
+      "kind": "decision",
+      "title": "Claims are fenced by a CAS `UPDATE` in PostgreSQL with a per-claim `lease_token`.",
+      "details": [],
+      "rejected": [
+        {
+          "text": "*Redis reliable queue (`LMOVE` into a processing list).* Redis isn't durable enough to act as the authority.",
+          "line": 14
+        },
+        {
+          "text": "*Redlock.* Unsafe under clock jumps and GC pauses.",
+          "line": 15
+        }
+      ],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "**Claims are fenced by a CAS `UPDATE` in PostgreSQL with a per-claim `lease_token`.** **Rejected:**"
+        },
+        {
+          "type": "list",
+          "items": [
+            {
+              "text": "*Redis reliable queue (`LMOVE` into a processing list).* Redis isn't durable enough to act as the authority.",
+              "ordered": false,
+              "line": 14
+            },
+            {
+              "text": "*Redlock.* Unsafe under clock jumps and GC pauses.",
+              "ordered": false,
+              "line": 15
+            }
+          ],
+          "line": 14
+        }
+      ],
+      "at": "architectural-decisions",
+      "section": "architectural-decisions",
+      "line": 12,
+      "number": 2
+    },
+    {
+      "kind": "decision",
+      "title": "Short leases with heartbeat renewal, kept separate from the job timeout.",
+      "details": [
+        {
+          "label": "tradeoff",
+          "text": "heartbeat write load, about `running_jobs / 15` updates per second.",
+          "line": 17
+        }
+      ],
+      "rejected": [
+        {
+          "text": "*an SQS-style visibility timeout equal to the job timeout*, where a crashed hour-long job would sit locked for an hour.",
+          "line": 17
+        }
+      ],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "**Short leases with heartbeat renewal, kept separate from the job timeout.** Crashes are detected in about 80 s whether a job lasts 10 s or an hour. **Rejected:** *an SQS-style visibility timeout equal to the job timeout*, where a crashed hour-long job would sit locked for an hour. Tradeoff: heartbeat write load, about `running_jobs / 15` updates per second."
+        }
+      ],
+      "at": "architectural-decisions",
+      "section": "architectural-decisions",
+      "line": 17,
+      "number": 3,
+      "body": [
+        {
+          "type": "p",
+          "text": "Crashes are detected in about 80 s whether a job lasts 10 s or an hour.",
+          "line": 17
+        }
+      ]
+    },
+    {
+      "kind": "decision",
+      "title": "Delayed, scheduled, and retrying jobs live only in PostgreSQL and are promoted by the scheduler.",
+      "details": [
+        {
+          "label": "tradeoff",
+          "text": "about 1 s of scheduling precision.",
+          "line": 20
+        }
+      ],
+      "rejected": [
+        {
+          "text": "*a Redis delayed ZSET*, which would create a second source of truth for timing.",
+          "line": 20
+        }
+      ],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "**Delayed, scheduled, and retrying jobs live only in PostgreSQL and are promoted by the scheduler.** **Rejected:** *a Redis delayed ZSET*, which would create a second source of truth for timing. Tradeoff: about 1 s of scheduling precision."
+        }
+      ],
+      "at": "architectural-decisions",
+      "section": "architectural-decisions",
+      "line": 20,
+      "number": 4
+    },
+    {
+      "kind": "decision",
+      "title": "Leaderless scheduler loops using `FOR UPDATE SKIP LOCKED`.",
+      "details": [
+        {
+          "label": "tradeoff",
+          "text": "every loop must be idempotent, which is enforced in review and tests.",
+          "line": 23
+        }
+      ],
+      "rejected": [
+        {
+          "text": "*leader election with an advisory lock or a Redis lock.* It adds failover gaps and split-brain cases.",
+          "line": 23
+        }
+      ],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "**Leaderless scheduler loops using `FOR UPDATE SKIP LOCKED`.** **Rejected:** *leader election with an advisory lock or a Redis lock.* It adds failover gaps and split-brain cases. Tradeoff: every loop must be idempotent, which is enforced in review and tests."
+        }
+      ],
+      "at": "architectural-decisions",
+      "section": "architectural-decisions",
+      "line": 23,
+      "number": 5
+    },
+    {
+      "kind": "decision",
+      "title": "One Redis sorted set per queue, with a composite priority and FIFO score.",
+      "details": [
+        {
+          "label": "tradeoff",
+          "text": "low priorities can starve. Aging is deferred to Later.",
+          "line": 31
+        }
+      ],
+      "rejected": [
+        {
+          "text": "*Redis Streams.* The consumer-group PEL duplicates the PostgreSQL leasing, and Streams have no priority.",
+          "line": 28
+        },
+        {
+          "text": "*One list per priority level.* More keys, and every level has to be blocked on.",
+          "line": 29
+        }
+      ],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "**One Redis sorted set per queue, with a composite priority and FIFO score.** **Rejected:**"
+        },
+        {
+          "type": "list",
+          "items": [
+            {
+              "text": "*Redis Streams.* The consumer-group PEL duplicates the PostgreSQL leasing, and Streams have no priority.",
+              "ordered": false,
+              "line": 28
+            },
+            {
+              "text": "*One list per priority level.* More keys, and every level has to be blocked on.",
+              "ordered": false,
+              "line": 29
+            }
+          ],
+          "line": 28
+        },
+        {
+          "type": "p",
+          "text": "Tradeoff: low priorities can starve. Aging is deferred to Later.",
+          "line": 31
+        }
+      ],
+      "at": "architectural-decisions",
+      "section": "architectural-decisions",
+      "line": 26,
+      "number": 6
+    },
+    {
+      "kind": "decision",
+      "title": "Async-first worker runtime: one event loop per process with M slots, scaled out by processes.",
+      "details": [],
+      "rejected": [
+        {
+          "text": "*Prefork process pools.* Complex supervision and IPC.",
+          "line": 35
+        },
+        {
+          "text": "*Killing threads.* Python can't do it.",
+          "line": 36
+        }
+      ],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "**Async-first worker runtime: one event loop per process with M slots, scaled out by processes.** Sync handlers run in threads, and the process is recycled after a timeout. **Rejected:**"
+        },
+        {
+          "type": "list",
+          "items": [
+            {
+              "text": "*Prefork process pools.* Complex supervision and IPC.",
+              "ordered": false,
+              "line": 35
+            },
+            {
+              "text": "*Killing threads.* Python can't do it.",
+              "ordered": false,
+              "line": 36
+            }
+          ],
+          "line": 35
+        }
+      ],
+      "at": "architectural-decisions",
+      "section": "architectural-decisions",
+      "line": 33,
+      "number": 7,
+      "body": [
+        {
+          "type": "p",
+          "text": "Sync handlers run in threads, and the process is recycled after a timeout.",
+          "line": 33
+        }
+      ]
+    },
+    {
+      "kind": "decision",
+      "title": "At-least-once execution with an idempotent-handler contract.",
+      "details": [],
+      "rejected": [
+        {
+          "text": "*exactly-once through distributed transactions.* It isn't achievable with arbitrary external side effects.",
+          "line": 38
+        }
+      ],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "**At-least-once execution with an idempotent-handler contract.** **Rejected:** *exactly-once through distributed transactions.* It isn't achievable with arbitrary external side effects."
+        }
+      ],
+      "at": "architectural-decisions",
+      "section": "architectural-decisions",
+      "line": 38,
+      "number": 8
+    },
+    {
+      "kind": "decision",
+      "title": "Prefixed API keys stored as HMAC-SHA256 with a versioned pepper.",
+      "details": [],
+      "rejected": [
+        {
+          "text": "*bcrypt or argon2.* Adds around 50 ms to every request.",
+          "line": 43
+        },
+        {
+          "text": "*JWT.* Revocation is hard.",
+          "line": 44
+        }
+      ],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "**Prefixed API keys stored as HMAC-SHA256 with a versioned pepper.** High-entropy secrets don't need a slow KDF. **Rejected:**"
+        },
+        {
+          "type": "list",
+          "items": [
+            {
+              "text": "*bcrypt or argon2.* Adds around 50 ms to every request.",
+              "ordered": false,
+              "line": 43
+            },
+            {
+              "text": "*JWT.* Revocation is hard.",
+              "ordered": false,
+              "line": 44
+            }
+          ],
+          "line": 43
+        }
+      ],
+      "at": "architectural-decisions",
+      "section": "architectural-decisions",
+      "line": 41,
+      "number": 9,
+      "body": [
+        {
+          "type": "p",
+          "text": "High-entropy secrets don't need a slow KDF.",
+          "line": 41
+        }
+      ]
+    },
+    {
+      "kind": "decision",
+      "title": "The DLQ is the `dead` status in PostgreSQL, not a separate queue.",
+      "details": [],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "**The DLQ is the `dead` status in PostgreSQL, not a separate queue.** It can be queried and filtered, and retried with one CAS."
+        }
+      ],
+      "at": "architectural-decisions",
+      "section": "architectural-decisions",
+      "line": 46,
+      "number": 10,
+      "body": [
+        {
+          "type": "p",
+          "text": "It can be queried and filtered, and retried with one CAS.",
+          "line": 46
+        }
+      ]
+    },
+    {
+      "kind": "decision",
+      "title": "Running jobs are cancelled cooperatively, on a best-effort basis.",
+      "details": [],
+      "rejected": [
+        {
+          "text": "*hard-killing worker tasks.* It corrupts handler state and shared connections.",
+          "line": 49
+        }
+      ],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "**Running jobs are cancelled cooperatively, on a best-effort basis.** **Rejected:** *hard-killing worker tasks.* It corrupts handler state and shared connections."
+        }
+      ],
+      "at": "architectural-decisions",
+      "section": "architectural-decisions",
+      "line": 49,
+      "number": 11
+    },
+    {
+      "kind": "decision",
+      "title": "The worker dashboard is built in Grafana, not as a custom UI.",
+      "details": [],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "**The worker dashboard is built in Grafana, not as a custom UI.** Lower cost to build, and it reuses the existing alerting stack."
+        }
+      ],
+      "at": "architectural-decisions",
+      "section": "architectural-decisions",
+      "line": 52,
+      "number": 12,
+      "body": [
+        {
+          "type": "p",
+          "text": "Lower cost to build, and it reuses the existing alerting stack.",
+          "line": 52
+        }
+      ]
+    }
+  ],
+  "diagrams": [],
+  "files": [],
+  "refs": {},
+  "warnings": [],
+  "roadmap": {
+    "ids": [
+      "architectural-decisions"
+    ],
+    "basis": "sections"
+  },
+  "stats": {
+    "words": 510,
+    "code_blocks": 0
+  }
+}

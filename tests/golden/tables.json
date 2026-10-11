@@ -63,6 +63,20 @@
   "callouts": [
     {
       "kind": "decision",
+      "title": "Database",
+      "details": [
+        {
+          "label": "choice",
+          "text": "Postgres",
+          "line": 7
+        },
+        {
+          "label": "why",
+          "text": "Already run it",
+          "line": 7
+        }
+      ],
+      "rejected": [],
       "blocks": [
         {
           "type": "p",
@@ -76,6 +90,20 @@
     },
     {
       "kind": "decision",
+      "title": "Queue",
+      "details": [
+        {
+          "label": "choice",
+          "text": "`SQS`",
+          "line": 8
+        },
+        {
+          "label": "why",
+          "text": "Managed",
+          "line": 8
+        }
+      ],
+      "rejected": [],
       "blocks": [
         {
           "type": "p",

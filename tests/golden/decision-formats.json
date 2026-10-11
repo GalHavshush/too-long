@@ -1,0 +1,394 @@
+{
+  "title": "Decision formats",
+  "file": "decision-formats",
+  "intro": [],
+  "sections": [
+    {
+      "id": "plain-labels",
+      "title": "Plain labels",
+      "line": 3,
+      "blocks": [
+        {
+          "type": "callout",
+          "kind": "decision",
+          "blocks": [
+            {
+              "type": "p",
+              "text": "Use PostgreSQL."
+            }
+          ],
+          "line": 5
+        },
+        {
+          "type": "callout",
+          "kind": "decision",
+          "blocks": [
+            {
+              "type": "p",
+              "text": "Keep the API stateless. It makes scaling trivial."
+            }
+          ],
+          "line": 7
+        },
+        {
+          "type": "callout",
+          "kind": "decision",
+          "blocks": [
+            {
+              "type": "p",
+              "text": "Ship weekly."
+            }
+          ],
+          "number": 4,
+          "line": 9
+        },
+        {
+          "type": "p",
+          "text": "Note - a dash without a number is prose, not a label.",
+          "line": 11
+        }
+      ],
+      "subsections": []
+    },
+    {
+      "id": "headings",
+      "title": "Headings",
+      "line": 13,
+      "blocks": [],
+      "subsections": [
+        {
+          "id": "decision-1-postgresql-persistence",
+          "title": "Decision 1: PostgreSQL persistence",
+          "line": 15,
+          "blocks": [
+            {
+              "type": "p",
+              "text": "We persist everything in PostgreSQL.",
+              "line": 17
+            },
+            {
+              "type": "p",
+              "text": "Rationale: one system to operate.",
+              "line": 19
+            },
+            {
+              "type": "p",
+              "text": "Rejected:",
+              "line": 21
+            },
+            {
+              "type": "list",
+              "items": [
+                {
+                  "text": "Redis-only persistence.",
+                  "ordered": false,
+                  "line": 22
+                },
+                {
+                  "text": "In-memory persistence.",
+                  "ordered": false,
+                  "line": 23
+                }
+              ],
+              "line": 22
+            }
+          ]
+        },
+        {
+          "id": "decision-2-fenced-claims",
+          "title": "Decision 2 — Fenced claims",
+          "line": 25,
+          "blocks": [
+            {
+              "type": "p",
+              "text": "Claims use compare-and-swap.",
+              "line": 27
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "decisions",
+      "title": "Decisions",
+      "line": 29,
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            {
+              "text": "Use Vite for the frontend",
+              "ordered": false,
+              "line": 31
+            },
+            {
+              "text": "Use pnpm workspaces",
+              "ordered": false,
+              "line": 32
+            }
+          ],
+          "line": 31
+        }
+      ],
+      "subsections": []
+    },
+    {
+      "id": "key-decisions",
+      "title": "Key decisions",
+      "line": 34,
+      "blocks": [
+        {
+          "type": "callout",
+          "kind": "decision",
+          "blocks": [
+            {
+              "type": "p",
+              "text": "**Cache reads in the edge.** Tradeoff: stale reads for up to 60 s. **Rejected:** *a write-through cache*, more moving parts."
+            }
+          ],
+          "number": 7,
+          "line": 36
+        },
+        {
+          "type": "p",
+          "text": "A paragraph in a decisions section explains the numbered decision above it.",
+          "line": 39
+        }
+      ],
+      "subsections": []
+    }
+  ],
+  "tasks": [],
+  "callouts": [
+    {
+      "kind": "decision",
+      "title": "Use PostgreSQL.",
+      "details": [],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Use PostgreSQL."
+        }
+      ],
+      "at": "plain-labels",
+      "section": "plain-labels",
+      "line": 5
+    },
+    {
+      "kind": "decision",
+      "title": "Keep the API stateless.",
+      "details": [],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Keep the API stateless. It makes scaling trivial."
+        }
+      ],
+      "at": "plain-labels",
+      "section": "plain-labels",
+      "line": 7,
+      "body": [
+        {
+          "type": "p",
+          "text": "It makes scaling trivial.",
+          "line": 7
+        }
+      ]
+    },
+    {
+      "kind": "decision",
+      "title": "Ship weekly.",
+      "details": [],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Ship weekly."
+        }
+      ],
+      "at": "plain-labels",
+      "section": "plain-labels",
+      "line": 9,
+      "number": 4
+    },
+    {
+      "kind": "decision",
+      "title": "PostgreSQL persistence",
+      "details": [
+        {
+          "label": "rationale",
+          "text": "one system to operate.",
+          "line": 19
+        }
+      ],
+      "rejected": [
+        {
+          "text": "Redis-only persistence.",
+          "line": 22
+        },
+        {
+          "text": "In-memory persistence.",
+          "line": 23
+        }
+      ],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "We persist everything in PostgreSQL.",
+          "line": 17
+        },
+        {
+          "type": "p",
+          "text": "Rationale: one system to operate.",
+          "line": 19
+        },
+        {
+          "type": "p",
+          "text": "Rejected:",
+          "line": 21
+        },
+        {
+          "type": "list",
+          "items": [
+            {
+              "text": "Redis-only persistence.",
+              "ordered": false,
+              "line": 22
+            },
+            {
+              "text": "In-memory persistence.",
+              "ordered": false,
+              "line": 23
+            }
+          ],
+          "line": 22
+        }
+      ],
+      "at": "decision-1-postgresql-persistence",
+      "section": "headings",
+      "line": 15,
+      "number": 1,
+      "body": [
+        {
+          "type": "p",
+          "text": "We persist everything in PostgreSQL.",
+          "line": 17
+        }
+      ]
+    },
+    {
+      "kind": "decision",
+      "title": "Fenced claims",
+      "details": [],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Claims use compare-and-swap.",
+          "line": 27
+        }
+      ],
+      "at": "decision-2-fenced-claims",
+      "section": "headings",
+      "line": 25,
+      "number": 2,
+      "body": [
+        {
+          "type": "p",
+          "text": "Claims use compare-and-swap.",
+          "line": 27
+        }
+      ]
+    },
+    {
+      "kind": "decision",
+      "title": "Use Vite for the frontend",
+      "details": [],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Use Vite for the frontend"
+        }
+      ],
+      "at": "decisions",
+      "section": "decisions",
+      "line": 31,
+      "from_heading": true
+    },
+    {
+      "kind": "decision",
+      "title": "Use pnpm workspaces",
+      "details": [],
+      "rejected": [],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Use pnpm workspaces"
+        }
+      ],
+      "at": "decisions",
+      "section": "decisions",
+      "line": 32,
+      "from_heading": true
+    },
+    {
+      "kind": "decision",
+      "title": "Cache reads in the edge.",
+      "details": [
+        {
+          "label": "tradeoff",
+          "text": "stale reads for up to 60 s.",
+          "line": 36
+        }
+      ],
+      "rejected": [
+        {
+          "text": "*a write-through cache*, more moving parts.",
+          "line": 36
+        }
+      ],
+      "blocks": [
+        {
+          "type": "p",
+          "text": "**Cache reads in the edge.** Tradeoff: stale reads for up to 60 s. **Rejected:** *a write-through cache*, more moving parts."
+        },
+        {
+          "type": "p",
+          "text": "A paragraph in a decisions section explains the numbered decision above it.",
+          "line": 39
+        }
+      ],
+      "at": "key-decisions",
+      "section": "key-decisions",
+      "line": 36,
+      "number": 7,
+      "body": [
+        {
+          "type": "p",
+          "text": "A paragraph in a decisions section explains the numbered decision above it.",
+          "line": 39
+        }
+      ]
+    }
+  ],
+  "diagrams": [],
+  "files": [],
+  "refs": {},
+  "warnings": [],
+  "roadmap": {
+    "ids": [
+      "plain-labels",
+      "headings",
+      "decisions",
+      "key-decisions"
+    ],
+    "basis": "sections"
+  },
+  "stats": {
+    "words": 108,
+    "code_blocks": 0
+  }
+}

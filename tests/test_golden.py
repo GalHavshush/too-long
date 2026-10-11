@@ -34,10 +34,10 @@ def strings(x):
 
 
 def check_nothing_dropped(path, model):
-    words = set(re.findall(r"\w+", " ".join(strings(model))))
+    words = set(re.findall(r"\w+", " ".join(strings(model)).lower()))  # labels are kept as lowercase kinds
     for n, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
         line = re.sub(r"\[[xX ]\]", "", line)  # task boxes are kept as `done`, not as text
-        missing = [w for w in re.findall(r"\w+", line) if w not in words]
+        missing = [w for w in re.findall(r"\w+", line.lower()) if w not in words]
         assert not missing, f"{path.name}:{n} words missing from the model: {missing}"
 
 
