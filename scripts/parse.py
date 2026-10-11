@@ -472,9 +472,32 @@ def section_ids(model):
         sub["id"] for s in model["sections"] for sub in s["subsections"]}
 
 
+class InputError(ValueError):
+    """The Markdown file can't be read. The message says what to do."""
+
+
+def read_markdown(path):
+    """(bytes, text) of a Markdown file; text has \\n line endings, like open() in text mode."""
+    path = Path(path)
+    if path.is_dir():
+        raise InputError(f"{path} is a folder. Pass the Markdown file inside it, e.g. {path / 'plan.md'}")
+    try:
+        data = path.read_bytes()
+    except FileNotFoundError:
+        raise InputError(f"{path}: no such file (relative paths start from {Path.cwd()})") from None
+    except PermissionError:
+        raise InputError(f"{path}: permission denied, cannot read it") from None
+    try:
+        text = data.decode("utf-8")
+    except UnicodeDecodeError as e:
+        raise InputError(f"{path} is not UTF-8 text (invalid byte at position {e.start}). Re-save it as UTF-8, "
+                         f"e.g. iconv -f latin1 -t utf-8 '{path}' > fixed.md") from None
+    return data, text.replace("\r\n", "\n").replace("\r", "\n")
+
+
 def parse_file(path, track=()):
     path = Path(path)
-    model = build_model(path.read_text(encoding="utf-8"), path.stem, track)
+    model = build_model(read_markdown(path)[1], path.stem, track)
     model["file"] = path.name
     return model
 
@@ -526,8 +549,16 @@ def summary(model):
     return "\n".join(out)
 
 
-if __name__ == "__main__":
-    if len(sys.argv) < 2:
+def main():
+    args = [a for a in sys.argv[1:] if a != "--json"]
+    if len(args) != 1:
         sys.exit("usage: parse.py FILE.md [--json]")
-    m = parse_file(sys.argv[1])
+    try:
+        m = parse_file(args[0])
+    except InputError as e:
+        sys.exit(str(e))
     print(json.dumps(m, indent=2, ensure_ascii=False) if "--json" in sys.argv else summary(m))
+
+
+if __name__ == "__main__":
+    main()

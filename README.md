@@ -10,7 +10,7 @@ No npm, no build step, no server. The output is a static folder you open by doub
 
 ## Installation
 
-You need [Claude Code](https://claude.com/claude-code) and Python 3.8+ (standard library only).
+You need [Claude Code](https://claude.com/claude-code) and Python 3.9+ (standard library only; tested on 3.9, 3.11 and 3.14).
 
 ### One prompt
 
@@ -66,13 +66,17 @@ Claude reads the whole document, then asks what you want the visual version to h
 
 You can pick several. Claude proposes which views fit *this* document, builds the site into `.too-long/`, and opens it.
 
-You can also run the scripts yourself:
+You can also run it yourself with one command, `scripts/too_long.py`:
 
 ```bash
-python3 ~/.claude/skills/too-long/scripts/parse.py plan.md   # structure summary
-python3 ~/.claude/skills/too-long/scripts/build.py plan.md   # build .too-long/
-open .too-long/index.html
+python3 ~/.claude/skills/too-long/scripts/too_long.py build plan.md    # build .too-long/
+python3 ~/.claude/skills/too-long/scripts/too_long.py watch plan.md    # rebuild on every save
+python3 ~/.claude/skills/too-long/scripts/too_long.py serve plan.md    # ticking a task writes [x] into plan.md
+python3 ~/.claude/skills/too-long/scripts/too_long.py parse plan.md    # structure summary
+python3 ~/.claude/skills/too-long/scripts/too_long.py doctor           # what is installed, what needs it
 ```
+
+Output goes to `.too-long/` in the current folder (`--out DIR` to change it). The individual scripts (`build.py`, `watch.py`, `serve.py`, `parse.py`, `video.py`) take the same arguments.
 
 ## Example
 
@@ -180,6 +184,7 @@ too-long/
 │   ├── video.py        # storyboard → narration → timing → mp4 (video mode)
 │   ├── render_video.mjs# frame capture via headless Chrome
 │   ├── cdp.mjs         # tiny Chrome DevTools client (video frames, browser tests)
+│   ├── too_long.py     # the command line: build, watch, serve, parse, video, doctor
 │   └── run_tests.py    # runs everything in tests/: python3 scripts/run_tests.py
 ├── video.md            # what Claude follows in video mode (storyboard schema)
 ├── tests/              # parser fixtures + golden files, unit tests, browser tests (e2e.test.mjs)

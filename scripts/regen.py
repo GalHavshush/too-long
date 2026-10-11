@@ -16,6 +16,7 @@ from pathlib import Path
 from config import ConfigError, load_config
 from identity import load_manifest
 from model import build_document
+from parse import InputError, read_markdown
 from website import write_site
 
 
@@ -46,7 +47,7 @@ class Regenerator:
         return lambda: self._subscribers.remove(fn)
 
     def _fingerprint(self):
-        h = hashlib.sha256(self.md.read_bytes())
+        h = hashlib.sha256(read_markdown(self.md)[0])
         if self.config_path.exists():
             h.update(self.config_path.read_bytes())
         return h.hexdigest()
@@ -64,8 +65,11 @@ class Regenerator:
                 self.document, self._inputs = doc, inputs
                 result = Result(ok=True, changed=bool(written), written=written, warnings=doc.warnings,
                                 revision=doc.model["revision"], stale=doc.model["stale"])
-            except (ConfigError, OSError, UnicodeDecodeError) as e:
+            except (ConfigError, InputError) as e:
                 result = Result(ok=False, error=str(e))
+            except OSError as e:  # e.g. the output folder is not writable
+                where = f": {e.filename}" if e.filename else ""
+                result = Result(ok=False, error=f"{e.strerror or e}{where}. If that is the output folder, choose another with --out.")
         if result.changed or not result.ok:
             for fn in list(self._subscribers):
                 fn(result)

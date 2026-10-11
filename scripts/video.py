@@ -26,7 +26,7 @@ import sys
 from pathlib import Path
 
 from config import is_css_color
-from parse import parse_file, section_ids
+from parse import InputError, parse_file, section_ids
 
 HERE = Path(__file__).resolve().parent
 ASSETS = HERE.parent / "assets" / "video"
@@ -53,7 +53,9 @@ def find_chrome():
     for p in ("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
               "/Applications/Chromium.app/Contents/MacOS/Chromium",
               "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
-              "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser"):
+              "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser",
+              r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+              r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"):
         if Path(p).exists():
             return p
     return next((w for n in ("google-chrome", "chromium", "chromium-browser") if (w := shutil.which(n))), None)
@@ -67,18 +69,34 @@ def node_major():
     return int(re.match(r"v(\d+)", out)[1]) if out else None
 
 
+# How to install each tool, per OS (sys.platform prefix).
+INSTALL = {
+    "darwin": {"ffmpeg": "brew install ffmpeg", "node": "brew install node", "chrome": "brew install --cask google-chrome"},
+    "linux": {"ffmpeg": "sudo apt install ffmpeg (or your package manager)",
+              "node": "install Node.js 22+ from https://nodejs.org (distro packages are often older)",
+              "chrome": "sudo apt install chromium (or install Google Chrome)"},
+    "win32": {"ffmpeg": "winget install Gyan.FFmpeg", "node": "winget install OpenJS.NodeJS",
+              "chrome": "winget install Google.Chrome"},
+}
+
+
+def install_hint(tool):
+    os_hints = next((v for k, v in INSTALL.items() if sys.platform.startswith(k)), INSTALL["linux"])
+    return os_hints[tool]
+
+
 def check_tools():
     """Returns (tools, problems). A problem is an exact thing to install."""
     tools = {"chrome": find_chrome(), "ffmpeg": shutil.which("ffmpeg"), "node": shutil.which("node"),
              "say": shutil.which("say") if shutil.which("afinfo") else None}
     problems = []
     if not tools["ffmpeg"]:
-        problems.append("ffmpeg is missing. Install it: brew install ffmpeg")
+        problems.append(f"ffmpeg is missing. Install it: {install_hint('ffmpeg')}")
     if not tools["node"] or (node_major() or 0) < 22:
         problems.append("Node.js 22 or newer is required (frame capture uses its built-in WebSocket). "
-                        "Install it: brew install node")
+                        f"Install it: {install_hint('node')}")
     if not tools["chrome"]:
-        problems.append("Google Chrome (or Chromium/Edge/Brave) is missing. Install it: brew install --cask google-chrome")
+        problems.append(f"Google Chrome (or Chromium/Edge/Brave) is missing. Install it: {install_hint('chrome')}")
     return tools, problems
 
 
@@ -221,7 +239,12 @@ def main():
     sb_path = out / "storyboard.json"
     if not sb_path.exists():
         sys.exit(f"No storyboard at {sb_path}. Write it first (see SKILL.md, video mode).")
-    model, sb = parse_file(md), json.loads(sb_path.read_text(encoding="utf-8"))
+    try:
+        model, sb = parse_file(md), json.loads(sb_path.read_text(encoding="utf-8"))
+    except InputError as e:
+        sys.exit(str(e))
+    except json.JSONDecodeError as e:
+        sys.exit(f"{sb_path}:{e.lineno}:{e.colno}: invalid JSON: {e.msg}")
     errors, warnings = validate(model, sb)
     for w in warnings:
         print(f"warning: {w}")

@@ -224,6 +224,8 @@ The Markdown is the source of truth.
 
 ## Files
 
+- `scripts/too_long.py`: one command line for all of it (`build`, `watch`, `serve`, `parse`, `video`,
+  `doctor`). Needs Python 3.9+ only; video also needs Node 22+, Chrome and ffmpeg.
 - `scripts/parse.py`: Markdown → content model. Run alone for a summary, `--json` for the model.
 - `scripts/build.py`: model + config → site (thin command over `regen.py`). `scripts/watch.py`: rebuild on change.
 - Core modules (no HTTP, no browser): `config.py` (load/validate config, staleness), `identity.py`

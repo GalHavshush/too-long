@@ -16,7 +16,7 @@ from pathlib import Path
 
 from config import check_config, config_sha, stamps, staleness
 from identity import apply_identity
-from parse import build_model, section_ids
+from parse import build_model, read_markdown, section_ids
 
 SCHEMA_VERSION = 1
 
@@ -26,11 +26,6 @@ def revision(data):
     based on another version."""
     return hashlib.sha256(data).hexdigest()
 
-
-def read_markdown(md_path):
-    """(bytes, text). Text has \\n line endings, like open() in text mode."""
-    data = Path(md_path).read_bytes()
-    return data, data.decode("utf-8").replace("\r\n", "\n").replace("\r", "\n")
 
 
 @dataclass
