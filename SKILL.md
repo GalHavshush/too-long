@@ -68,7 +68,32 @@ can combine. The goals:
 Recommend based on content: a plan with phases and checkboxes suggests 2/4/8;
 a design doc with components suggests 1/3; a dense spec suggests 1/5.
 
-### 3. Propose, briefly
+### 3. Decide what is worth adding
+
+The scripts already handle everything explicit: structure, tasks, labeled decisions
+(with their "Rejected:" alternatives and tradeoffs), risks with mitigations, open
+questions, milestones, stated stage dependencies, file references. Check the parse
+summary (`Highlights:`, `Roadmap basis:`, `Stage dependencies:`, warnings). Your job is
+what the scripts cannot do, and only where it helps the reader's goal:
+
+- **Dependencies the text implies but does not label.** If stages depend on each other
+  in prose ("once auth is in place...") and `Stage dependencies` says none or few are
+  stated, write config `dependencies` for the ones the text supports, and a dependency
+  diagram when the graph is more than a straight line. Never add an edge the text does
+  not support; when it is ambiguous, leave it out and say so in your report.
+- **Architecture** the text describes in words: one `flowchart TD` of the named
+  components and the relationships the text states.
+- **Why it matters**: a note on the few sections where a decision or risk has
+  consequences elsewhere ("the fencing in §7 relies on this"). Lead with the most
+  important decisions and risks, not all of them.
+- **A TL;DR** for long documents: the 3-5 facts a reader needs first. Do not repeat
+  what the overview's stats and highlights already show.
+
+Skip what would only restate the document: no diagram that redraws a list, no note
+that paraphrases its section, no view the document can't fill. Fewer, better additions
+beat filling every slot.
+
+### 4. Propose, briefly
 
 Say in 3-6 bullets how you will show *this* document: which views, what each
 will contain, and anything you will add that is not in the source (a TL;DR, an
@@ -79,7 +104,7 @@ without checkboxes, no file tree for two files.
 Wait for a go-ahead unless the user already said to just build it. Keep it
 short; rebuilding later is cheap.
 
-### 4. Write the config (visualization selection)
+### 5. Write the config (visualization selection)
 
 Write `.too-long/config.json` (create the folder):
 
@@ -106,14 +131,18 @@ All fields are optional. The first view is the landing page. Two more:
 - `"track": ["implementation-steps"]`: show the top-level numbered items in these
   sections (and their subsections) as tasks with checkboxes. Use it when the plan
   lists its steps as `1. 2. 3.` instead of `- [ ]` and the user wants to track progress.
+- `"dependencies": {"phase-4": ["phase-2", "phase-3"]}`: what each roadmap stage needs,
+  when the document does not state it on a `Dependencies:` line. It replaces what was
+  found for that stage, drives the roadmap's ready/blocked status, and is shown as
+  inferred. Only stages and edges the text supports.
 
 | View | Shows | Good for goals |
 |---|---|---|
 | `overview` | title, TL;DR, stats, intro, section cards with progress | 1, 4, 6 |
 | `document` | the full document, collapsible sections, TOC scroll-spy, raw source toggle. **Always included.** | 1 |
-| `roadmap` | stages as a timeline, status, current-focus card with next open tasks | 2, 4, 8 |
+| `roadmap` | stages with progress, dependencies, ready/blocked status, parallel waves, focus card | 2, 4, 7, 8 |
 | `tasks` | every checkbox grouped by section, filters, progress (saved in the browser) | 4, 8 |
-| `highlights` | decisions, risks, warnings, questions, assumptions, milestones as cards | 1, 4 |
+| `highlights` | decisions (with rejected alternatives), risks (with mitigations), questions, assumptions, milestones | 1, 4 |
 | `diagrams` | Mermaid blocks from the document + diagrams you add (labelled inferred) | 3, 7 |
 | `files` | tree of every file path mentioned, linked to where it is mentioned | 3, 4 |
 | `steps` | one section per screen, prev/next, arrow keys, "mark as understood" | 5, 6 |
@@ -129,9 +158,12 @@ Choosing the rest:
   section is for, how it connects to others. Never add requirements.
 - `diagrams`: for architecture or dependency goals when the document describes
   components but has no diagram. Nodes and edges must come from the text; cite
-  the sections in `sources`. Prefer `flowchart TD` for more than ~5 nodes (wide
+  the sections in `sources` (a diagram without sources is checked against the whole
+  document for staleness). Prefer `flowchart TD` for more than ~5 nodes (wide
   LR diagrams shrink). Draw dependencies only where the text states them
-  ("after", "requires", "depends on", "blocked by").
+  ("after", "requires", "depends on", "blocked by"); use a dashed edge with a label
+  for a partial one ("fast path"). If the document already has a Mermaid diagram of
+  the same thing, don't draw another.
 
 Everything from the config is rendered with an "Inferred · not in the
 original" label. That is what makes adding it safe.
@@ -140,7 +172,7 @@ Everything extracted from the Markdown (tasks, highlights, diagrams, file
 mentions) links to its source line ("L42"), which opens `#/source/42`: the
 Markdown exactly as written, with that line highlighted.
 
-### 5. Build
+### 6. Build
 
 ```bash
 python3 <skill-dir>/scripts/build.py path/to/plan.md
@@ -165,10 +197,11 @@ on changes, build.py and watch.py report it and the site marks that item "May be
 outdated". Nothing is rewritten automatically: update config.json yourself when the
 user wants it refreshed (a changed config clears the flags).
 
-### 6. Report
+### 7. Report
 
 Two or three lines: where the site is, which views it has, and exactly what
-you added that is inferred. Mention that, opened as a file, task checks are
+you added that is inferred (and anything you left out because the text was
+ambiguous). Mention that, opened as a file, task checks are
 saved in the browser only and re-running build.py refreshes the site; and that
 `python3 <skill-dir>/scripts/serve.py path/to/plan.md` serves it on
 127.0.0.1 so ticking a task writes `[x]` into the Markdown and edits to the
@@ -196,15 +229,25 @@ The Markdown is the source of truth.
   fenced and 4-space indented code (long blocks fold), ```` ```mermaid ```` diagrams, YAML front
   matter, `[text][ref]` reference links, `\|` and `` `a|b` `` inside table cells. Unclosed fences or
   front matter are kept and reported as warnings by parse.py and build.py.
-- Callouts: paragraphs or bullets starting with `Decision:`, `Risk:`,
-  `Warning:`, `Question:`, `Note:`, `Assumption:`, `Milestone:` (bold or not),
-  and GitHub alerts `> [!WARNING]`.
+- Highlights: paragraphs or bullets starting with `Decision:`, `Risk:`,
+  `Warning:`, `Question:`, `Note:`, `Assumption:`, `Milestone:` (bold or not, also
+  numbered: `**Decision 3 — title.**`), headings `### Decision 2: title` and ADR
+  `## Decision`, GitHub alerts `> [!WARNING]`, and bold labels later in a sentence
+  (`... **Milestone:** M1`). Labels that follow attach to the highlight above them:
+  `Rejected:` (alternatives, inline or as the list after it), `Tradeoff:`,
+  `Rationale:`, `Mitigation:`, `Likelihood:`, `Impact:`, `Answer:` and similar.
 - Bullets under headings like "Risks", "Open Questions", "Decisions",
-  "Assumptions", "Milestones" become highlights of that kind.
+  "Assumptions", "Milestones" become highlights of that kind, unless the section
+  labels its items explicitly; tables whose first column is "Risk"/"Decision" too.
 - Stages for the roadmap: sections whose titles read like phases ("Phase 2",
-  "Step 3", "Week 1", "1. Setup"); otherwise every top-level section.
+  "Step 3", "Week 1", "1. Setup"), or `### Phase N` subsections when top-level
+  sections are only numbered; otherwise every top-level section. A stage's
+  `Dependencies:` / `Depends on:` / `Requires:` line gives what it needs ("P2, P3",
+  "Phase 1", "All prior phases", "None"); "in parallel with" is never a dependency.
 - File paths with a known extension or a trailing `/` (e.g. `src/db/client.ts`,
-  `services/billing/`), plus Dockerfile, Makefile, `.env`.
+  `services/billing/`, `src/x/{a,b}.py`), plus Dockerfile, Makefile, `.env`. A short
+  reference (`config.py`) is merged with the one longer path it can mean; each file
+  is marked on disk / not on disk / ambiguous.
 
 ## Limits
 
