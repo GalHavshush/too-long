@@ -1,0 +1,85 @@
+{
+  "title": "References",
+  "file": "references",
+  "intro": [],
+  "sections": [
+    {
+      "id": "files",
+      "title": "Files",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Edit `src/app.ts`, `./config/settings.json` and `../shared/types.d.ts`. Keep `docs/` and the `Dockerfile` in sync. React is `react.js`, not a file."
+        }
+      ],
+      "subsections": []
+    },
+    {
+      "id": "links",
+      "title": "Links",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "See [the guide](docs/guide.md), [an anchor](#files) and <https://example.com>. Visit https://example.com/path?q=1 directly."
+        },
+        {
+          "type": "p",
+          "text": "![diagram](img/arch.png)"
+        }
+      ],
+      "subsections": []
+    }
+  ],
+  "tasks": [],
+  "callouts": [],
+  "diagrams": [],
+  "files": [
+    {
+      "path": "../shared/types.d.ts",
+      "at": [
+        "files"
+      ]
+    },
+    {
+      "path": "Dockerfile",
+      "at": [
+        "files"
+      ]
+    },
+    {
+      "path": "config/settings.json",
+      "at": [
+        "files"
+      ]
+    },
+    {
+      "path": "docs/",
+      "at": [
+        "files"
+      ]
+    },
+    {
+      "path": "docs/guide.md",
+      "at": [
+        "links"
+      ]
+    },
+    {
+      "path": "src/app.ts",
+      "at": [
+        "files"
+      ]
+    }
+  ],
+  "roadmap": {
+    "ids": [
+      "files",
+      "links"
+    ],
+    "basis": "sections"
+  },
+  "stats": {
+    "words": 54,
+    "code_blocks": 0
+  }
+}

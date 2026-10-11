@@ -1,0 +1,39 @@
+{
+  "title": "Front matter plan",
+  "file": "frontmatter",
+  "intro": [
+    {
+      "type": "code",
+      "lang": "yaml",
+      "label": "Front matter",
+      "text": "title: Front matter plan\nowner: platform"
+    }
+  ],
+  "sections": [
+    {
+      "id": "only-section",
+      "title": "Only section",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Body."
+        }
+      ],
+      "subsections": []
+    }
+  ],
+  "tasks": [],
+  "callouts": [],
+  "diagrams": [],
+  "files": [],
+  "roadmap": {
+    "ids": [
+      "only-section"
+    ],
+    "basis": "sections"
+  },
+  "stats": {
+    "words": 12,
+    "code_blocks": 1
+  }
+}

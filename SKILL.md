@@ -200,6 +200,6 @@ The Markdown is the source of truth.
 
 - `scripts/parse.py`: Markdown → content model. Run alone for a summary, `--json` for the model.
 - `scripts/build.py`: model + config → site. Validates the config.
-- `scripts/test_parse.py`: parser smoke test (`python3 scripts/test_parse.py`).
+- `scripts/run_tests.py`: runs every test in `tests/` (`python3 scripts/run_tests.py`).
 - `video.md`, `scripts/video.py`, `scripts/render_video.mjs`, `scripts/args.py`, `assets/video/`: video mode (`--video`).
 - `assets/index.html`, `assets/styles.css`, `assets/app.js`: the site template, copied as is. `app.js` renders `data.js` into the chosen views.

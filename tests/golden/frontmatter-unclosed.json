@@ -1,0 +1,30 @@
+{
+  "title": "Heading after unclosed front matter",
+  "file": "frontmatter-unclosed",
+  "intro": [
+    {
+      "type": "hr"
+    },
+    {
+      "type": "p",
+      "text": "title: never closed"
+    },
+    {
+      "type": "p",
+      "text": "Body."
+    }
+  ],
+  "sections": [],
+  "tasks": [],
+  "callouts": [],
+  "diagrams": [],
+  "files": [],
+  "roadmap": {
+    "ids": [],
+    "basis": "sections"
+  },
+  "stats": {
+    "words": 9,
+    "code_blocks": 0
+  }
+}

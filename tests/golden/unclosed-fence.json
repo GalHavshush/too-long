@@ -1,0 +1,37 @@
+{
+  "title": "Unclosed fence",
+  "file": "unclosed-fence",
+  "intro": [],
+  "sections": [
+    {
+      "id": "before",
+      "title": "Before",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Text before the fence."
+        },
+        {
+          "type": "code",
+          "lang": "js",
+          "text": "const a = 1;\n## not a heading, still inside the fence"
+        }
+      ],
+      "subsections": []
+    }
+  ],
+  "tasks": [],
+  "callouts": [],
+  "diagrams": [],
+  "files": [],
+  "roadmap": {
+    "ids": [
+      "before"
+    ],
+    "basis": "sections"
+  },
+  "stats": {
+    "words": 18,
+    "code_blocks": 1
+  }
+}

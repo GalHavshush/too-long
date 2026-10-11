@@ -1,0 +1,98 @@
+{
+  "title": "Tables",
+  "file": "tables",
+  "intro": [],
+  "sections": [
+    {
+      "id": "decisions",
+      "title": "Decisions",
+      "blocks": [
+        {
+          "type": "table",
+          "header": [
+            "Area",
+            "Choice",
+            "Why"
+          ],
+          "rows": [
+            [
+              "Database",
+              "Postgres",
+              "Already run it"
+            ],
+            [
+              "Queue",
+              "`SQS`",
+              "Managed"
+            ]
+          ]
+        }
+      ],
+      "subsections": []
+    },
+    {
+      "id": "plain-table",
+      "title": "Plain table",
+      "blocks": [
+        {
+          "type": "table",
+          "header": [
+            "Area",
+            "Owner"
+          ],
+          "rows": [
+            [
+              "API",
+              "backend"
+            ],
+            [
+              "Web",
+              "frontend"
+            ]
+          ]
+        }
+      ],
+      "subsections": []
+    }
+  ],
+  "tasks": [],
+  "callouts": [
+    {
+      "kind": "decision",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "**Database** · Choice: Postgres · Why: Already run it"
+        }
+      ],
+      "at": "decisions",
+      "section": "decisions",
+      "from_heading": true
+    },
+    {
+      "kind": "decision",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "**Queue** · Choice: `SQS` · Why: Managed"
+        }
+      ],
+      "at": "decisions",
+      "section": "decisions",
+      "from_heading": true
+    }
+  ],
+  "diagrams": [],
+  "files": [],
+  "roadmap": {
+    "ids": [
+      "decisions",
+      "plain-table"
+    ],
+    "basis": "sections"
+  },
+  "stats": {
+    "words": 21,
+    "code_blocks": 0
+  }
+}

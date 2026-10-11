@@ -1,0 +1,85 @@
+{
+  "title": "תוכנית עבודה 🚀",
+  "file": "unicode-rtl",
+  "intro": [],
+  "sections": [
+    {
+      "id": "שלב-1-הקמה",
+      "title": "שלב 1: הקמה",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            {
+              "text": "להתקין את `server/app.py`",
+              "ordered": false,
+              "task": false,
+              "id": "t-שלב-1-הקמה-להתקין-את-serverapppy"
+            },
+            {
+              "text": "ליצור מסד נתונים",
+              "ordered": false,
+              "task": true,
+              "id": "t-שלב-1-הקמה-ליצור-מסד-נתונים"
+            }
+          ]
+        },
+        {
+          "type": "p",
+          "text": "**החלטה:** משתמשים ב-Postgres."
+        }
+      ],
+      "subsections": []
+    },
+    {
+      "id": "étape-2-café",
+      "title": "Étape 2 : café ☕",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Texte avec accents, emoji 🎉, and 日本語."
+        }
+      ],
+      "subsections": []
+    }
+  ],
+  "tasks": [
+    {
+      "id": "t-שלב-1-הקמה-להתקין-את-serverapppy",
+      "text": "להתקין את `server/app.py`",
+      "done": false,
+      "at": "שלב-1-הקמה",
+      "section": "שלב-1-הקמה",
+      "n": null
+    },
+    {
+      "id": "t-שלב-1-הקמה-ליצור-מסד-נתונים",
+      "text": "ליצור מסד נתונים",
+      "done": true,
+      "at": "שלב-1-הקמה",
+      "section": "שלב-1-הקמה",
+      "n": null
+    }
+  ],
+  "callouts": [],
+  "diagrams": [],
+  "files": [
+    {
+      "path": "server/app.py",
+      "at": [
+        "שלב-1-הקמה"
+      ]
+    }
+  ],
+  "roadmap": {
+    "ids": [
+      "שלב-1-הקמה",
+      "étape-2-café"
+    ],
+    "basis": "sections"
+  },
+  "stats": {
+    "words": 27,
+    "code_blocks": 0
+  }
+}

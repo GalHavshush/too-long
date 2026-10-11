@@ -176,9 +176,9 @@ too-long/
 │   ├── args.py         # parses "<file.md> [--video]"
 │   ├── video.py        # storyboard → narration → timing → mp4 (video mode)
 │   ├── render_video.mjs# frame capture via headless Chrome
-│   ├── test_parse.py   # parser test: python3 scripts/test_parse.py
-│   └── test_video.py   # args + storyboard validation tests
+│   └── run_tests.py    # runs everything in tests/: python3 scripts/run_tests.py
 ├── video.md            # what Claude follows in video mode (storyboard schema)
+├── tests/              # parser fixtures + golden files, unit tests
 ├── assets/             # site template (HTML, CSS, vanilla JS) + assets/video/ frame player
 ├── examples/           # example plan + generated site
 └── docs/screenshots/

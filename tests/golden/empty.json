@@ -1,0 +1,18 @@
+{
+  "title": "Empty",
+  "file": "empty",
+  "intro": [],
+  "sections": [],
+  "tasks": [],
+  "callouts": [],
+  "diagrams": [],
+  "files": [],
+  "roadmap": {
+    "ids": [],
+    "basis": "sections"
+  },
+  "stats": {
+    "words": 0,
+    "code_blocks": 0
+  }
+}

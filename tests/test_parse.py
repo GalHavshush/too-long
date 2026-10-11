@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Smoke test for the parser:  python3 scripts/test_parse.py"""
+"""Smoke test for the parser:  python3 tests/test_parse.py"""
+import _path  # noqa: F401  (puts scripts/ on sys.path)
 from parse import build_model
 
 SAMPLE = """# Billing Rewrite

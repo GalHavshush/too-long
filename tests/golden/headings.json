@@ -1,0 +1,137 @@
+{
+  "title": "Repeated headings",
+  "file": "headings",
+  "intro": [
+    {
+      "type": "p",
+      "text": "Intro paragraph before any section."
+    }
+  ],
+  "sections": [
+    {
+      "id": "setup",
+      "title": "Setup",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            {
+              "text": "Install dependencies",
+              "ordered": false,
+              "task": false,
+              "id": "t-setup-install-dependencies"
+            },
+            {
+              "text": "Install dependencies",
+              "ordered": false,
+              "task": false,
+              "id": "t-setup-install-dependencies-2"
+            }
+          ]
+        }
+      ],
+      "subsections": [
+        {
+          "id": "notes",
+          "title": "Notes",
+          "blocks": [
+            {
+              "type": "p",
+              "text": "Plain text."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "setup-2",
+      "title": "Setup",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            {
+              "text": "Install dependencies",
+              "ordered": false,
+              "task": false,
+              "id": "t-setup-2-install-dependencies"
+            }
+          ]
+        }
+      ],
+      "subsections": [
+        {
+          "id": "notes-2",
+          "title": "Notes",
+          "blocks": [
+            {
+              "type": "p",
+              "text": "Same subsection title again."
+            },
+            {
+              "type": "heading",
+              "level": 4,
+              "text": "Deep heading stays inside the subsection"
+            },
+            {
+              "type": "p",
+              "text": "Text under the deep heading."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "setext-section",
+      "title": "Setext section",
+      "blocks": [
+        {
+          "type": "p",
+          "text": "Body of the setext section."
+        }
+      ],
+      "subsections": []
+    }
+  ],
+  "tasks": [
+    {
+      "id": "t-setup-install-dependencies",
+      "text": "Install dependencies",
+      "done": false,
+      "at": "setup",
+      "section": "setup",
+      "n": null
+    },
+    {
+      "id": "t-setup-install-dependencies-2",
+      "text": "Install dependencies",
+      "done": false,
+      "at": "setup",
+      "section": "setup",
+      "n": null
+    },
+    {
+      "id": "t-setup-2-install-dependencies",
+      "text": "Install dependencies",
+      "done": false,
+      "at": "setup-2",
+      "section": "setup-2",
+      "n": null
+    }
+  ],
+  "callouts": [],
+  "diagrams": [],
+  "files": [],
+  "roadmap": {
+    "ids": [
+      "setup",
+      "setup-2",
+      "setext-section"
+    ],
+    "basis": "sections"
+  },
+  "stats": {
+    "words": 41,
+    "code_blocks": 0
+  }
+}

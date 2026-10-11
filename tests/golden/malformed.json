@@ -1,0 +1,89 @@
+{
+  "title": "Malformed",
+  "file": "malformed",
+  "intro": [
+    {
+      "type": "p",
+      "text": "#"
+    },
+    {
+      "type": "p",
+      "text": "##No space after hashes"
+    },
+    {
+      "type": "list",
+      "items": [
+        {
+          "text": "",
+          "ordered": false
+        },
+        {
+          "text": "[ ]",
+          "ordered": false
+        },
+        {
+          "text": "",
+          "ordered": false,
+          "task": true,
+          "id": "t-intro"
+        }
+      ]
+    },
+    {
+      "type": "quote",
+      "blocks": []
+    },
+    {
+      "type": "p",
+      "text": "| only one pipe"
+    },
+    {
+      "type": "hr"
+    },
+    {
+      "type": "p",
+      "text": "[ ] not a list item"
+    },
+    {
+      "type": "p",
+      "text": "**unclosed bold and `unclosed code"
+    },
+    {
+      "type": "list",
+      "items": [
+        {
+          "text": "paren ordered",
+          "ordered": true,
+          "n": 1
+        },
+        {
+          "text": "second",
+          "ordered": true,
+          "n": 2
+        }
+      ]
+    }
+  ],
+  "sections": [],
+  "tasks": [
+    {
+      "id": "t-intro",
+      "text": "",
+      "done": true,
+      "at": "intro",
+      "section": "intro",
+      "n": null
+    }
+  ],
+  "callouts": [],
+  "diagrams": [],
+  "files": [],
+  "roadmap": {
+    "ids": [],
+    "basis": "sections"
+  },
+  "stats": {
+    "words": 22,
+    "code_blocks": 0
+  }
+}

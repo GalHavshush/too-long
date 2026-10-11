@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Tests for argument parsing and storyboard validation:  python3 scripts/test_video.py"""
+"""Tests for argument parsing and storyboard validation:  python3 tests/test_video.py"""
+import _path  # noqa: F401  (puts scripts/ on sys.path)
 from args import parse_args
 from parse import build_model
 from video import validate, timeline

@@ -1,0 +1,183 @@
+{
+  "title": "Nested structures",
+  "file": "nested",
+  "intro": [],
+  "sections": [
+    {
+      "id": "lists",
+      "title": "Lists",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            {
+              "text": "Top item",
+              "ordered": false,
+              "children": [
+                {
+                  "text": "Child item",
+                  "ordered": false,
+                  "children": [
+                    {
+                      "text": "Grandchild with `code`",
+                      "ordered": false
+                    }
+                  ]
+                },
+                {
+                  "text": "Second child",
+                  "ordered": false
+                }
+              ]
+            },
+            {
+              "text": "Task with children",
+              "ordered": false,
+              "task": false,
+              "children": [
+                {
+                  "text": "Done subtask",
+                  "ordered": false,
+                  "task": true,
+                  "id": "t-lists-done-subtask"
+                },
+                {
+                  "text": "Open subtask",
+                  "ordered": false,
+                  "task": false,
+                  "children": [
+                    {
+                      "text": "Tab-indented child of the open subtask",
+                      "ordered": false
+                    }
+                  ],
+                  "id": "t-lists-open-subtask"
+                }
+              ],
+              "id": "t-lists-task-with-children"
+            }
+          ]
+        },
+        {
+          "type": "list",
+          "items": [
+            {
+              "text": "Starts at three",
+              "ordered": true,
+              "n": 3
+            },
+            {
+              "text": "Then four",
+              "ordered": true,
+              "n": 4,
+              "children": [
+                {
+                  "text": "Nested ordered",
+                  "ordered": true,
+                  "n": 1
+                },
+                {
+                  "text": "Nested ordered two",
+                  "ordered": true,
+                  "n": 2
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "subsections": []
+    },
+    {
+      "id": "code-in-lists",
+      "title": "Code in lists",
+      "blocks": [
+        {
+          "type": "list",
+          "items": [
+            {
+              "text": "Install:",
+              "ordered": true,
+              "n": 1,
+              "blocks": [
+                {
+                  "type": "code",
+                  "lang": "bash",
+                  "text": "npm install\nnpm run build"
+                }
+              ]
+            },
+            {
+              "text": "Configure, with a paragraph after a blank line.",
+              "ordered": true,
+              "n": 2,
+              "blocks": [
+                {
+                  "type": "p",
+                  "text": "Second paragraph of step two."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list",
+          "items": [
+            {
+              "text": "Bullet with a fence",
+              "ordered": false,
+              "blocks": [
+                {
+                  "type": "code",
+                  "lang": "python",
+                  "text": "print(\"tilde fence\")"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "subsections": []
+    }
+  ],
+  "tasks": [
+    {
+      "id": "t-lists-task-with-children",
+      "text": "Task with children",
+      "done": false,
+      "at": "lists",
+      "section": "lists",
+      "n": null
+    },
+    {
+      "id": "t-lists-done-subtask",
+      "text": "Done subtask",
+      "done": true,
+      "at": "lists",
+      "section": "lists",
+      "n": null
+    },
+    {
+      "id": "t-lists-open-subtask",
+      "text": "Open subtask",
+      "done": false,
+      "at": "lists",
+      "section": "lists",
+      "n": null
+    }
+  ],
+  "callouts": [],
+  "diagrams": [],
+  "files": [],
+  "roadmap": {
+    "ids": [
+      "lists",
+      "code-in-lists"
+    ],
+    "basis": "sections"
+  },
+  "stats": {
+    "words": 74,
+    "code_blocks": 2
+  }
+}
