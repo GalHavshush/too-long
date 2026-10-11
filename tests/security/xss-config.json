@@ -1,0 +1,11 @@
+{
+  "views": ["overview", "document", "tasks", "highlights", "diagrams", "files", "steps", "roadmap"],
+  "tldr": ["<img src=x onerror=\"window.__pwned=1\">", "[tldr link](javascript:window.__pwned=1)"],
+  "notes": { "intro": "<script>window.__pwned=1</script> note", "links-svg-onloadwindowpwned1": "x" },
+  "diagrams": [{
+    "title": "<img src=x onerror=\"window.__pwned=1\"> diagram",
+    "description": "\"><script>window.__pwned=1</script>",
+    "mermaid": "flowchart TD\n  A[\"<img src=x onerror=window.__pwned=1>\"] --> B",
+    "sources": ["intro"]
+  }]
+}

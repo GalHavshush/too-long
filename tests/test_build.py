@@ -22,6 +22,11 @@ rejects({"diagrams": [{"title": "D", "mermaid": "flowchart TD\n A-->B", "sources
         "unknown section id 'ghost'")
 rejects({"roadmap": ["setup", "ghost"]}, "unknown section id 'ghost'")
 rejects({"views": ["overview", "bogus"]}, "Unknown view")
+# The accent is a color and nothing else (no url(), no extra declarations).
+rejects({"accent": "red;background:url(https://evil.example/x)"}, "must be a CSS color")
+rejects({"accent": "url(https://evil.example/x)"}, "must be a CSS color")
+for ok in ("#0f766e", "teal", "rgb(15 118 110)", "oklch(60% 0.1 190)"):
+    check_config({"accent": ok}, build_model(MD, "p"))
 
 config, warnings = check_config({"notes": {"setup": "x"}, "diagrams": [
     {"title": "D", "mermaid": "flowchart TD\n A-->B", "sources": ["launch"]}]}, build_model(MD, "p"))

@@ -13,6 +13,7 @@ to <out>/config.json when it exists; without one, suggested views are used.
 import argparse
 import json
 import os
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -21,6 +22,15 @@ from identity import apply_identity, load_manifest, save_manifest
 from parse import parse_file, section_ids, suggest_views
 
 ASSETS = Path(__file__).resolve().parent.parent / "assets"
+# A CSS color and nothing else: hex, a color function with plain arguments, or a color name.
+# (No url(), no ';', so an accent can never load a resource or add other styles.)
+CSS_COLOR_RE = re.compile(r"^(#[0-9a-f]{3,8}|[a-z]{3,30}|(rgba?|hsla?|hwb|lab|lch|oklab|oklch)\([\d\s.,%/+-]*(deg|turn|rad)?[\d\s.,%/+-]*\))$", re.I)
+
+
+def is_css_color(value):
+    return isinstance(value, str) and bool(CSS_COLOR_RE.match(value.strip()))
+
+
 VIEWS = ["overview", "document", "roadmap", "tasks", "highlights", "diagrams", "files", "steps"]
 
 
@@ -42,6 +52,9 @@ def check_config(config, model):
     for key in config.get("notes", {}):
         if key not in ids:
             sys.exit(f"config 'notes' has unknown section id '{key}'. Use an id from parse.py.")
+
+    if "accent" in config and not is_css_color(config["accent"]):
+        sys.exit(f"config 'accent' must be a CSS color like \"#0f766e\", got {config['accent']!r}")
 
     for key in ("roadmap", "track"):
         for i in config.get(key, []):

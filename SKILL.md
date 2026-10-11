@@ -199,7 +199,10 @@ The Markdown is the source of truth.
 
 ## Limits
 
-- Mermaid loads from a CDN the first time; offline, diagram source is shown instead.
+- Mermaid (pinned version, integrity-checked) loads from a CDN the first time; offline, the
+  diagram source is shown instead. It is the only network request the site makes.
+- Links may use http(s), mailto, file or relative paths; any other scheme (javascript:, data:...)
+  is turned into a dead link. `accent` must be a plain CSS color.
 - Task checks live in the browser (localStorage). They never change the Markdown.
 - That state is keyed by a document id kept in `<out>/build.json` (with the task ids of the
   last build, so checks follow tasks through edits). Keep the file; deleting it starts fresh.

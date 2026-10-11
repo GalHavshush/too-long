@@ -25,6 +25,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from build import is_css_color
 from parse import parse_file, section_ids
 
 HERE = Path(__file__).resolve().parent
@@ -93,6 +94,8 @@ def validate(model, sb):
     ids = section_ids(model)
     source = norm(model["source"])
     scenes = sb.get("scenes") or []
+    if sb.get("accent") and not is_css_color(sb["accent"]):
+        errors.append(f"accent must be a CSS color like \"#3f9d68\", got {sb['accent']!r}")
     if len(scenes) < 3:
         errors.append("storyboard needs at least 3 scenes")
     for i, sc in enumerate(scenes, 1):

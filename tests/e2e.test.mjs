@@ -35,7 +35,7 @@ setTimeout(() => { console.log("FAIL e2e tests timed out after 90s"); process.ex
 let failures = 0;
 
 // Open a page that records console errors and uncaught exceptions.
-async function open(url, { blockCdn = false } = {}) {
+async function open(url, { blockCdn = false, init } = {}) {
   const page = await chrome.newPage(1280, 900);
   page.errors = [];
   page.on((m) => {
@@ -49,6 +49,7 @@ async function open(url, { blockCdn = false } = {}) {
     await page.cdp("Network.enable");
     await page.cdp("Network.setBlockedURLs", { urls: ["*cdn.jsdelivr.net*"] });
   }
+  if (init) await page.cdp("Page.addScriptToEvaluateOnNewDocument", { source: init });
   await page.navigate(url);
   page.go = async (hash) => { await page.evaluate(`location.hash = ${JSON.stringify(hash)}`); await page.evaluate("new Promise(r => setTimeout(r, 50))"); };
   page.text = (sel) => page.evaluate(`document.querySelector(${JSON.stringify(sel)})?.innerText ?? null`);
@@ -58,7 +59,7 @@ async function open(url, { blockCdn = false } = {}) {
 
 async function test(name, fn) {
   try { await fn(); console.log(`ok   ${name}`); }
-  catch (e) { failures++; console.log(`FAIL ${name}\n     ${e.stack.split("\n").slice(0, 3).join("\n     ")}`); }
+  catch (e) { failures++; console.log(`FAIL ${name}\n     ${e.stack.split("\n").slice(0, 12).join("\n     ")}`); }
 }
 
 const example = join(ROOT, "examples", "trailhead-plan.md");
@@ -210,6 +211,43 @@ await test("a saved check does not apply once the task text changed", async () =
   await p.evaluate(`localStorage.setItem(${JSON.stringify(key)}, JSON.stringify({ "${id}": { done: true, sig: "stale" } }))`);
   await p.reload();
   assert.equal(await p.evaluate(`document.querySelector('input[data-task="${id}"]').checked`), false);
+});
+
+await test("hostile Markdown and config cannot run script or inject attributes", async () => {
+  const cfg = JSON.parse(execFileSync("cat", [join(ROOT, "tests", "security", "xss-config.json")], { encoding: "utf8" }));
+  const url = build("xss", join(ROOT, "tests", "security", "xss.md"), cfg);
+  const p = await open(url, { init: "window.alert = window.confirm = window.prompt = () => { window.__pwned = 1; };" });
+  const check = () => p.evaluate(`(() => {
+    const all = [...document.querySelectorAll("*")];
+    return {
+      pwned: !!window.__pwned,
+      handlers: all.flatMap(el => [...el.attributes].filter(a => /^on/i.test(a.name)).map(a => el.tagName + " " + a.name)),
+      scripts: document.querySelectorAll("body script:not([src='data.js']):not([src='app.js']), iframe, object, embed").length,
+      badLinks: [...document.querySelectorAll("a[href]")].map(a => a.href).filter(h => !/^(https?:|mailto:|file:)/.test(h)),
+      badImages: [...document.querySelectorAll("img[src]")].map(i => i.getAttribute("src")).filter(s => !/^(https?:|file:|#$|data:image[/]png;)/.test(s) && /:/.test(s)),
+    };
+  })()`);
+  for (const v of cfg.views.concat(["source/3", "files/src/ok.ts"])) {
+    await p.go(`#/${v}`);
+    await p.evaluate("new Promise(r => setTimeout(r, 30))");
+    const r = await check();
+    assert.deepEqual(r, { pwned: false, handlers: [], scripts: 0, badLinks: [], badImages: [] }, `view ${v}`);
+  }
+  assert.deepEqual(p.errors, []);
+  // Legitimate Markdown still works.
+  await p.go("#/document");
+  const ok = await p.evaluate(`({
+    ok: !!document.querySelector('a[href="https://example.com/ok"][target="_blank"]'),
+    ref: !!document.querySelector('a[href="https://example.com/good"]'),
+    emphasisUrl: !!document.querySelector('a[href="https://example.com/*a*/_b_/~~c~~"]'),
+    boldLink: !!document.querySelector('strong > a[href="https://example.com/__x__"]'),
+    anchor: !!document.querySelector('a[href="#links"]'),
+    png: !!document.querySelector('img[src^="data:image/png;"]'),
+    blocked: [...document.querySelectorAll("a")].filter(a => a.getAttribute("href") === "#").map(a => a.textContent).sort(),
+    rawHtmlShownAsText: document.querySelector("#intro").textContent.includes("<script>"),
+  })`);
+  assert.deepEqual(ok, { ok: true, ref: true, emphasisUrl: true, boldLink: true, anchor: true, png: true, rawHtmlShownAsText: true,
+    blocked: ["control char", "data", "js", "mixed case", "ref link", "vbscript"] });
 });
 
 await test("invalid config is refused by build.py", async () => {

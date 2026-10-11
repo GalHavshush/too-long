@@ -37,6 +37,9 @@ assert any("code line not in the Markdown" in e for e in errors), errors
 assert any("path not in the Markdown" in e for e in errors), errors
 assert any("unknown source section id 'nope'" in e for e in errors), errors
 
+errors, _ = validate(model, {**ok, "accent": "red;background:url(x)"})
+assert any("accent must be a CSS color" in e for e in errors), errors
+
 # timing: scenes follow each other, never shorter than the minimum
 scenes = [{"narration": "a b c"}, {"narration": "word " * 40}]
 total = timeline(scenes, {0: 1.0, 1: 14.0})

@@ -12,7 +12,9 @@
     highlights: "Highlights", diagrams: "Diagrams", files: "Files", steps: "Step by step",
   };
   const KIND_ORDER = ["decision", "risk", "warning", "caution", "question", "assumption", "milestone", "important", "note", "tip"];
-  const MERMAID_SRC = "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js";
+  // Pinned and integrity-checked: the browser refuses the file if the CDN ever serves different bytes.
+  const MERMAID_SRC = "https://cdn.jsdelivr.net/npm/mermaid@11.17.2/dist/mermaid.min.js";
+  const MERMAID_SRI = "sha384-EOXBFmc3gx5mb+vn0vPvvGqACToJD24hhacX5Yx+8NUUQrHIle/Qi5Bg9o3zKwW2";
 
   // ---------- lookups ----------
   const nodes = { intro: { id: "intro", title: "Introduction", blocks: model.intro } };
@@ -62,30 +64,49 @@
   const plain = s => String(s).replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/[*_`~]/g, "");
   const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
 
-  function href(u) {
-    if (/^\s*(javascript|data|vbscript):/i.test(u)) return "#";
-    if (/^([a-z][\w+.-]*:|#|\/)/i.test(u)) return u;
-    return (model.base && model.base !== "." ? model.base + "/" : "") + u;  // relative to the .md file
+  // URL schemes a link may use. Anything else (javascript:, data:, vbscript:, unknown) becomes "#".
+  // Checked with the browser's own URL parser, after removing the control characters and spaces
+  // browsers ignore, so "\x01javascript:" or "java\tscript:" cannot slip through.
+  const SAFE_LINK = ["http:", "https:", "mailto:", "file:"];
+  const SAFE_IMAGE = /^data:image\/(png|gif|jpe?g|webp);/i;
+  function href(u, image = false) {
+    const clean = String(u).replace(/[\u0000-\u0020\u007f-\u009f]/g, "");
+    if (image && SAFE_IMAGE.test(clean)) return clean;
+    let url;
+    try { url = new URL(clean, location.href); } catch { return "#"; }
+    if (!SAFE_LINK.includes(url.protocol)) return "#";
+    if (/^([a-z][\w+.-]*:|#|\/)/i.test(clean)) return clean;
+    return (model.base && model.base !== "." ? esc(model.base) + "/" : "") + clean;  // relative to the .md file (clean is already escaped)
   }
 
+  const emphasis = s => s
+    .replace(/\*\*(.+?)\*\*|__(.+?)__/g, (_, a, b) => `<strong>${a ?? b}</strong>`)
+    .replace(/(^|[^\w*])\*(?!\s)(.+?)\*(?!\w)/g, "$1<em>$2</em>")
+    .replace(/(^|[^\w])_(?!\s)(.+?)_(?!\w)/g, "$1<em>$2</em>")
+    .replace(/~~(.+?)~~/g, "<del>$1</del>");
+
+  // Markdown inline -> HTML. Everything is escaped first; the only tags that appear are the ones made
+  // here. Code spans and finished links are set aside as placeholders so later passes (emphasis) never
+  // run inside a tag or an attribute.
   function inline(md) {
-    const codes = [];
-    let s = String(md).replace(/(`+)([\s\S]*?[^`])\1(?!`)/g, (_, __, c) => `\u0000${codes.push(c.trim()) - 1}\u0000`);
+    const codes = [], html = [];
+    const keep = h => `\u0001${html.push(h) - 1}\u0001`;
+    let s = String(md).replace(/[\u0000\u0001]/g, "");
+    s = s.replace(/(`+)([\s\S]*?[^`])\1(?!`)/g, (_, __, c) => `\u0000${codes.push(c.trim()) - 1}\u0000`);
     s = s.replace(/<(https?:\/\/[^>\s]+)>/g, "[$1]($1)");  // <https://...> autolinks
     s = s.replace(/(!?)\[([^\]]+)\](?:\[([^\]]*)\])?(?![(:])/g, (m, bang, text, ref) => {  // [text][ref], [text][], [ref]
       const u = refs[(ref || text).trim().toLowerCase()]?.url;
       return u ? `${bang}[${text}](${u})` : m;
     });
     s = esc(s);
-    s = s.replace(/!\[([^\]]*)\]\(([^)\s]+)[^)]*\)/g, (_, alt, src) => `<img src="${href(src)}" alt="${alt}">`);
-    s = s.replace(/\[([^\]]+)\]\(([^)\s]+)[^)]*\)/g, (_, text, u) =>
-      `<a href="${href(u)}"${/^https?:/.test(u) ? ' target="_blank" rel="noopener"' : ""}>${text}</a>`);
-    s = s.replace(/(^|[\s(])(https?:\/\/[^\s<)]+)/g, '$1<a href="$2" target="_blank" rel="noopener">$2</a>');
-    s = s.replace(/\*\*(.+?)\*\*|__(.+?)__/g, (_, a, b) => `<strong>${a ?? b}</strong>`);
-    s = s.replace(/(^|[^\w*])\*(?!\s)(.+?)\*(?!\w)/g, "$1<em>$2</em>");
-    s = s.replace(/(^|[^\w])_(?!\s)(.+?)_(?!\w)/g, "$1<em>$2</em>");
-    s = s.replace(/~~(.+?)~~/g, "<del>$1</del>");
-    return s.replace(/\u0000(\d+)\u0000/g, (_, i) => {
+    s = s.replace(/!\[([^\]]*)\]\(([^)\s]+)[^)]*\)/g, (_, alt, src) => keep(`<img src="${href(src, true)}" alt="${alt}">`));
+    s = s.replace(/\[([^\]]+)\]\(([^)\s]+)[^)]*\)/g, (_, text, u) => {
+      const h = href(u);
+      return keep(`<a href="${h}"${/^https?:/i.test(h) ? ' target="_blank" rel="noopener"' : ""}>`) + text + keep("</a>");
+    });
+    s = s.replace(/(^|[\s(])(https?:\/\/[^\s<)\u0001]+)/g, (_, pre, u) => pre + keep(`<a href="${href(u)}" target="_blank" rel="noopener">${u}</a>`));
+    s = emphasis(s);
+    return s.replace(/\u0001(\d+)\u0001/g, (_, i) => html[i]).replace(/\u0000(\d+)\u0000/g, (_, i) => {
       const c = codes[i];
       return fileSet.has(c.replace(/^\.\//, "")) && has("files")
         ? `<code class="file-ref" data-file="${esc(c.replace(/^\.\//, ""))}" title="Show in file tree">${esc(c)}</code>`
@@ -144,10 +165,10 @@
     return `<li dir="auto" class="task">${checkbox(it.id, isDone({ id: it.id, done: it.task }))}<div><span class="t">${chip}${inline(it.text)}</span>${rest}</div></li>`;
   }
 
-  const checkbox = (id, done) => `<input type="checkbox" data-task="${id}"${done ? " checked" : ""} aria-label="Done">`;
-  const kindChip = k => `<span class="chip" data-kind="${k}">${cap(k)}</span>`;
+  const checkbox = (id, done) => `<input type="checkbox" data-task="${esc(id)}"${done ? " checked" : ""} aria-label="Done">`;
+  const kindChip = k => `<span class="chip" data-kind="${esc(k)}">${esc(cap(k))}</span>`;
   const callout = (kind, html) =>
-    `<aside class="callout" data-kind="${kind}"><div class="callout-label">${cap(kind)}</div><div class="callout-body">${html}</div></aside>`;
+    `<aside class="callout" data-kind="${esc(kind)}"><div class="callout-label">${esc(cap(kind))}</div><div class="callout-body">${html}</div></aside>`;
 
   // Everything Claude wrote (config) is labelled as inferred.
   const inferred = (label, html) =>
@@ -157,7 +178,7 @@
     ? `<ul>${t.map(x => `<li>${inline(x)}</li>`).join("")}</ul>`
     : String(t).split(/\n{2,}/).map(p => `<p>${inline(p)}</p>`).join("");
 
-  const progressEl = scope => tasksIn(scope).length ? `<span class="progress" data-scope="${scope}"></span>` : "";
+  const progressEl = scope => tasksIn(scope).length ? `<span class="progress" data-scope="${esc(scope)}"></span>` : "";
   function refreshProgress() {
     document.querySelectorAll("[data-scope]").forEach(el => {
       const p = progress(tasksIn(el.dataset.scope));
@@ -173,7 +194,7 @@
     return `<p class="excerpt" dir="auto">${esc(t.length > max ? t.slice(0, max).replace(/\s+\S*$/, "") + "…" : t)}</p>`;
   }
 
-  const link = id => `<a href="#/document/${id}">${inline(nodes[id]?.title ?? id)}</a>`;
+  const link = id => `<a href="#/document/${esc(id)}">${inline(nodes[id]?.title ?? id)}</a>`;
   // Where an item came from in the Markdown: "L42" opens the source at that line.
   const lineRef = n => n ? `<a class="where" href="#/source/${n}" title="Line ${n} of ${esc(model.file)}">L${n}</a>` : "";
   const plainText = b => !b ? "" :
@@ -205,12 +226,12 @@
       <h2 class="label">Sections</h2>
       <div class="cards">${model.sections.map(s => {
         const k = countKinds(s.id);
-        return `<a class="card" href="#/document/${s.id}">
+        return `<a class="card" href="#/document/${esc(s.id)}">
           <h3 dir="auto">${inline(s.title)}</h3>
           ${excerpt(s)}
           <div class="card-meta">
             ${s.subsections.length ? `<span class="muted">${s.subsections.length} parts</span>` : ""}
-            ${Object.entries(k).map(([kind, n]) => `<span class="chip" data-kind="${kind}">${n} ${kind}</span>`).join("")}
+            ${Object.entries(k).map(([kind, n]) => `<span class="chip" data-kind="${esc(kind)}">${n} ${esc(kind)}</span>`).join("")}
           </div>
           ${progressEl(s.id)}
         </a>`;
@@ -224,7 +245,7 @@
   }
 
   function sectionHTML(node, level) {
-    return `<details class="sec l${level}" id="${node.id}" open>
+    return `<details class="sec l${level}" id="${esc(node.id)}" open>
       <summary><h${level} dir="auto">${inline(node.title)}</h${level}>${progressEl(node.id)}</summary>
       <div class="sec-body">
         ${note(node.id)}
@@ -280,7 +301,7 @@
             <div class="phase-head"><h3 dir="auto">${link(s.id)}</h3>${status ? `<span class="status">${status}</span>` : ""}</div>
             ${excerpt(s, 220)}
             ${progressEl(s.id)}
-            ${subs.length ? `<div class="subs">${subs.map(sub => `<a class="sub-chip" href="#/document/${sub.id}">${inline(sub.title)}</a>`).join("")}</div>` : ""}
+            ${subs.length ? `<div class="subs">${subs.map(sub => `<a class="sub-chip" href="#/document/${esc(sub.id)}">${inline(sub.title)}</a>`).join("")}</div>` : ""}
             ${milestones.map(m => `<p class="milestone" dir="auto">◆ ${inline(plainText(m))}</p>`).join("")}
           </div>
         </li>`;
@@ -325,7 +346,7 @@
       ${shown.map(k => `<section class="hl-group">
         <h2>${cap(k)}s</h2>
         <div class="hl-grid">${model.callouts.filter(c => c.kind === k).map(c => `
-          <article class="hl" data-kind="${k}">
+          <article class="hl" data-kind="${esc(k)}">
             <div class="hl-body">${blocks(c.blocks)}</div>
             <footer>${link(c.at)} ${lineRef(c.line)}${c.from_heading ? ` <span class="muted small">· listed under that heading</span>` : ""}</footer>
           </article>`).join("")}</div>
@@ -355,7 +376,7 @@
       if (name) node.files.push({ name, ...f });
       else node.refs = f.mentions || f.at.map(at => ({ at }));
     });
-    const refs = ms => (ms || []).map(m => `<a class="ref" href="#/document/${m.at}">${inline(nodes[m.at]?.title ?? m.at)}</a>${lineRef(m.line)}`).join("");
+    const refs = ms => (ms || []).map(m => `<a class="ref" href="#/document/${esc(m.at)}">${inline(nodes[m.at]?.title ?? m.at)}</a>${lineRef(m.line)}`).join("");
     const tree = node => `<ul class="tree">${
       Object.entries(node.dirs).sort().map(([name, d]) =>
         `<li><details open><summary><span class="dir">${esc(name)}/</span>${refs(d.refs)}</summary>${tree(d)}</details></li>`).join("") +
@@ -386,7 +407,7 @@
       </article>
       <footer class="step-nav">
         ${nav(i - 1, "← Previous")}
-        <button type="button" data-act="understood" data-id="${s.id}" class="${understood[s.id] ? "on" : ""}">${understood[s.id] ? "✓ Understood" : "Mark as understood"}</button>
+        <button type="button" data-act="understood" data-id="${esc(s.id)}" class="${understood[s.id] ? "on" : ""}">${understood[s.id] ? "✓ Understood" : "Mark as understood"}</button>
         ${nav(i + 1, "Next →")}
       </footer>
     </div>`;
@@ -405,7 +426,7 @@
     });
     const mark = s => esc(s).replace(new RegExp(esc(q).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"), m => `<mark>${m}</mark>`);
     return `<header class="page-head"><h1>Search</h1><p class="muted">${hits.length} result${hits.length === 1 ? "" : "s"} for “${esc(q)}”</p></header>
-      <div class="hits">${hits.slice(0, 80).map(h => `<a class="hit" href="#/document/${h.id}">
+      <div class="hits">${hits.slice(0, 80).map(h => `<a class="hit" href="#/document/${esc(h.id)}">
         <strong dir="auto">${inline(nodes[h.id].title)}</strong>${h.snippet ? `<span dir="auto">…${mark(h.snippet)}…</span>` : ""}</a>`).join("")}</div>`;
   }
 
@@ -434,10 +455,10 @@
       return "";
     };
     document.getElementById("views").innerHTML = config.views.map(v =>
-      `<a href="#/${v}" data-view="${v}">${VIEW_LABELS[v]}<span class="muted" data-badge="${v}">${badge(v)}</span></a>`).join("");
+      `<a href="#/${esc(v)}" data-view="${esc(v)}">${VIEW_LABELS[v]}<span class="muted" data-badge="${esc(v)}">${badge(v)}</span></a>`).join("");
     document.getElementById("toc").innerHTML = `<p class="label">Contents</p>` + model.sections.map(s =>
-      `<a href="#/document/${s.id}" data-id="${s.id}" dir="auto">${inline(s.title)}</a>` +
-      s.subsections.map(sub => `<a href="#/document/${sub.id}" data-id="${sub.id}" class="sub" dir="auto">${inline(sub.title)}</a>`).join("")).join("");
+      `<a href="#/document/${esc(s.id)}" data-id="${esc(s.id)}" dir="auto">${inline(s.title)}</a>` +
+      s.subsections.map(sub => `<a href="#/document/${esc(sub.id)}" data-id="${esc(sub.id)}" class="sub" dir="auto">${inline(sub.title)}</a>`).join("")).join("");
   }
 
   function parseRoute() {
@@ -484,7 +505,8 @@
     const els = [...main.querySelectorAll("pre.mermaid:not([data-processed])")];
     if (!els.length) return;
     mermaidReady ??= new Promise((ok, fail) => {
-      const s = Object.assign(document.createElement("script"), { src: MERMAID_SRC, onload: ok, onerror: fail });
+      const s = Object.assign(document.createElement("script"),
+        { src: MERMAID_SRC, integrity: MERMAID_SRI, crossOrigin: "anonymous", referrerPolicy: "no-referrer", onload: ok, onerror: fail });
       document.head.append(s);
     }).then(() => window.mermaid.initialize({ startOnLoad: false, securityLevel: "strict", theme: isDark() ? "dark" : "neutral" }));
     mermaidReady
@@ -503,7 +525,7 @@
     save("tasks", checks);
     const { view } = parseRoute();
     if (view === "roadmap" || view === "overview") return render(true);
-    document.querySelectorAll(`[data-task="${id}"]`).forEach(b => { b.checked = e.target.checked; });
+    document.querySelectorAll(`[data-task="${CSS.escape(id)}"]`).forEach(b => { b.checked = e.target.checked; });
     document.querySelector('[data-badge="tasks"]')?.replaceChildren(`${progress(model.tasks).done}/${model.tasks.length}`);
     refreshProgress();
   });
