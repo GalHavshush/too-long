@@ -2,45 +2,31 @@
 
 **Too long. Just show me.**
 
-A [Claude Code](https://claude.com/claude-code) skill that turns a long Markdown plan or technical document (the kind Claude writes before implementing something) into an interactive local website: roadmap, task tracker, decisions and risks, diagrams, file tree, step-by-step walkthrough, plus the full document. Or, with `--video`, a narrated two-minute explainer.
+Claude just wrote you a long implementation plan. Phases, checklists, decisions, risks, file paths, diagrams. You were never going to read all of it.
 
-No npm, no build step. The output is a static folder you open by double-clicking `index.html`.
+**too-long** is a [Claude Code](https://claude.com/claude-code) skill that turns that Markdown into a small website you will actually use. Say *"use too-long on plan.md"* and open the result.
 
-### Before and after
+![Demo: overview, roadmap, ticking tasks, highlights, diagrams, files, document and step-by-step views of an example plan](docs/demo.gif)
 
-The input is ordinary Markdown ([`examples/trailhead-plan.md`](examples/trailhead-plan.md), 95 lines):
+## What you get
 
-```markdown
-## Phase 1: Foundations
+- **The gist first.** An overview with a TL;DR, progress and every section at a glance.
+- **What to do next.** A roadmap that knows which phases are done, in progress, ready to start or blocked, and which can run in parallel.
+- **A real checklist.** Every `- [ ]` in one place. Tick them in the browser, or run `serve` and the ticks are written back into your Markdown.
+- **The decisions, not the noise.** Each architectural decision with the alternatives it rejected and the tradeoff it accepted, and each risk next to its mitigation.
+- **The architecture.** Diagrams from the plan, plus ones Claude draws from it, clearly labelled as Claude's.
+- **Every file the plan touches,** in one tree, with what already exists and what is still to be created.
+- **Learn it or present it.** Step through it one section at a time.
+- **Or just watch it.** Add `--video` for a narrated two-minute explainer, rendered on your machine.
 
-Set up the project and the trail catalogue that everything else hangs off.
+## Why you can trust it
 
-- [x] Create the SvelteKit app in `web/` with TypeScript and Vitest
-- [x] Add Postgres + PostGIS via `docker-compose.yml`
-- [x] Import trail geometries from OpenStreetMap into `trails` with `scripts/import_osm.py`
-- [ ] Trail search endpoint `GET /api/trails?q=` in `web/src/routes/api/trails/+server.ts`
-```
+- **Nothing is left out.** The full document is always one click away, and every task, decision and file links back to the exact line it came from.
+- **Nothing is made up.** What comes from your plan and what Claude added are kept apart. Claude's additions are labelled, and flagged when the plan changes under them.
+- **It stays in sync.** Edit the plan and rebuild, or leave `watch` running. Rebuilding never needs Claude.
+- **It's yours.** No account, no server, no npm, no build step. The site is a folder of static files; the only thing it ever downloads is the diagram library, and without it you see the diagram source.
 
-The output is a site built from it, here the roadmap view:
-
-![Roadmap view of the example plan](docs/screenshots/roadmap.png)
-
-### Why not just ask Claude for an HTML dashboard?
-
-You can, and you get a one-off page that drifts from the plan the moment the plan changes. too-long is different:
-
-- **Rebuilt from the Markdown, without an LLM.** Edit the plan and run `build` (or leave `watch` running). Claude is only involved in choosing views and writing the clearly labelled extras.
-- **Nothing is dropped.** The Document view always renders every block, and the tests check that every word of each fixture survives parsing.
-- **Inferred content is labelled and tracked.** A TL;DR, notes and diagrams Claude adds carry an "Inferred" badge, and are marked "May be outdated" when the sections they were based on change.
-- **Traceable.** Every task, highlight, diagram and file mention links to its line in the Markdown.
-- **Task state that can live in the Markdown.** Served locally, ticking a task writes `[x]` into the file (atomically, refusing if the file changed underneath).
-- **Safe rendering.** Links are checked against an allowlist of schemes, raw HTML is shown as text, and the only third-party script (Mermaid) is pinned with an integrity hash.
-
-## Installation
-
-You need [Claude Code](https://claude.com/claude-code) and Python 3.9+ (standard library only; tested on 3.9, 3.11 and 3.14).
-
-### One prompt
+## Get it
 
 Paste this into Claude Code:
 
@@ -48,7 +34,23 @@ Paste this into Claude Code:
 Install the too-long skill from https://github.com/GalHavshush/too-long: clone it into ~/.claude/skills/too-long (create ~/.claude/skills if it doesn't exist; if too-long is already there, run git pull in it instead). Then check that ~/.claude/skills/too-long/SKILL.md exists and tell me how to use it.
 ```
 
-### Manually
+Then, in a new session:
+
+```text
+Use too-long on plan.md
+```
+
+Claude asks what you want from it (read it, track it, see the architecture, learn it, present it), picks the views that fit, builds the site and opens it.
+
+---
+
+# Technical details
+
+## Installation
+
+You need [Claude Code](https://claude.com/claude-code) and Python 3.9+ (standard library only; tested on 3.9, 3.11 and 3.14).
+
+The one-prompt install is [above](#get-it). To do it by hand:
 
 For every project (personal skill):
 
@@ -106,9 +108,33 @@ python3 ~/.claude/skills/too-long/scripts/too_long.py doctor           # what is
 
 Output goes to `.too-long/` in the current folder (`--out DIR` to change it). The individual scripts (`build.py`, `watch.py`, `serve.py`, `parse.py`, `video.py`) take the same arguments.
 
+## Why not just ask Claude for an HTML dashboard?
+
+You can, and you get a one-off page that drifts from the plan the moment the plan changes. too-long is different:
+
+- **Rebuilt from the Markdown, without an LLM.** Edit the plan and run `build` (or leave `watch` running). Claude is only involved in choosing views and writing the clearly labelled extras.
+- **Nothing is dropped.** The Document view always renders every block, and the tests check that every word of each fixture survives parsing.
+- **Inferred content is labelled and tracked.** A TL;DR, notes and diagrams Claude adds carry an "Inferred" badge, and are marked "May be outdated" when the sections they were based on change.
+- **Traceable.** Every task, highlight, diagram and file mention links to its line in the Markdown.
+- **Task state that can live in the Markdown.** Served locally, ticking a task writes `[x]` into the file (atomically, refusing if the file changed underneath).
+- **Safe rendering.** Links are checked against an allowlist of schemes, raw HTML is shown as text, and the only third-party script (Mermaid) is pinned with an integrity hash.
+
 ## Example
 
-[`examples/trailhead-plan.md`](examples/trailhead-plan.md) is a made-up plan for a trail-conditions app: four phases with checkboxes, decisions, risks, open questions, a table, a Mermaid diagram and file paths. The prompt was:
+[`examples/trailhead-plan.md`](examples/trailhead-plan.md) is a made-up plan for a trail-conditions app (95 lines): four phases with checkboxes, decisions, risks, open questions, a table, a Mermaid diagram and file paths. It is ordinary Markdown:
+
+```markdown
+## Phase 1: Foundations
+
+Set up the project and the trail catalogue that everything else hangs off.
+
+- [x] Create the SvelteKit app in `web/` with TypeScript and Vitest
+- [x] Add Postgres + PostGIS via `docker-compose.yml`
+- [x] Import trail geometries from OpenStreetMap into `trails` with `scripts/import_osm.py`
+- [ ] Trail search endpoint `GET /api/trails?q=` in `web/src/routes/api/trails/+server.ts`
+```
+
+The prompt was:
 
 ```text
 Use too-long on examples/trailhead-plan.md. I want to track implementation, see the architecture, and be able to walk a new teammate through it.
