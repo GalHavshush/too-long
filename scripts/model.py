@@ -38,7 +38,7 @@ class Document:
     manifest: dict
 
 
-def build_document(md_path, config, manifest, out):
+def build_document(md_path, config, manifest, out, root=None):
     md_path, out = Path(md_path), Path(out)
     config = copy.deepcopy(config)
     sha = config_sha(config)
@@ -53,7 +53,7 @@ def build_document(md_path, config, manifest, out):
     # Relative links in the Markdown are relative to the .md file, not the output folder.
     model["base"] = os.path.relpath(md_path.resolve().parent, out.resolve()).replace(os.sep, "/")
 
-    add_file_status(model, md_path)
+    add_file_status(model, md_path, root)
     config, warnings = check_config(config, model, strict=new_config)
     warnings = model["warnings"] + warnings + add_dependencies(model, config)
     new_manifest = apply_identity(model, md_path, manifest, out)
@@ -90,12 +90,17 @@ def _repo_files(root):
     return r.stdout.splitlines() if r.returncode == 0 else []
 
 
-def add_file_status(model, md_path):
+def add_file_status(model, md_path, root=None):
     """Mark each referenced file `exists` (found on disk), `planned` (not there: a file the plan will
     create, or a wrong path), or `ambiguous` (a short name that could be several files). Relative
-    paths are looked up from the repository root and from the Markdown's folder. In a git repository,
-    a short reference that matches exactly one file there gets that file as `resolved`."""
-    root, is_git = project_root(md_path)
+    paths are looked up from the repository root (or `root`, when given) and from the Markdown's
+    folder. In a git repository, a short reference that matches exactly one file there gets that
+    file as `resolved`."""
+    if root is None:
+        root, is_git = project_root(md_path)
+    else:  # a plan kept outside the project (e.g. ~/.claude/plans/) names the project's files
+        root = Path(root).resolve()
+        is_git = (root / ".git").exists()
     here = Path(md_path).resolve().parent
     repo = None
     for f in model["files"]:

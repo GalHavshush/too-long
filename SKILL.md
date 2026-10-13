@@ -275,6 +275,7 @@ The Markdown is the source of truth.
   (doc and task ids, `build.json`), `model.py` (`build_document`, schema in `docs/model.md`),
   `regen.py` (`Regenerator`), `website.py` (writes the site files), `sync.py` (`update_task`:
   writes a checkbox to the Markdown). `scripts/serve.py`: local server, a thin transport over them.
+- `scripts/pane.py`: JSON interface (`model`, `task`, `open`) for the Claude Code side pane in `hooks/`.
 - `scripts/run_tests.py`: runs every test in `tests/` (`python3 scripts/run_tests.py`).
 - `video.md`, `scripts/video.py`, `scripts/render_video.mjs`, `scripts/args.py`, `assets/video/`: video mode (`--video`).
 - `assets/index.html`, `assets/styles.css`, `assets/app.js`: the site template, copied as is. `app.js` renders `data.js` into the chosen views.
