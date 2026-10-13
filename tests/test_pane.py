@@ -4,6 +4,7 @@ import json
 import subprocess
 import sys
 import tempfile
+import urllib.request
 from pathlib import Path
 
 from _path import ROOT
@@ -91,5 +92,26 @@ pane.webbrowser.open = lambda url: opened.append(url) or True
 assert pane.cmd_open(plan)["status"] == "ok" and opened == [(out / "index.html").as_uri()]
 pane.webbrowser.open = lambda url: False
 assert pane.cmd_open(plan)["status"] == "error"
+opened.clear()
+pane.webbrowser.open = lambda url: opened.append(url) or True
+assert pane.cmd_open(plan, "http://127.0.0.1:9/")["status"] == "ok" and opened == ["http://127.0.0.1:9/"]
+
+# serve: prints the URL once listening, serves the live site (with the project root's file status).
+proc = subprocess.Popen([sys.executable, str(PANE), "serve", str(plan), "--root", str(ROOT)],
+                        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+try:
+    first = json.loads(proc.stdout.readline())
+    assert first["status"] == "serving" and first["url"].startswith("http://127.0.0.1:"), first
+    with urllib.request.urlopen(first["url"], timeout=5) as page:
+        assert page.status == 200 and 'name="too-long-token"' in page.read().decode()
+    with urllib.request.urlopen(first["url"] + "data.js", timeout=5) as data:
+        js = data.read().decode()
+    served = json.loads(js[js.index("{"):js.rindex("}") + 1])["model"]
+    assert {f["path"]: f["status"] for f in served["files"]}["scripts/pane.py"] == "exists"
+finally:
+    proc.terminate()
+    proc.wait(timeout=5)
+code, r, err = run("serve", tmp / "gone.md")
+assert code == 1 and r["status"] == "error" and "gone.md" in r["error"], (r, err)
 
 print("pane: ok")

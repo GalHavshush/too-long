@@ -92,14 +92,14 @@ _watches = {}  # one watch per Markdown file, however many callers ask
 _lock = threading.Lock()
 
 
-def watch(md, out=".too-long", config_path=None, on_result=None, delay=0.3, source=PollingWatcher):
+def watch(md, out=".too-long", config_path=None, on_result=None, delay=0.3, source=PollingWatcher, root=None):
     """Start watching md (if not already watched) and return its Watch. on_result(result) is
     called after each rebuild. source(paths, callback) must return an object with start()/stop()."""
     key = str(Path(md).resolve())
     with _lock:
         w = _watches.get(key)
         if w is None:
-            regen = Regenerator(md, out, config_path)
+            regen = Regenerator(md, out, config_path, root=root)
             debouncer = Debouncer(delay, regen.refresh)
             w = _watches[key] = Watch(key, regen, source([regen.md, regen.config_path], debouncer), debouncer)
             w.source.start()

@@ -3,7 +3,8 @@
 
     python3 pane.py model PLAN [--root DIR]                          rebuild the site, print the pane's summary
     python3 pane.py task  PLAN TASK_ID (--done|--undo) --revision R  write one checkbox (sync.update_task)
-    python3 pane.py open  PLAN                                       open the site in the default browser
+    python3 pane.py open  PLAN [--url URL]                           open the site (or URL) in the default browser
+    python3 pane.py serve PLAN [--root DIR]                          serve the site live (serve.py) until killed
 
 The output folder is always <plan's folder>/.too-long/<plan name>/, worked out here so the caller
 never has to. `--root` is the project the plan is about, for "does this file exist" (a plan kept in
@@ -13,6 +14,7 @@ stdout is always one JSON object with a "status":
     model  ok | error
     task   applied | conflict | busy | not_found | not_a_task | error
     open   ok | error
+    serve  serving (with "url", printed once the server listens; it then runs until killed) | error
 Exit code 0 for ok/applied, 1 for every other status (the JSON still says why), 2 for bad usage.
 No traceback for expected failures: "error" carries a message a person can act on.
 """
@@ -98,15 +100,38 @@ def cmd_task(plan, task_id, done, rev):
     return {"status": "applied", "revision": r.revision, "line": r.line}
 
 
-def cmd_open(plan):
-    index = out_dir(plan) / "index.html"
-    if not index.exists():
-        built = cmd_model(plan)
-        if built["status"] != "ok":
-            return built
-    if not webbrowser.open(index.as_uri()):
-        return {"status": "error", "error": f"no browser found; open {index} by hand"}
-    return {"status": "ok", "index": str(index)}
+def cmd_open(plan, url=None):
+    if not url:
+        index = out_dir(plan) / "index.html"
+        if not index.exists():
+            built = cmd_model(plan)
+            if built["status"] != "ok":
+                return built
+        url = index.as_uri()
+    if not webbrowser.open(url):
+        return {"status": "error", "error": f"no browser found; open {url} by hand"}
+    return {"status": "ok", "url": url}
+
+
+def cmd_serve(plan, root=None):
+    """serve.py for the pane: ticks in the browser are written to the plan, and plan edits (the
+    pane's ticks too) reload the open page. Prints the URL as JSON, then serves until killed."""
+    from serve import make_server  # only this command needs it
+
+    try:
+        httpd = make_server(plan, out_dir(plan), port=0, root=root)
+    except SystemExit as e:  # make_server's own message for a first build that failed
+        return {"status": "error", "error": str(e.code)}
+    except OSError as e:
+        return {"status": "error", "error": f"could not start the local server: {e.strerror or e}"}
+    print(json.dumps({"status": "serving", "url": f"http://127.0.0.1:{httpd.app['port']}/"}), flush=True)
+    try:
+        httpd.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        httpd.app["watch"].stop()
+    return None
 
 
 def main(argv=None):
@@ -124,14 +149,22 @@ def main(argv=None):
     t.add_argument("--revision", required=True)
     o = sub.add_parser("open")
     o.add_argument("plan")
+    o.add_argument("--url")
+    v = sub.add_parser("serve")
+    v.add_argument("plan")
+    v.add_argument("--root")
     args = ap.parse_args(argv)
 
     if args.cmd == "model":
         res = cmd_model(args.plan, args.root)
     elif args.cmd == "task":
         res = cmd_task(args.plan, args.task_id, args.done, args.revision)
+    elif args.cmd == "open":
+        res = cmd_open(args.plan, args.url)
     else:
-        res = cmd_open(args.plan)
+        res = cmd_serve(args.plan, args.root)
+        if res is None:  # served until stopped
+            return 0
     print(json.dumps(res))
     return 0 if res["status"] in ("ok", "applied") else 1
 
