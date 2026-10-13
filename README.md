@@ -61,7 +61,15 @@ Decisions and risks, with their mitigations, one tab away:
 
 The same pane opens in the desktop app's Code tab, beside the plan and the approval card.
 
-<!-- DESKTOP-SCREENSHOT: add docs/screenshots/live-desktop.png and replace this comment with its image link -->
+![The Claude desktop app: the plan on top and the too-long pane below it, with the roadmap, next tasks and a button to open the full site](docs/screenshots/live-desktop.png)
+
+Tick a task and the progress follows. Here one task of ten is done, so the ring shows 10% and the next task moves up.
+
+![The pane after one task is ticked: 1/10 tasks done, Phase 1 half complete](docs/screenshots/live-desktop-progress.png)
+
+| Tasks, grouped by phase | Decisions and risks |
+|---|---|
+| ![The Tasks tab: every task grouped by phase with progress bars](docs/screenshots/live-desktop-tasks.png) | ![The Decisions tab: a decision and a risk with its mitigation](docs/screenshots/live-desktop-decisions.png) |
 
 ## Why you can trust it
 
