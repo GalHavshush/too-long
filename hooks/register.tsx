@@ -25,6 +25,10 @@ type Watch = { path: string; timer: Timer | null; lastSig: string; builtSig: str
 let watch: Watch | null = null
 let isWriting = false
 let python: string | null = null
+// The live site of the plan shown (serve.py): started by the first "Open full site", kept until
+// another plan is shown or the session ends; a reload of the mod ends it with the module.
+type Server = { path: string; url: Promise<string | null>; found: (url: string | null) => void; stop: () => void }
+let server: Server | null = null
 
 // ---- running pane.py ----
 
@@ -148,6 +152,7 @@ function stopWatching() {
 async function startWatching($: EngineInterface, path: string) {
   if (watch?.path === path) return
   stopWatching()
+  if (server && server.path !== path) stopServer()
   const w: Watch = { path, timer: null, lastSig: '', builtSig: '', building: null, isDirty: false }
   watch = w
   w.timer = $.clock.every(TICK_MS, () => void tick($, w))
@@ -207,9 +212,52 @@ async function toggle($: EngineInterface, task: Task, revision: string) {
   }
 }
 
+function stopServer() {
+  server?.stop()
+  server = null
+}
+
+// Runs `pane.py serve` for as long as the loop reads it; the first line it prints says where.
+async function runServer($: EngineInterface, s: Server) {
+  const exe = await findPython($)
+  if (!exe || server !== s) return s.found(null)
+  const stream = $.process.spawn({ argv: [exe, `${$.plugin.root}/scripts/pane.py`, 'serve', s.path, '--root', await $.session.root()] })
+  s.stop = () => void stream.return(undefined as never)
+  let first = ''
+  try {
+    for await (const chunk of stream) {
+      if (chunk.stream !== 'stdout' || first.includes('\n')) continue
+      first += chunk.text
+      if (!first.includes('\n')) continue
+      try {
+        const out = JSON.parse(first.split('\n')[0] ?? '')
+        s.found(out.status === 'serving' && typeof out.url === 'string' ? out.url : null)
+      } catch {
+        s.found(null)
+      }
+    }
+  } catch {
+    // could not start: answered below
+  }
+  s.found(null) // a no-op once the URL was found
+  if (server === s) server = null
+}
+
+// Opens the live site: browser ticks are written to the plan and plan edits reload the page.
+// Without a server it falls back to the static file (ticks there stay in the browser).
 async function openSite($: EngineInterface, path: string) {
-  const r = await runPane($, ['open', path])
+  if (server?.path !== path) {
+    stopServer()
+    let found: (url: string | null) => void = () => {}
+    const url = new Promise<string | null>(resolve => (found = resolve))
+    const s: Server = { path, url, found, stop: () => {} }
+    server = s
+    $.clock.after(0, () => void runServer($, s)) // outside the press, so the server outlives it
+  }
+  const url = await server.url
+  const r = await runPane($, ['open', path, ...(url ? ['--url', url] : [])])
   if (r.status !== 'ok') $.ui.toast(`too-long: ${r.error ?? 'could not open the site'}`)
+  else if (!url) $.ui.toast('too-long: the live site did not start; opened the static copy (its ticks stay in the browser).')
 }
 
 // ---- plan mode ----
@@ -327,6 +375,7 @@ export const register: Register = on => {
 
   on('session.end', ($, e, next) => {
     stopWatching()
+    stopServer()
     return next(e)
   })
 

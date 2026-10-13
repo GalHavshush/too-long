@@ -173,7 +173,7 @@ When you approve a plan in plan mode, a **too-long pane** opens beside the trans
 - every task, which you can tick: the `[x]` is written into the plan;
 - decisions, risks with their mitigations, and open questions;
 - the files the plan mentions, marked as already in the project or still to create;
-- a button that opens the full site.
+- a button that opens the full site, served live on 127.0.0.1: ticks there are written to the plan too, and the page and the pane follow each other.
 
 The pane follows edits to the plan within a couple of seconds. Nothing in it is inferred, and no model is called.
 

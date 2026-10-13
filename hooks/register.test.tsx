@@ -110,6 +110,12 @@ function end($: Engine) {
   return $.session.end({ reason: 'other', sessionId: 'test', resume: { id: 'test' } } as never)
 }
 
+async function pressSettled(f: Fake, ui: Awaited<ReturnType<typeof mountPane>>, key: string) {
+  const pressed = ui.press({ key })
+  await f.clock.settle()
+  await pressed
+}
+
 const models = (f: Fake) => f.calls.filter(c => c[0] === 'model').length
 
 async function mountPane($: Engine, surface: 'terminal' | 'desktop' = 'terminal') {
@@ -386,5 +392,49 @@ test('an approval on a narrow terminal leaves a toast instead', async ($, on) =>
   await exitPlanMode($)
   await f.clock.settle()
   expect(f.toasts.at(-1)).toContain('Run /too-long-pane to open it')
+  await end($)
+})
+
+test('Open full site starts the live site once and opens its address', async ($, on) => {
+  const f = fake(on)
+  const spawns: string[][] = []
+  let stop = () => {}
+  const stopped = new Promise<void>(resolve => (stop = resolve))
+  on('process.spawn', async function* ($, e) {
+    spawns.push([...e.argv].slice(2))
+    yield { stream: 'stdout' as const, text: '{"status": "serving", "url": "http://127.0.0.1:4321/"}\n' }
+    await stopped // serves until stopped
+    return { value: { code: 0, signal: null } }
+  })
+  f.files.set('/plans/t.md', { mtimeMs: 1, size: 10 })
+  await run($, '/plans/t.md')
+  await f.clock.settle()
+  const ui = await mountPane($)
+  await pressSettled(f, ui, 'open-site') // the server starts on a timer
+  await pressSettled(f, ui, 'open-site')
+  expect(spawns).toEqual([['serve', '/plans/t.md', '--root', '/proj']])
+  expect(f.calls.filter(c => c[0] === 'open')).toEqual([
+    ['open', '/plans/t.md', '--url', 'http://127.0.0.1:4321/'],
+    ['open', '/plans/t.md', '--url', 'http://127.0.0.1:4321/'],
+  ])
+  stop()
+  await ui.unmount()
+  await end($)
+})
+
+test('a live site that does not start falls back to the static copy', async ($, on) => {
+  const f = fake(on)
+  on('process.spawn', async function* () {
+    yield { stream: 'stdout' as const, text: '{"status": "error", "error": "port in use"}\n' }
+    return { value: { code: 1, signal: null } }
+  })
+  f.files.set('/plans/u.md', { mtimeMs: 1, size: 10 })
+  await run($, '/plans/u.md')
+  await f.clock.settle()
+  const ui = await mountPane($)
+  await pressSettled(f, ui, 'open-site')
+  expect(f.calls.filter(c => c[0] === 'open')).toEqual([['open', '/plans/u.md']])
+  expect(f.toasts.at(-1)).toContain('opened the static copy')
+  await ui.unmount()
   await end($)
 })
