@@ -166,6 +166,34 @@ The generated site is committed in [`examples/trailhead-site/`](examples/trailhe
 
 ![Document view, dark mode](docs/screenshots/document.png)
 
+## Side pane in Claude Code
+
+When you approve a plan in plan mode, a **too-long pane** opens beside the transcript. It shows:
+- the plan's progress and roadmap stages, with the next open tasks;
+- every task, which you can tick: the `[x]` is written into the plan;
+- decisions, risks with their mitigations, and open questions;
+- the files the plan mentions, marked as already in the project or still to create;
+- a button that opens the full site.
+
+The pane follows edits to the plan within a couple of seconds. Nothing in it is inferred, and no model is called.
+
+Install it once, from a terminal session (it then loads in the desktop app's Code tab too; Claude Code 2.1.275 or later):
+
+```text
+/plugin install too-long-pane --marketplace GalHavshush/too-long
+```
+
+Answer `y` to add the marketplace and pick the user scope. This also installs the too-long skill, so you don't need the `git clone` as well.
+
+To open a plan yourself, run `/too-long-pane path/to/plan.md`. With no path, it opens the plan of the current or latest planning in this project.
+
+The site the pane builds goes next to the plan, in `<plan's folder>/.too-long/<plan name>/`, e.g. `~/.claude/plans/.too-long/<name>/`.
+
+The pane is a Claude Code mod (`hooks/register.tsx`) over the same Python core, through `scripts/pane.py`. It needs Python 3.9+ on `PATH`. To work on it:
+- load the repo with `claude --plugin-dir .`;
+- validate it with `claude plugin validate .`;
+- run its tests with `claude plugin test .`.
+
 ## Video mode
 
 Add `--video` to get a ~2 minute narrated explainer video instead of a website:
@@ -354,10 +382,10 @@ This runs everything:
 
 - golden-file parser tests over readable fixtures in `tests/fixtures/`
 - semantic snapshots of realistic plans (`tests/test_semantic.py`, `tests/golden/semantic/`): which decisions, rejected alternatives, mitigations, stage dependencies and merged file references are extracted. Excerpts of TaskForge, a 7,800-word implementation plan used for testing, are among the fixtures
-- unit tests for identity, config, regeneration, sync, the server and the CLI
+- unit tests for identity, config, regeneration, sync, the server, the CLI and the side pane's `pane.py`
 - browser tests (`tests/e2e.test.mjs`) that build sites and drive headless Chrome over the DevTools protocol, with no npm packages
 
-The browser tests need Node 22+ and Chrome and skip themselves without them. After an intended parser change, regenerate the golden files with `python3 tests/test_golden.py --update` and `python3 tests/test_semantic.py --update`, and review the diff.
+The side pane's own tests run in Claude Code's mod test kit: `claude plugin test .`. The browser tests need Node 22+ and Chrome and skip themselves without them. After an intended parser change, regenerate the golden files with `python3 tests/test_golden.py --update` and `python3 tests/test_semantic.py --update`, and review the diff.
 
 ## Troubleshooting
 
