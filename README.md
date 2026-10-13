@@ -51,8 +51,10 @@ Paste this into Claude Code:
 Install the too-long skill from https://github.com/GalHavshush/too-long: clone it into ~/.claude/skills/too-long (create ~/.claude/skills if it doesn't exist; if too-long is already there, run git pull in it instead). Then check that ~/.claude/skills/too-long/SKILL.md exists and tell me how to use it.
 ```
 
-Then, in a new session: `Use too-long on plan.md`. Want it live inside Claude Code? Add the plugin:
+Then, in a new session: `Use too-long on plan.md`. 
 
+
+Want it live inside Claude Code? Add the plugin:
 ```text
 /plugin install too-long-live --marketplace GalHavshush/too-long
 ```
