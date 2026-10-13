@@ -114,4 +114,29 @@ finally:
 code, r, err = run("serve", tmp / "gone.md")
 assert code == 1 and r["status"] == "error" and "gone.md" in r["error"], (r, err)
 
+# One site per plan: a site the skill built (with Claude's config) is the one the pane uses,
+# in the project's .too-long/ or a named folder in it; other plans get their own beside them.
+project = tmp / "project"
+(project / "docs").mkdir(parents=True)
+spec = project / "docs" / "spec.md"
+spec.write_text("# Spec\n\n## Work\n\n- [ ] Ship\n", encoding="utf-8")
+skill_out = project / ".too-long"
+skill_out.mkdir()
+(skill_out / "config.json").write_text(json.dumps({"tldr": ["Ship it."]}))
+subprocess.run([sys.executable, str(ROOT / "scripts" / "build.py"), str(spec), "--out", str(skill_out)], check=True,
+               capture_output=True)
+assert pane.out_dir(spec, project) == skill_out.resolve()
+code, res, _ = run("model", spec, "--root", project)
+assert res["status"] == "ok" and Path(res["out"]) == skill_out.resolve() and not (project / "docs" / ".too-long").exists()
+assert '"tldr": ["Ship it."]' in (skill_out / "data.js").read_text(encoding="utf-8")  # Claude's config kept
+other = project / "docs" / "other.md"
+other.write_text("# Other\n", encoding="utf-8")
+named = skill_out / "other"
+subprocess.run([sys.executable, str(ROOT / "scripts" / "build.py"), str(other), "--out", str(named)], check=True,
+               capture_output=True)
+assert pane.out_dir(other, project) == named.resolve()
+third = project / "docs" / "third.md"
+third.write_text("# Third\n", encoding="utf-8")
+assert pane.out_dir(third, project) == (project / "docs" / ".too-long" / "third").resolve()
+
 print("pane: ok")

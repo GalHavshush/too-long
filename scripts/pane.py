@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """The side pane's way into the core: one short command, one JSON object on stdout.
 
-    python3 pane.py model PLAN [--root DIR]                          rebuild the site, print the pane's summary
-    python3 pane.py task  PLAN TASK_ID (--done|--undo) --revision R  write one checkbox (sync.update_task)
-    python3 pane.py open  PLAN [--url URL]                           open the site (or URL) in the default browser
-    python3 pane.py serve PLAN [--root DIR]                          serve the site live (serve.py) until killed
+    python3 pane.py model PLAN [--root DIR]                    rebuild the site, print the pane's summary
+    python3 pane.py task  PLAN ID (--done|--undo) --revision R [--root DIR]   write one checkbox
+    python3 pane.py open  PLAN [--url URL] [--root DIR]        open the site (or URL) in the browser
+    python3 pane.py serve PLAN [--root DIR]                    serve the site live (serve.py) until killed
 
-The output folder is always <plan's folder>/.too-long/<plan name>/, worked out here so the caller
-never has to. `--root` is the project the plan is about, for "does this file exist" (a plan kept in
-~/.claude/plans/ names files of the project, not of that folder).
+Every command takes `--root`, the project the plan is about: it says whether the files the plan
+names exist (a plan kept in ~/.claude/plans/ names files of the project, not of that folder), and
+where to look for the plan's site (out_dir), worked out here so the caller never has to.
 
 stdout is always one JSON object with a "status":
     model  ok | error
@@ -30,6 +30,7 @@ from pathlib import Path  # noqa: E402
 
 import sync  # noqa: E402
 from config import ConfigError  # noqa: E402
+from identity import load_manifest  # noqa: E402
 from parse import InputError  # noqa: E402
 from regen import Regenerator  # noqa: E402
 
@@ -37,8 +38,16 @@ LOCK_TIMEOUT = 5.0  # seconds to wait for another writer before answering "busy"
 HIGHLIGHT_KINDS = ("decision", "risk", "question")
 
 
-def out_dir(plan):
+def out_dir(plan, root=None):
+    """The one site of this plan, shared with the skill and serve.py: an existing build of it in a
+    .too-long/ folder of the project or beside the plan (build.json names its Markdown), so the
+    views and extras Claude chose stay; else <plan's folder>/.too-long/<plan name>/."""
     plan = Path(plan).resolve()
+    for base in dict.fromkeys(Path(d).resolve() / ".too-long" for d in (root, plan.parent) if d):
+        for out in (base, *sorted(p for p in base.glob("*/") if p.is_dir())):
+            source = load_manifest(out).get("source")
+            if source and (out / source).resolve() == plan:
+                return out
     return plan.parent / ".too-long" / plan.stem
 
 
@@ -75,7 +84,7 @@ def summary(model):
 
 
 def cmd_model(plan, root=None):
-    regen = Regenerator(plan, out_dir(plan), root=root)
+    regen = Regenerator(plan, out_dir(plan, root), root=root)
     result = regen.refresh(force=True)
     if not result.ok:
         return {"status": "error", "error": result.error}
@@ -84,9 +93,9 @@ def cmd_model(plan, root=None):
             **summary(regen.document.model)}
 
 
-def cmd_task(plan, task_id, done, rev):
+def cmd_task(plan, task_id, done, rev, root=None):
     try:
-        r = sync.update_task(plan, task_id, done, rev, out=out_dir(plan), timeout=LOCK_TIMEOUT)
+        r = sync.update_task(plan, task_id, done, rev, out=out_dir(plan, root), timeout=LOCK_TIMEOUT)
     except sync.TaskNotFound:
         return {"status": "not_found", "error": f"no task {task_id} in {Path(plan).name}"}
     except sync.NotATask as e:
@@ -100,11 +109,11 @@ def cmd_task(plan, task_id, done, rev):
     return {"status": "applied", "revision": r.revision, "line": r.line}
 
 
-def cmd_open(plan, url=None):
+def cmd_open(plan, url=None, root=None):
     if not url:
-        index = out_dir(plan) / "index.html"
+        index = out_dir(plan, root) / "index.html"
         if not index.exists():
-            built = cmd_model(plan)
+            built = cmd_model(plan, root)
             if built["status"] != "ok":
                 return built
         url = index.as_uri()
@@ -119,7 +128,7 @@ def cmd_serve(plan, root=None):
     from serve import make_server  # only this command needs it
 
     try:
-        httpd = make_server(plan, out_dir(plan), port=0, root=root)
+        httpd = make_server(plan, out_dir(plan, root), port=0, root=root)
     except SystemExit as e:  # make_server's own message for a first build that failed
         return {"status": "error", "error": str(e.code)}
     except OSError as e:
@@ -147,9 +156,11 @@ def main(argv=None):
     state.add_argument("--done", action="store_true")
     state.add_argument("--undo", action="store_true")
     t.add_argument("--revision", required=True)
+    t.add_argument("--root")
     o = sub.add_parser("open")
     o.add_argument("plan")
     o.add_argument("--url")
+    o.add_argument("--root")
     v = sub.add_parser("serve")
     v.add_argument("plan")
     v.add_argument("--root")
@@ -158,9 +169,9 @@ def main(argv=None):
     if args.cmd == "model":
         res = cmd_model(args.plan, args.root)
     elif args.cmd == "task":
-        res = cmd_task(args.plan, args.task_id, args.done, args.revision)
+        res = cmd_task(args.plan, args.task_id, args.done, args.revision, args.root)
     elif args.cmd == "open":
-        res = cmd_open(args.plan, args.url)
+        res = cmd_open(args.plan, args.url, args.root)
     else:
         res = cmd_serve(args.plan, args.root)
         if res is None:  # served until stopped
