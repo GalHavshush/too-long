@@ -233,11 +233,24 @@ async function approved($: EngineInterface) {
 const ACCENT = '#3fb27f'
 
 // A rounded progress bar for surfaces that draw SVG; the terminal gets text.
-function barSvg(done: number, total: number, width: number): string {
+function barSvg(done: number, total: number, width: number, height = 6): string {
   const w = total ? Math.round((done / total) * width) : 0
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="6" viewBox="0 0 ${width} 6">`
-    + `<rect width="${width}" height="6" rx="3" fill="#8884"/>`
-    + (w ? `<rect width="${w}" height="6" rx="3" fill="${ACCENT}"/>` : '')
+  const r = height / 2
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`
+    + `<rect width="${width}" height="${height}" rx="${r}" fill="#8884"/>`
+    + (w ? `<rect width="${Math.max(w, height)}" height="${height}" rx="${r}" fill="${ACCENT}"/>` : '')
+    + '</svg>'
+}
+
+// The header's progress ring, its percentage in the accent color (readable on light and dark).
+function ringSvg(done: number, total: number): string {
+  const c = 2 * Math.PI * 19
+  const pct = total ? Math.round((done / total) * 100) : 0
+  return '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">'
+    + '<circle cx="24" cy="24" r="19" fill="none" stroke="#8884" stroke-width="5"/>'
+    + (pct ? `<circle cx="24" cy="24" r="19" fill="none" stroke="${ACCENT}" stroke-width="5" stroke-linecap="round"`
+      + ` stroke-dasharray="${(c * pct) / 100} ${c}" transform="rotate(-90 24 24)"/>` : '')
+    + `<text x="24" y="28" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="${ACCENT}">${pct}%</text>`
     + '</svg>'
 }
 
@@ -256,7 +269,7 @@ function plain(text: string): string {
   return text.replace(/`/g, '')
 }
 
-const KINDS = [['decision', 'Decisions', 'suggestion'], ['risk', 'Risks', 'warning'], ['question', 'Open questions', 'permission']] as const
+const KINDS = [['decision', 'Decisions', 'Decision', 'suggestion'], ['risk', 'Risks', 'Risk', 'warning'], ['question', 'Open questions', 'Question', 'permission']] as const
 const FILE_MARK = { exists: ['●', 'success'], planned: ['○', 'subtle'], ambiguous: ['?', 'warning'] } as const
 
 type TreeNode = { children: Map<string, TreeNode>; status?: PlanFile['status']; isDir: boolean }
@@ -367,15 +380,28 @@ export const register: Register = on => {
 
     const checkable = doc.tasks.filter(t => !t.browser_only)
     const done = checkable.filter(t => t.done).length
-    const pct = checkable.length ? Math.round((done / checkable.length) * 100) : 0
     const titles = new Map([...doc.sections, ...doc.stages].map(s => [s.id, s.title] as const))
+    const inner = Math.max(80, Math.min((cols - 6) * 8, 440)) // px inside a card
     const body: RenderElement[] = []
     let shown = 0
 
-    const heading = (key: string, text: string, extra = '') => (
-      <Box key={key} marginTop={body.length ? 1 : 0}>
-        <Text bold wrap="truncate-end">{text}</Text>
-        {extra ? <Text dimColor>{`  ${extra}`}</Text> : null}
+    // Progress as a thin bar: SVG where the surface draws it, text in the terminal.
+    const bar = (key: string, d: number, t: number, width: number, height = 4) =>
+      Svg
+        ? <Svg key={key} source={barSvg(d, t, width, height)} alt={`${d} of ${t} done`} />
+        : <Text key={key} color="success">{barText(d, t, Math.max(8, Math.min(30, cols - 8)))}</Text>
+
+    const card = (key: string, children: RenderElement[], color?: string) => (
+      <Box key={key} flexDirection="column" borderStyle="round" borderColor={color} borderDimColor={!color}
+        paddingX={1} marginTop={body.length ? 1 : 0}>
+        {children}
+      </Box>
+    )
+
+    const cardHead = (key: string, title: string, extra = '') => (
+      <Box key={key} flexDirection="row" justifyContent="space-between" columnGap={1}>
+        <Text bold wrap="truncate-end">{title}</Text>
+        {extra ? <Text dimColor>{extra}</Text> : null}
       </Box>
     )
 
@@ -383,51 +409,61 @@ export const register: Register = on => {
       if (t.browser_only) return <Text key={`t:${t.id}`} dimColor wrap="wrap">{`·  ${plain(t.text)}  (site only)`}</Text>
       const isPending = v.pending === t.id
       return (
-        <Button key={`t:${t.id}`} plain dimColor={!!v.pending && !isPending} onPress={() => void toggle($, t, doc.revision)}>
-          <Text color={isPending ? 'subtle' : t.done ? 'success' : 'subtle'}>{isPending ? '◌' : t.done ? '☑' : '☐'}</Text>
-          {'  '}
-          <Text dimColor={t.done} strikethrough={t.done}>{plain(t.text)}</Text>
-        </Button>
+        <Box key={`row:${t.id}`} hover={{ backgroundColor: 'subtle' }}>
+          <Button key={`t:${t.id}`} plain dimColor={!!v.pending && !isPending} onPress={() => void toggle($, t, doc.revision)}>
+            <Text color={t.done ? 'success' : 'subtle'}>{isPending ? '◌' : t.done ? '☑' : '☐'}</Text>
+            {'  '}
+            <Text dimColor={t.done} strikethrough={t.done}>{plain(t.text)}</Text>
+          </Button>
+        </Box>
       )
     }
 
+    // Where the work is: the first unfinished stage, else wherever the first open task is.
+    const stages = doc.stages.filter(s => s.total > 0) // a design doc's task-less sections say nothing
+    const current = stages.find(s => s.done < s.total)
+    const firstOpen = doc.tasks.find(t => !t.done && !t.browser_only)
+    const where = current?.id ?? firstOpen?.section
+
     if (v.tab === 'roadmap') {
-      // Stages without tasks (a design doc's numbered sections) say nothing about progress.
-      const stages = doc.stages.filter(s => s.total > 0)
-      if (stages.length) body.push(heading('h:stages', 'Stages'))
-      for (const s of stages) {
-        const [mark, color] = stageMark(s.done, s.total)
-        body.push(
-          <Box key={`s:${s.id}`} flexDirection="row" justifyContent="space-between" columnGap={1}>
-            <Text wrap="truncate-end"><Text color={color}>{mark}</Text>{`  ${s.title}`}</Text>
-            <Text dimColor>{`${s.done}/${s.total}`}</Text>
-          </Box>,
-        )
-      }
-      // Next up: the first unfinished stage, else wherever the first open task is.
-      const current = stages.find(s => s.done < s.total)
-      const firstOpen = doc.tasks.find(t => !t.done && !t.browser_only)
-      const where = current?.id ?? firstOpen?.section
       if (where) {
-        body.push(heading('next', `Next up: ${titles.get(where) ?? where}`))
         const open = doc.tasks.filter(t => !t.done && (t.section === where || t.at === where)).slice(0, 3)
-        for (const t of open) body.push(taskRow(t))
-      } else if (checkable.length) {
-        body.push(<Text key="all-done" color="success">All tasks are done.</Text>)
+        body.push(card('next', [
+          <Text key="next-label" color="claude" bold>NEXT UP</Text>,
+          <Text key="next-title" bold wrap="wrap">{titles.get(where) ?? where}</Text>,
+          <Box key="next-tasks" flexDirection="column" marginTop={1}>{open.map(taskRow)}</Box>,
+        ], 'claude'))
       } else {
-        body.push(<Text key="none" dimColor>No tasks in this plan.</Text>)
+        body.push(<Text key="none" color={checkable.length ? 'success' : undefined} dimColor={!checkable.length}>
+          {checkable.length ? 'All tasks are done.' : 'No tasks in this plan.'}
+        </Text>)
+      }
+      if (stages.length) {
+        body.push(card('stages', stages.flatMap(s => {
+          const [mark, color] = stageMark(s.done, s.total)
+          return [
+            <Box key={`s:${s.id}`} flexDirection="row" justifyContent="space-between" columnGap={1} marginTop={1}>
+              <Text wrap="truncate-end" bold={s.id === current?.id}><Text color={color}>{mark}</Text>{`  ${s.title}`}</Text>
+              <Text dimColor>{`${s.done}/${s.total}`}</Text>
+            </Box>,
+            bar(`sb:${s.id}`, s.done, s.total, inner, 4),
+          ]
+        })))
       }
     } else if (v.tab === 'tasks') {
       if (!doc.tasks.length) body.push(<Text key="none" dimColor>No tasks in this plan.</Text>)
       const groups = new Map<string, Task[]>()
       for (const t of doc.tasks) groups.set(t.section, [...(groups.get(t.section) ?? []), t])
       for (const [section, list] of groups) {
-        const visible = list.filter(t => v.showDone || !t.done)
-        if (!visible.length) continue
-        body.push(heading(`g:${section}`, titles.get(section) ?? section, `${list.filter(t => t.done).length}/${list.length}`))
-        for (const t of visible) {
-          if (shown++ < MAX_ROWS) body.push(taskRow(t))
-        }
+        const visible = list.filter(t => v.showDone || !t.done).filter(() => shown++ < MAX_ROWS)
+        const d = list.filter(t => t.done).length
+        body.push(card(`g:${section}`, [
+          cardHead(`gh:${section}`, titles.get(section) ?? section, `${d}/${list.length}`),
+          bar(`gb:${section}`, d, list.length, inner, 4),
+          ...(visible.length
+            ? [<Box key={`gt:${section}`} flexDirection="column" marginTop={1}>{visible.map(taskRow)}</Box>]
+            : [<Text key={`gd:${section}`} dimColor>{`All ${list.length} done`}</Text>]),
+        ]))
       }
       if (shown > MAX_ROWS) body.push(<Text key="more" dimColor>{`${shown - MAX_ROWS} more in the full site.`}</Text>)
       const doneCount = doc.tasks.filter(t => t.done).length
@@ -442,13 +478,13 @@ export const register: Register = on => {
       }
     } else if (v.tab === 'highlights') {
       if (!doc.highlights.length) body.push(<Text key="none" dimColor>No decisions, risks or questions found.</Text>)
-      for (const [kind, label, color] of KINDS) {
-        const list = doc.highlights.filter(item => item.kind === kind)
-        if (!list.length) continue
-        body.push(heading(`k:${kind}`, label, String(list.length)))
-        list.forEach((item, i) => { // not `h`: that is the JSX factory
-          body.push(<Text key={`h:${kind}:${i}`} wrap="wrap"><Text color={color}>▍</Text>{` ${plain(item.title)}`}</Text>)
-          if (item.mitigation) body.push(<Text key={`m:${kind}:${i}`} dimColor wrap="wrap">{`   ↳ ${plain(item.mitigation)}`}</Text>)
+      for (const [kind, , label, color] of KINDS) {
+        doc.highlights.filter(item => item.kind === kind).forEach((item, i) => { // not `h`: the JSX factory
+          body.push(card(`h:${kind}:${i}`, [
+            <Text key="kind" color={color} bold>{label.toUpperCase()}</Text>,
+            <Text key="title" wrap="wrap">{plain(item.title)}</Text>,
+            ...(item.mitigation ? [<Text key="mitigation" dimColor wrap="wrap">{`↳ ${plain(item.mitigation)}`}</Text>] : []),
+          ], color))
         })
       }
     } else {
@@ -456,44 +492,52 @@ export const register: Register = on => {
       else {
         const count = (status: PlanFile['status']) => doc.files.filter(f => f.status === status).length
         const unclear = count('ambiguous')
-        body.push(heading('h:files', 'Files', `${count('exists')} exist · ${count('planned')} to create${unclear ? ` · ${unclear} unclear` : ''}`))
-      }
-      for (const row of fileTree(doc.files).slice(0, MAX_ROWS)) {
-        const [mark, color] = row.status ? FILE_MARK[row.status] : (['▾', 'subtle'] as const)
-        body.push(
-          <Box key={`f:${row.path}`} paddingLeft={row.depth * 2}>
-            <Text wrap="truncate-end">
-              <Text color={color}>{mark}</Text>
-              {'  '}
-              {row.isDir ? <Text bold={!row.status} dimColor={!row.status}>{row.name}</Text> : row.name}
-            </Text>
+        body.push(card('files', [
+          cardHead('h:files', 'Files', `${count('exists')} exist · ${count('planned')} to create${unclear ? ` · ${unclear} unclear` : ''}`),
+          <Box key="tree" flexDirection="column" marginTop={1}>
+            {fileTree(doc.files).slice(0, MAX_ROWS).map(row => {
+              const [mark, color] = row.status ? FILE_MARK[row.status] : (['▾', 'subtle'] as const)
+              return (
+                <Box key={`f:${row.path}`} paddingLeft={row.depth * 2}>
+                  <Text wrap="truncate-end">
+                    <Text color={color}>{mark}</Text>
+                    {'  '}
+                    {row.isDir ? <Text bold={!row.status} dimColor={!row.status}>{row.name}</Text> : row.name}
+                  </Text>
+                </Box>
+              )
+            })}
           </Box>,
-        )
+        ]))
       }
     }
 
-    const barWidth = Math.max(80, Math.min(cols * 8, 480))
+    const now = where ? (titles.get(where) ?? where) : checkable.length ? 'All done' : 'No tasks'
     return (
       <Box flexDirection="column">
-        <Text bold wrap="wrap">{doc.title}</Text>
-        <Box flexDirection="column" marginTop={1}>
-          {Svg
-            ? <Svg source={barSvg(done, checkable.length, barWidth)} alt={`${done} of ${checkable.length} tasks done`} />
-            : <Text color="success">{barText(done, checkable.length, Math.min(30, cols - 2))}</Text>}
-          <Text dimColor>{`${done}/${checkable.length} tasks · ${pct}%`}</Text>
+        <Box flexDirection="column" borderStyle="round" borderDimColor paddingX={1}>
+          <Text bold wrap="wrap">{doc.title}</Text>
+          <Box flexDirection="row" alignItems="center" columnGap={2} marginTop={1}>
+            {Svg ? <Svg source={ringSvg(done, checkable.length)} alt={`${done} of ${checkable.length} tasks done`} /> : null}
+            <Box flexDirection="column" flexShrink={1}>
+              <Text bold>{`${done}/${checkable.length} tasks done`}</Text>
+              <Text dimColor wrap="truncate-end">{now}</Text>
+              {Svg ? null : bar('bar', done, checkable.length, inner)}
+            </Box>
+          </Box>
         </Box>
         {v.notice ? <Box key="notice" marginTop={1}><Text color="warning" wrap="wrap">{`⚠ ${v.notice}`}</Text></Box> : null}
-        <Box flexDirection="row" flexWrap="wrap" columnGap={2} marginTop={1}>
+        <Box flexDirection="row" flexWrap="wrap" columnGap={2} marginTop={1} paddingX={1}>
           {TABS.map(([id, label], i) => (
             <Button key={`tab:${id}`} plain hotkey={e.surface === 'terminal' ? String(i + 1) : undefined}
               onPress={() => void update($, view, x => ({ ...x, tab: id }))}>
-              {v.tab === id ? <Text bold underline>{label}</Text> : <Text dimColor>{label}</Text>}
+              {v.tab === id ? <Text bold color="claude">{label}</Text> : <Text dimColor>{label}</Text>}
             </Button>
           ))}
         </Box>
         <Box flexDirection="column" marginTop={1}>{body}</Box>
-        <Box flexDirection="row" justifyContent="space-between" alignItems="center" columnGap={1} marginTop={2}>
-          <Button key="open-site" onPress={() => void openSite($, doc.path)}>Open full site ↗</Button>
+        <Box flexDirection="row" justifyContent="space-between" alignItems="center" columnGap={1} marginTop={1}>
+          <Button key="open-site" variant="primary" onPress={() => void openSite($, doc.path)}>Open full site ↗</Button>
           <Text dimColor wrap="truncate-start">{doc.file}</Text>
         </Box>
       </Box>
