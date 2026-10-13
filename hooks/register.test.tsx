@@ -18,6 +18,7 @@ type Fake = {
   done: Set<string>
   isPlaced: boolean
   isModelBroken: boolean
+  isDesignDoc: boolean
   holdModel: Promise<void> | null
   clock: ReturnType<typeof mock.clock>
 }
@@ -43,7 +44,7 @@ function doc(f: Fake, path: string) {
 function fake(on: On): Fake {
   const f: Fake = {
     files: new Map(), calls: [], toasts: [], opened: [], task: { status: 'applied' }, revision: 1, done: new Set(),
-    isPlaced: true, isModelBroken: false, holdModel: null, clock: mock.clock(on, { now: 1000 }),
+    isPlaced: true, isModelBroken: false, isDesignDoc: false, holdModel: null, clock: mock.clock(on, { now: 1000 }),
   }
   mock.store(on)
   on('process.run', async ($, e) => {
@@ -55,6 +56,12 @@ function fake(on: On): Fake {
     if (args[0] === 'model') {
       if (f.holdModel) await f.holdModel
       out = f.isModelBroken ? { status: 'error', error: 'config.json: bad view' } : doc(f, args[1] ?? '')
+      if (f.isDesignDoc) { // numbered sections without tasks; the tasks sit in a later section
+        const d = out as ReturnType<typeof doc>
+        d.stages = [{ id: 'goals', title: '1. Goals', done: 0, total: 0 }, { id: 'design', title: '2. Design', done: 0, total: 0 }]
+        d.sections = [...d.sections, { id: 'todo', title: 'Remaining work' }]
+        d.tasks = d.tasks.map(t => ({ ...t, section: 'todo', at: 'todo' }))
+      }
     } else if (args[0] === 'task') {
       out = f.task
       if (f.task.status === 'applied') {
@@ -145,6 +152,21 @@ test('the pane draws the plan on every surface', async ($, on) => {
     await ui.press({ key: 'tab:roadmap' })
     await ui.unmount()
   }
+  await end($)
+})
+
+test('a roadmap of task-less sections points at the open tasks instead', async ($, on) => {
+  const f = fake(on)
+  f.isDesignDoc = true
+  f.files.set('/plans/s.md', { mtimeMs: 1, size: 10 })
+  await run($, '/plans/s.md')
+  await f.clock.settle()
+  const ui = await mountPane($)
+  expect(await ui.find({ text: /1\. Goals/ })).toBeUndefined()
+  expect(await ui.find({ text: 'No stages with tasks.' })).toBeDefined()
+  expect(await ui.find({ text: 'Next up: Remaining work' })).toBeDefined()
+  expect(await ui.find({ key: 't:a' })).toBeDefined()
+  await ui.unmount()
   await end($)
 })
 

@@ -318,18 +318,23 @@ export const register: Register = on => {
     }
 
     if (v.tab === 'roadmap') {
-      if (!doc.stages.length) rows.push(<Text key="none" dimColor>No stages found. See Tasks.</Text>)
-      for (const s of doc.stages) {
+      // Stages without tasks (a design doc's numbered sections) say nothing about progress.
+      const stages = doc.stages.filter(s => s.total > 0)
+      if (!stages.length) rows.push(<Text key="none" dimColor>No stages with tasks.</Text>)
+      for (const s of stages) {
         rows.push(
           <Text key={`s:${s.id}`} wrap="truncate-end">
             {`${stageGlyph(s.done, s.total)} ${s.title}`} <Text dimColor>{`${s.done}/${s.total}`}</Text>
           </Text>,
         )
       }
-      const current = doc.stages.find(s => s.done < s.total)
-      if (current) {
-        rows.push(<Text key="next" bold>{`Next up: ${current.title}`}</Text>)
-        const open = doc.tasks.filter(t => !t.done && (t.section === current.id || t.at === current.id)).slice(0, 3)
+      // Next up: the first unfinished stage, else wherever the first open task is.
+      const current = stages.find(s => s.done < s.total)
+      const firstOpen = doc.tasks.find(t => !t.done && !t.browser_only)
+      const where = current?.id ?? firstOpen?.section
+      if (where) {
+        rows.push(<Text key="next" bold>{`Next up: ${titles.get(where) ?? where}`}</Text>)
+        const open = doc.tasks.filter(t => !t.done && (t.section === where || t.at === where)).slice(0, 3)
         for (const t of open) rows.push(taskRow(t))
       }
     } else if (v.tab === 'tasks') {
