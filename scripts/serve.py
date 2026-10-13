@@ -118,9 +118,9 @@ class Handler(SimpleHTTPRequestHandler):
         return self._json(HTTPStatus.OK, {"revision": result.revision, "line": result.line})
 
 
-def make_server(md, out=".too-long", config_path=None, port=0):
+def make_server(md, out=".too-long", config_path=None, port=0, root=None):
     """Build the site, start watching the Markdown, and return an HTTP server (not yet serving)."""
-    w = watch(md, out, config_path)
+    w = watch(md, out, config_path, root=root)
     first = w.regen.refresh(force=True)
     if not first.ok:
         w.stop()

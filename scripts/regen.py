@@ -32,8 +32,9 @@ class Result:
 
 
 class Regenerator:
-    def __init__(self, md, out=".too-long", config_path=None):
+    def __init__(self, md, out=".too-long", config_path=None, root=None):
         self.md = Path(md)
+        self.root = root           # project root for file status (default: the Markdown's repository)
         self.out = Path(out)
         self.config_path = Path(config_path) if config_path else self.out / "config.json"
         self.document = None       # the last model.Document built
@@ -60,7 +61,8 @@ class Regenerator:
                 inputs = self._fingerprint()
                 if not force and inputs == self._inputs:
                     return Result(ok=True, revision=self.document.model["revision"] if self.document else "")
-                doc = build_document(self.md, load_config(self.config_path), load_manifest(self.out), self.out)
+                doc = build_document(self.md, load_config(self.config_path), load_manifest(self.out), self.out,
+                                     root=self.root)
                 written = write_site(self.out, doc.model, doc.config, doc.manifest)
                 self.document, self._inputs = doc, inputs
                 result = Result(ok=True, changed=bool(written), written=written, warnings=doc.warnings,

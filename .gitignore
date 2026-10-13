@@ -3,3 +3,6 @@ __pycache__/
 .too-long/
 examples/trailhead-video/audio/
 examples/trailhead-video/render/
+
+# Written by Claude Code when it loads the side pane mod
+live/.claude-plugin/types/

@@ -1,0 +1,13 @@
+{
+  "name": "too-long",
+  "description": "too-long: a Markdown plan as a site or video (the skill), and live beside Claude Code (too-long-live).",
+  "owner": {
+    "name": "Gal Havshush"
+  },
+  "plugins": [
+    {
+      "name": "too-long-live",
+      "source": "./live"
+    }
+  ]
+}

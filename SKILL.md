@@ -172,7 +172,7 @@ Everything extracted from the Markdown (tasks, highlights, diagrams, file
 mentions) links to its source line ("L42"), which opens `#/source/42`: the
 Markdown exactly as written, with that line highlighted.
 
-### 6. Build
+### 6. Build and open it live
 
 ```bash
 python3 <skill-dir>/scripts/build.py path/to/plan.md
@@ -181,32 +181,45 @@ python3 <skill-dir>/scripts/build.py path/to/plan.md
 Options: `--out DIR` (default `.too-long`; use `.too-long/<name>` for several
 documents), `--config FILE` (default `<out>/config.json`). It refuses a config
 whose notes, diagram sources, roadmap or track cite an unknown section id; fix
-it and re-run. Fix any warnings it prints too. Then open it:
+it and re-run. Fix any warnings it prints too.
+
+The Markdown, the site and the side pane are views of one plan and stay in sync. To
+keep them so, serve the site rather than opening the file. Start this in the background
+(it runs until stopped) with the same `--out`, then open the URL it prints:
 
 ```bash
-open .too-long/index.html
+python3 <skill-dir>/scripts/serve.py path/to/plan.md [--out DIR] [--port 8765]
+open http://127.0.0.1:8765/
 ```
 
-(`xdg-open` on Linux, `start` on Windows.) If you can view it in a browser
-tool, check the landing view and one more view for broken rendering.
+(`xdg-open` on Linux, `start` on Windows; another `--port` if 8765 is taken.) Served,
+ticking a task in the browser writes `[x]` into the Markdown, and any change to the
+Markdown (an edit, a tick in the side pane) reloads the open page. It rebuilds on its
+own, with no LLM involved. If you cannot keep a process running, open
+`<out>/index.html` instead: task checks are then saved in that browser only.
 
-To keep the site current while the Markdown is being edited:
-`python3 <skill-dir>/scripts/watch.py path/to/plan.md [--out DIR]` rebuilds on every
-save (no LLM involved). When a section that your TL;DR, a note or a diagram is based
-on changes, build.py and watch.py report it and the site marks that item "May be
-outdated". Nothing is rewritten automatically: update config.json yourself when the
-user wants it refreshed (a changed config clears the flags).
+If the `mcp__too-long-live__show_plan` tool is available (the too-long side pane for
+Claude Code), call it with the Markdown path: the pane shows the same plan, using this
+site and its config.
+
+If you can view the page in a browser tool, check the landing view and one more view
+for broken rendering.
+
+When a section that your TL;DR, a note or a diagram is based on changes, build.py and
+watch.py report it, and the site marks that item "May be outdated".
+Nothing is rewritten automatically: update config.json yourself when the user wants
+it refreshed (a changed config clears the flags).
 
 ### 7. Report
 
-Two or three lines: where the site is, which views it has, and exactly what
-you added that is inferred (and anything you left out because the text was
-ambiguous). Mention that, opened as a file, task checks are
-saved in the browser only and re-running build.py refreshes the site; and that
-`python3 <skill-dir>/scripts/serve.py path/to/plan.md` serves it on
-127.0.0.1 so ticking a task writes `[x]` into the Markdown and edits to the
-Markdown show up in the open page. If `.too-long/` is not ignored by git, suggest adding it to `.gitignore`;
-don't edit it yourself.
+Two or three lines:
+- where the site is and its URL, and which views it has;
+- exactly what you added that is inferred, and anything you left out because the text was ambiguous;
+- that ticks in the browser, in the side pane (when shown) and in the Markdown are the same
+  ticks, and that the server stops when its process does.
+
+If `.too-long/` is not ignored by git, suggest adding it to `.gitignore`; don't edit it
+yourself.
 
 ## Fidelity rules
 
@@ -275,6 +288,8 @@ The Markdown is the source of truth.
   (doc and task ids, `build.json`), `model.py` (`build_document`, schema in `docs/model.md`),
   `regen.py` (`Regenerator`), `website.py` (writes the site files), `sync.py` (`update_task`:
   writes a checkbox to the Markdown). `scripts/serve.py`: local server, a thin transport over them.
+- `scripts/pane.py`: JSON interface (`model`, `config`, `task`, `open`, `serve`) for the optional Claude Code side pane (`live/`), which runs it from this skill's install. It finds the
+  plan's site through `build.json`, so the pane and the skill share one site per plan.
 - `scripts/run_tests.py`: runs every test in `tests/` (`python3 scripts/run_tests.py`).
 - `video.md`, `scripts/video.py`, `scripts/render_video.mjs`, `scripts/args.py`, `assets/video/`: video mode (`--video`).
 - `assets/index.html`, `assets/styles.css`, `assets/app.js`: the site template, copied as is. `app.js` renders `data.js` into the chosen views.

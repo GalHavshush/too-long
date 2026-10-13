@@ -2,6 +2,7 @@
 data.js (window.TOO_LONG = {model, config}). Only files whose content changed are rewritten, so
 a rebuild after a small edit touches data.js alone. Returns the names of the files written."""
 import json
+import os
 from pathlib import Path
 
 from identity import MANIFEST
@@ -20,7 +21,9 @@ def write_if_changed(path, content):
     data = content.encode("utf-8") if isinstance(content, str) else content
     if path.exists() and path.read_bytes() == data:
         return False
-    path.write_bytes(data)
+    tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")  # a page loading meanwhile never sees half a file
+    tmp.write_bytes(data)
+    os.replace(tmp, path)
     return True
 
 
