@@ -3,6 +3,7 @@
 
     python3 pane.py model PLAN [--root DIR]                    rebuild the site, print the pane's summary
     python3 pane.py task  PLAN ID (--done|--undo) --revision R [--root DIR]   write one checkbox
+    python3 pane.py config PLAN JSON [--root DIR]              save Claude's config.json for the plan's site, then build
     python3 pane.py open  PLAN [--url URL] [--root DIR]        open the site (or URL) in the browser
     python3 pane.py serve PLAN [--root DIR]                    serve the site live (serve.py) until killed
 
@@ -12,6 +13,7 @@ where to look for the plan's site (out_dir), worked out here so the caller never
 
 stdout is always one JSON object with a "status":
     model  ok | error
+    config ok | error (an invalid config is not kept)
     task   applied | conflict | busy | not_found | not_a_task | error
     open   ok | error
     serve  serving (with "url", printed once the server listens; it then runs until killed) | error
@@ -93,6 +95,30 @@ def cmd_model(plan, root=None):
             **summary(regen.document.model)}
 
 
+def cmd_config(plan, text, root=None):
+    """Claude's config.json for the plan's site, written here because plan mode lets Claude edit only
+    the plan. Kept only if the site builds with it; otherwise the previous config is put back."""
+    try:
+        config = json.loads(text)
+    except ValueError as e:
+        return {"status": "error", "error": f"the config is not valid JSON: {e}"}
+    if not isinstance(config, dict):
+        return {"status": "error", "error": "the config must be a JSON object"}
+    path = out_dir(plan, root) / "config.json"
+    old = path.read_bytes() if path.exists() else None
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(config, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    built = cmd_model(plan, root)
+    if built["status"] != "ok":
+        if old is None:
+            path.unlink()
+        else:
+            path.write_bytes(old)
+        before = cmd_model(plan, root)  # the site as it was; its section ids help fix the config
+        return {**built, "sections": [x["id"] for x in before.get("sections", [])]}
+    return {"status": "ok", "config": str(path)}
+
+
 def cmd_task(plan, task_id, done, rev, root=None):
     try:
         r = sync.update_task(plan, task_id, done, rev, out=out_dir(plan, root), timeout=LOCK_TIMEOUT)
@@ -157,6 +183,10 @@ def main(argv=None):
     state.add_argument("--undo", action="store_true")
     t.add_argument("--revision", required=True)
     t.add_argument("--root")
+    c = sub.add_parser("config")
+    c.add_argument("plan")
+    c.add_argument("json")
+    c.add_argument("--root")
     o = sub.add_parser("open")
     o.add_argument("plan")
     o.add_argument("--url")
@@ -170,6 +200,8 @@ def main(argv=None):
         res = cmd_model(args.plan, args.root)
     elif args.cmd == "task":
         res = cmd_task(args.plan, args.task_id, args.done, args.revision, args.root)
+    elif args.cmd == "config":
+        res = cmd_config(args.plan, args.json, args.root)
     elif args.cmd == "open":
         res = cmd_open(args.plan, args.url, args.root)
     else:

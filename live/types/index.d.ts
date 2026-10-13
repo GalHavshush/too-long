@@ -52,10 +52,13 @@ export type PaneView = {
 export type PlanMode = {
   /** The plan file of the current or latest planning, as the engine named it. */
   path: string
+  /** The band above the prompt offers to open this plan in the pane: set when plan mode names a new
+   * file, cleared once the pane shows it or the person dismisses the offer. */
+  isOffered?: boolean
 }
 
 declare module 'claude-code' {
   interface PluginState {
-    'too-long-pane': { view: PaneView; plan: PlanMode }
+    'too-long-live': { view: PaneView; plan: PlanMode }
   }
 }

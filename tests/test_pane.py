@@ -139,4 +139,16 @@ third = project / "docs" / "third.md"
 third.write_text("# Third\n", encoding="utf-8")
 assert pane.out_dir(third, project) == (project / "docs" / ".too-long" / "third").resolve()
 
+# config: Claude's config for a plan in plan mode (it may edit only the plan), kept only if it builds.
+code, r, err = run("config", third, json.dumps({"views": ["overview", "document"], "tldr": ["Three."]}), "--root", project)
+cfg = project / "docs" / ".too-long" / "third" / "config.json"
+assert code == 0 and r["status"] == "ok" and Path(r["config"]) == cfg.resolve(), (r, err)
+assert '"tldr": ["Three."]' in (cfg.parent / "data.js").read_text(encoding="utf-8")
+code, r, _ = run("config", third, json.dumps({"notes": {"no-such-section": "x"}}), "--root", project)
+assert code == 1 and r["status"] == "error" and "no-such-section" in r["error"], r
+assert json.loads(cfg.read_text(encoding="utf-8"))["tldr"] == ["Three."]  # the good config is back
+assert '"tldr": ["Three."]' in (cfg.parent / "data.js").read_text(encoding="utf-8")
+code, r, _ = run("config", third, "{not json", "--root", project)
+assert code == 1 and "not valid JSON" in r["error"], r
+
 print("pane: ok")

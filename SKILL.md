@@ -198,7 +198,7 @@ Markdown (an edit, a tick in the side pane) reloads the open page. It rebuilds o
 own, with no LLM involved. If you cannot keep a process running, open
 `<out>/index.html` instead: task checks are then saved in that browser only.
 
-If the `mcp__too-long-pane__show_plan` tool is available (the too-long side pane for
+If the `mcp__too-long-live__show_plan` tool is available (the too-long side pane for
 Claude Code), call it with the Markdown path: the pane shows the same plan, using this
 site and its config.
 
@@ -288,7 +288,7 @@ The Markdown is the source of truth.
   (doc and task ids, `build.json`), `model.py` (`build_document`, schema in `docs/model.md`),
   `regen.py` (`Regenerator`), `website.py` (writes the site files), `sync.py` (`update_task`:
   writes a checkbox to the Markdown). `scripts/serve.py`: local server, a thin transport over them.
-- `scripts/pane.py`: JSON interface (`model`, `task`, `open`, `serve`) for the Claude Code side pane in `hooks/`. It finds the
+- `scripts/pane.py`: JSON interface (`model`, `config`, `task`, `open`, `serve`) for the optional Claude Code side pane (`live/`), which runs it from this skill's install. It finds the
   plan's site through `build.json`, so the pane and the skill share one site per plan.
 - `scripts/run_tests.py`: runs every test in `tests/` (`python3 scripts/run_tests.py`).
 - `video.md`, `scripts/video.py`, `scripts/render_video.mjs`, `scripts/args.py`, `assets/video/`: video mode (`--video`).

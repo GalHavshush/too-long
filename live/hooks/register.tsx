@@ -1,6 +1,7 @@
 // too-long side pane: shows a plan's progress, stages, tasks, decisions, risks and files beside the
-// transcript, opened when a plan is approved or by /too-long-pane. Ticking a task writes [x] into
-// the Markdown. All the work is done by scripts/pane.py (the same core as the website); this file
+// transcript, opened by /too-long-live, the button offered above the prompt for a new plan, or the skill.
+// Ticking a task writes [x] into the Markdown. All the work is done by the too-long skill's
+// scripts/pane.py (the same core as its website), run from where the skill is installed; this file
 // only decides when to call it and draws what it prints.
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, FsStat, Register, RenderElement, Timer } from 'claude-code'
@@ -8,15 +9,37 @@ import type { EngineInterface, FsStat, Register, RenderElement, Timer } from 'cl
 import type { PaneDoc, PaneView, PlanFile, PlanMode, Tab, Task } from '../types'
 
 const PANE = 'too-long'
-const USAGE = 'Usage: /too-long-pane <path-to-plan.md>'
+const USAGE = 'Usage: /too-long-live <path-to-plan.md>'
 const TICK_MS = 1000
 const MAX_ROWS = 200
-const NO_PYTHON = 'too-long needs Python 3.9+ on PATH (tried python3, python). Install it, then run /too-long-pane again.'
+const NO_PYTHON = 'too-long needs Python 3.9+ on PATH (tried python3, python). Install it, then run /too-long-live again.'
+const NO_SKILL = (dir: string) => `The too-long pane runs the too-long skill, which is not installed in ${dir}. `
+  + `Install it: git clone https://github.com/GalHavshush/too-long ${dir}`
 const TABS: [Tab, string][] = [['roadmap', 'Roadmap'], ['tasks', 'Tasks'], ['highlights', 'Decisions'], ['files', 'Files']]
 
 const EMPTY: PaneView = { status: 'idle', path: '', doc: null, error: '', notice: '', pending: '', tab: 'roadmap', showDone: false }
-const view = atom({ plugin: 'too-long-pane', key: 'view' } as const, EMPTY)
-const plan = atom({ plugin: 'too-long-pane', key: 'plan' } as const, { path: '' } as PlanMode)
+const view = atom({ plugin: 'too-long-live', key: 'view' } as const, EMPTY)
+const plan = atom({ plugin: 'too-long-live', key: 'plan' } as const, { path: '' } as PlanMode)
+
+// What Claude is told, appended to the engine's own plan-mode notes so it reads it in the right
+// phase: while planning (with the first, full reminder), and once when the plan is approved.
+const PLANNING = 'too-long: Write the plan so it can be reviewed and tracked: each step a Markdown checkbox '
+  + '(`- [ ] ...`) under its phase heading, and key points labelled `Decision:` (with `Rejected:`), `Risk:` '
+  + '(with `Mitigation:`) or `Question:`. If the plan is long (about 60+ lines or 4+ sections), then before '
+  + 'ExitPlanMode ask the user with AskUserQuestion whether they want a visual review of it and what for '
+  + '(easier reading, a roadmap, the architecture, tracking progress). If they do, call '
+  + 'mcp__too-long-live__show_plan with the plan path and a config chosen for that goal (its description '
+  + 'says how), then call ExitPlanMode as usual. Short plans go straight to ExitPlanMode.'
+const tracking = (path: string) => `too-long: The approved plan is ${path}. As you finish each of its \`- [ ]\` `
+  + 'tasks, change that box to `- [x]` in the file right away, and change nothing else in the plan. The user '
+  + 'follows progress in the too-long pane.'
+const CONFIG_HELP = 'Optional `config` (plan mode lets you edit only the plan, so pass it here instead of writing '
+  + 'config.json): {"views": [...], "tldr": [...], "notes": {sectionId: text}, "diagrams": [{"title", '
+  + '"description", "mermaid", "sources": [sectionId]}], "dependencies": {stageId: [stageId]}}. Views: overview, '
+  + 'roadmap, tasks, highlights, diagrams, files, steps, document (first = landing page; document is always '
+  + 'included). A section id is its heading as a slug ("## Phase 2: Sync" -> "phase-2-sync"). Add only what the '
+  + 'plan states or clearly implies: it is shown labelled as inferred. An invalid config is refused with the '
+  + 'valid section ids.'
 
 type Result = { status: string; error?: string; revision?: string; [k: string]: unknown }
 
@@ -45,13 +68,26 @@ async function findPython($: EngineInterface): Promise<string | null> {
   return null
 }
 
+// The installed skill's pane.py, the project's install before the personal one: the mod holds none
+// of the rules, the skill does.
+async function paneScript($: EngineInterface): Promise<{ script: string } | { error: string }> {
+  const personal = `${(await $.env.get('CLAUDE_CONFIG_DIR')) ?? `${(await $.env.get('HOME')) ?? '~'}/.claude`}/skills/too-long`
+  for (const dir of [`${await $.session.root()}/.claude/skills/too-long`, personal]) {
+    const script = `${dir}/scripts/pane.py`
+    if (await statFile($, script)) return { script }
+  }
+  return { error: NO_SKILL(personal) }
+}
+
 async function runPane($: EngineInterface, args: string[]): Promise<Result> {
   const exe = await findPython($)
   if (!exe) return { status: 'error', error: NO_PYTHON }
+  const found = await paneScript($)
+  if ('error' in found) return { status: 'error', error: found.error }
   let r
   try {
     // --root: the project, for file status and for finding the plan's site (shared with the skill)
-    r = await $.process.run([exe, `${$.plugin.root}/scripts/pane.py`, ...args, '--root', await $.session.root()], { timeoutMs: 120_000 })
+    r = await $.process.run([exe, found.script, ...args, '--root', await $.session.root()], { timeoutMs: 120_000 })
   } catch (err) {
     return { status: 'error', error: `could not run too-long: ${String(err)}` }
   }
@@ -173,15 +209,23 @@ async function expandPath($: EngineInterface, path: string): Promise<string> {
 }
 
 // Shows the plan in the pane. `isAsked`: the person's command (the pane is placed at any width);
-// otherwise an approval opened it, and a pane the surface did not place gets a toast instead.
-async function show($: EngineInterface, path: string, isAsked: boolean): Promise<string> {
+// otherwise the skill opened it, and a pane the surface did not place gets a toast instead.
+async function show($: EngineInterface, path: string, isAsked: boolean, config?: object): Promise<string> {
   const s = await statFile($, path)
   if (!s) return `Plan not found: ${path}`
   const real = s.realPath ?? path
+  if (config) {
+    const r = await runPane($, ['config', real, JSON.stringify(config)])
+    if (r.status !== 'ok') {
+      const ids = Array.isArray(r.sections) ? ` Section ids: ${r.sections.join(', ')}.` : ''
+      return `The config was not used: ${r.error ?? r.status}.${ids} Fix it and call show_plan again.`
+    }
+  }
   await patch($, v => (v.path === real ? v : { ...EMPTY, tab: v.tab, status: 'loading', path: real }))
   await $.store.set(await storeKey($), real)
+  await update($, plan, p => (p.isOffered && (p.path === path || p.path === real) ? { ...p, isOffered: false } : p))
   const opened = await $.ui.open({ id: PANE, title: 'too-long' })
-  if (!opened.isPlaced && !isAsked) $.ui.toast('too-long: plan ready. Run /too-long-pane to open it.')
+  if (!opened.isPlaced && !isAsked) $.ui.toast('too-long: plan ready. Run /too-long-live to open it.')
   // The first build runs on a timer, outside the hook that asked for it.
   $.clock.after(0, () => void startWatching($, real))
   return `Showing ${real} in the too-long pane.`
@@ -221,8 +265,9 @@ function stopServer() {
 // Runs `pane.py serve` for as long as the loop reads it; the first line it prints says where.
 async function runServer($: EngineInterface, s: Server) {
   const exe = await findPython($)
-  if (!exe || server !== s) return s.found(null)
-  const stream = $.process.spawn({ argv: [exe, `${$.plugin.root}/scripts/pane.py`, 'serve', s.path, '--root', await $.session.root()] })
+  const found = await paneScript($)
+  if (!exe || 'error' in found || server !== s) return s.found(null)
+  const stream = $.process.spawn({ argv: [exe, found.script, 'serve', s.path, '--root', await $.session.root()] })
   s.stop = () => void stream.return(undefined as never)
   let first = ''
   try {
@@ -263,18 +308,9 @@ async function openSite($: EngineInterface, path: string) {
 
 // ---- plan mode ----
 
+// A new plan file is offered once; the same file named again (each plan-mode turn) changes nothing.
 async function remember($: EngineInterface, path: string) {
-  if ((await read($, plan)).path !== path) await update($, plan, () => ({ path }))
-}
-
-// The plan was approved (ExitPlanMode succeeded): open the file this planning wrote.
-async function approved($: EngineInterface) {
-  const { path } = await read($, plan)
-  if (!path) {
-    $.ui.toast(`Plan approved. ${USAGE}`)
-    return
-  }
-  await show($, path, false)
+  if ((await read($, plan)).path !== path) await update($, plan, () => ({ path, isOffered: true }))
 }
 
 // ---- drawing ----
@@ -367,13 +403,21 @@ function fileTree(files: PlanFile[]): TreeRow[] {
 
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
-    await $.command.register({ name: 'too-long-pane', description: 'Show a Markdown plan in the too-long side pane', argumentHint: '[path-to-plan.md]' })
+    await $.command.register({ name: 'too-long-live', description: 'Show a Markdown plan in the too-long side pane', argumentHint: '[path-to-plan.md]' })
     // The skill shows the plan it just built in the pane through this tool.
     await $.tool.register({
       name: 'show_plan',
       description: 'Show a Markdown plan in the too-long side pane beside the transcript, live: its tasks can be ticked '
-        + 'there and stay in sync with the file and the too-long site. Call it after building a too-long site for a plan.',
-      inputSchema: { type: 'object', properties: { path: { type: 'string', description: 'The Markdown file' } }, required: ['path'] },
+        + 'there and stay in sync with the file and the too-long site. Call it after building a too-long site for a '
+        + `plan, or in plan mode when the user wants a visual review. ${CONFIG_HELP}`,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          path: { type: 'string', description: 'The Markdown file' },
+          config: { type: 'object', description: 'The site config for this plan (views and inferred extras)' },
+        },
+        required: ['path'],
+      },
       isDeferred: false,
     })
     // After a reload the pane may still be open: watch its plan again (the old timer is gone).
@@ -388,18 +432,19 @@ export const register: Register = on => {
     return next(e)
   })
 
-  on('command.run', { command: 'too-long-pane' }, async ($, e) => {
+  on('command.run', { command: 'too-long-live' }, async ($, e) => {
     const asked = await expandPath($, e.args)
     const path = asked || (await read($, plan)).path || String((await $.store.get(await storeKey($))) ?? '')
     if (!path) return { text: USAGE }
     return { text: await show($, path, true) }
   })
 
-  on('tool.call', { tool: 'mcp__too-long-pane__show_plan' }, async ($, e) => {
-    const input = e.input as { path?: unknown }
+  on('tool.call', { tool: 'mcp__too-long-live__show_plan' }, async ($, e) => {
+    const input = e as unknown as { path?: unknown; config?: unknown } // a tool's arguments sit beside `tool`
     const path = await expandPath($, typeof input.path === 'string' ? input.path : '')
-    const text = path ? await show($, path, false) : 'Give the path of the Markdown plan.'
-    return { result: { text }, text }
+    const config = input.config && typeof input.config === 'object' ? input.config : undefined
+    const text = path ? await show($, path, false, config) : 'Give the path of the Markdown plan.'
+    return { result: text } // a string: what the model reads
   })
 
   on('ui.close', { id: PANE }, ($, e, next) => {
@@ -407,22 +452,57 @@ export const register: Register = on => {
     return next(e)
   }).catch(($, e, next) => next(e))
 
-  // Which file the plan is written to. These notes only remember the path: the engine renders
-  // them again for old rows (when a mod loads, say), so they never open anything.
+  // Which file the plan is written to, and what Claude is told about it. These notes only remember
+  // the path and add words: the engine renders them again for old rows (when a mod loads, say), so
+  // they never open anything.
   for (const type of ['plan_mode', 'plan_mode_reentry', 'plan_mode_exit'] as const) {
     on('prompt.attachment', { type }, async ($, e, next) => {
       const path = e.detail?.planFilePath
       if (path) await remember($, path)
-      return next(e)
+      const r = await next(e)
+      if (r.text === null) return r
+      if (e.type === 'plan_mode' && e.detail?.reminder === 'full') return { text: `${r.text}\n\n${PLANNING}` }
+      // ponytail: told once at approval; a compaction may drop it. A system-prompt section while a plan is tracked if so.
+      if (e.type === 'plan_mode_exit' && e.detail?.hasPlan && path) return { text: `${r.text}\n\n${tracking(path)}` }
+      return r
     })
   }
 
-  // Approval: the ExitPlanMode call itself, which happens once and is never replayed.
-  on('tool.call', { tool: 'ExitPlanMode' }, async ($, e, next) => {
-    const r = await next(e)
-    if (r.result !== undefined && !r.isError) $.clock.after(0, () => void approved($)) // not a deny or a rejection
-    return r
-  }).catch(($, e, next) => next(e)) // never in the way of the tool call
+  // The band above the prompt offers the plan as soon as plan mode names its file, through the
+  // approval and after it, until the pane shows it or the person dismisses it. Nothing opens by
+  // itself. (The terminal's approval screen hides the band while it is up; a desktop's may not.)
+  on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
+    const p = await read($, plan)
+    if (e.props.hasSurvey || !p.isOffered || !p.path) return next(e)
+    const { Box, Button, Text } = $.ui.resolve(e)
+    return (
+      <Box flexDirection="row" columnGap={2}>
+        <Button key="open-plan" label="Open plan in too-long" variant="primary" onPress={() => void show($, p.path, true)} />
+        <Text dimColor wrap="truncate-end">Progress, stages and tasks you can tick, beside the transcript</Text>
+        <Button key="dismiss-plan" label="×" plain dimColor role="dismiss"
+          onPress={() => void update($, plan, x => ({ ...x, isOffered: false }))} />
+      </Box>
+    )
+  })
+
+  // The plan's own row in the transcript (the ExitPlanMode call) carries the button too: the
+  // transcript stays in view beside a desktop's approval card, and the row keeps it afterwards.
+  on('ui.render', { component: 'ToolUse' }, async ($, e, next) => {
+    const drawn = await next(e)
+    if (e.props.tool !== 'ExitPlanMode') return drawn
+    const output = e.props.output as { filePath?: unknown } | undefined
+    const path = typeof output?.filePath === 'string' ? output.filePath : (await read($, plan)).path
+    if (!path) return drawn
+    const { Box, Button } = $.ui.resolve(e)
+    return (
+      <Box flexDirection="column">
+        {drawn}
+        <Box marginTop={1}>
+          <Button key={`open-plan:${e.props.tool_use_id}`} label="Open plan in too-long" onPress={() => void show($, path, true)} />
+        </Box>
+      </Box>
+    )
+  })
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     const { Box, Text, Button } = $.ui.resolve(e)
@@ -474,12 +554,11 @@ export const register: Register = on => {
       if (t.browser_only) return <Text key={`t:${t.id}`} dimColor wrap="wrap">{`·  ${plain(t.text)}  (site only)`}</Text>
       const isPending = v.pending === t.id
       return (
-        <Box key={`row:${t.id}`} hover={{ backgroundColor: 'subtle' }}>
-          <Button key={`t:${t.id}`} plain dimColor={!!v.pending && !isPending} onPress={() => void toggle($, t, doc.revision)}>
-            <Text color={t.done ? 'success' : 'subtle'}>{isPending ? '◌' : t.done ? '☑' : '☐'}</Text>
-            {'  '}
-            <Text dimColor={t.done} strikethrough={t.done}>{plain(t.text)}</Text>
-          </Button>
+        // The box alone is the Button (a plain string label, as every engine takes); the text beside it.
+        <Box key={`row:${t.id}`} flexDirection="row" columnGap={2} hover={{ backgroundColor: 'subtle' }}>
+          <Button key={`t:${t.id}`} label={isPending ? '◌' : t.done ? '☑' : '☐'} plain dimColor={!t.done || (!!v.pending && !isPending)}
+            onPress={() => void toggle($, t, doc.revision)} />
+          <Text dimColor={t.done} strikethrough={t.done} wrap="wrap">{plain(t.text)}</Text>
         </Box>
       )
     }
@@ -594,10 +673,8 @@ export const register: Register = on => {
         {v.notice ? <Box key="notice" marginTop={1}><Text color="warning" wrap="wrap">{`⚠ ${v.notice}`}</Text></Box> : null}
         <Box flexDirection="row" flexWrap="wrap" columnGap={2} marginTop={1} paddingX={1}>
           {TABS.map(([id, label], i) => (
-            <Button key={`tab:${id}`} plain hotkey={e.surface === 'terminal' ? String(i + 1) : undefined}
-              onPress={() => void update($, view, x => ({ ...x, tab: id }))}>
-              {v.tab === id ? <Text bold color="claude">{label}</Text> : <Text dimColor>{label}</Text>}
-            </Button>
+            <Button key={`tab:${id}`} label={label} plain dimColor={v.tab !== id} hotkey={e.surface === 'terminal' ? String(i + 1) : undefined}
+              onPress={() => void update($, view, x => ({ ...x, tab: id }))} />
           ))}
         </Box>
         <Box flexDirection="column" marginTop={1}>{body}</Box>

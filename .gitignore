@@ -5,4 +5,4 @@ examples/trailhead-video/audio/
 examples/trailhead-video/render/
 
 # Written by Claude Code when it loads the side pane mod
-.claude-plugin/types/
+live/.claude-plugin/types/

@@ -8,6 +8,23 @@ Claude just wrote you a long implementation plan. Phases, checklists, decisions,
 
 ![Demo: overview, roadmap, ticking tasks, highlights, diagrams, files, document and step-by-step views of an example plan](docs/demo.gif)
 
+## Three ways to use it
+
+```mermaid
+flowchart LR
+    P[("📄 plan.md<br/>the one source of truth")]
+    P --> S["🌐 <b>Site</b><br/>/too-long plan.md<br/>read, navigate, tick"]
+    P --> V["🎬 <b>Video</b><br/>/too-long plan.md --video<br/>a 2 minute explainer"]
+    P <--> L["🪟 <b>Live</b><br/>/too-long-live<br/>review before approval,<br/>track after"]
+    L <-.same site.-> S
+```
+
+| | What it is | Install | Use |
+|---|---|---|---|
+| 🌐 **Site** | The plan as a small website: overview, roadmap, tasks, decisions, diagrams, files | the skill | `/too-long plan.md` |
+| 🎬 **Video** | A narrated ~2 minute explainer, rendered on your machine | the skill (+ Chrome, ffmpeg, Node) | `/too-long plan.md --video` |
+| 🪟 **Live** | A side pane in Claude Code: review the plan before you approve it, track it as Claude works | the skill **+** the `too-long-live` plugin | `/too-long-live` |
+
 ## What you get
 
 - **The gist first.** An overview with a TL;DR, progress and every section at a glance.
@@ -166,33 +183,108 @@ The generated site is committed in [`examples/trailhead-site/`](examples/trailhe
 
 ![Document view, dark mode](docs/screenshots/document.png)
 
-## Side pane in Claude Code
+## too-long-live: review and track plans in Claude Code
 
-When you approve a plan in plan mode, a **too-long pane** opens beside the transcript. It shows:
-- the plan's progress and roadmap stages, with the next open tasks;
-- every task, which you can tick: the `[x]` is written into the plan;
-- decisions, risks with their mitigations, and open questions;
-- the files the plan mentions, marked as already in the project or still to create;
-- a button that opens the full site, served live on 127.0.0.1: ticks there are written to the plan too, and the page and the pane follow each other.
-
-The pane follows edits to the plan within a couple of seconds. Nothing in it is inferred, and no model is called.
-
-Install it once, from a terminal session (it then loads in the desktop app's Code tab too; Claude Code 2.1.275 or later):
+**too-long-live** is an optional add-on to the skill. It puts the plan in a pane beside the transcript, and teaches Claude to write plans you can review and to tick them off as it works.
 
 ```text
-/plugin install too-long-pane --marketplace GalHavshush/too-long
+┌─ transcript ───────────────────────┐┌─ too-long ─────────────────────────┐
+│ > Plan a todo-list web app         ││ ╭────────────────────────────────╮ │
+│                                    ││ │ Todo-list web app              │ │
+│ ⏺ Updated plan                     ││ │  ◐ 12/30 tasks done            │ │
+│                                    ││ │  Phase 3: Frontend             │ │
+│ ⏺ Plan written.                    ││ ╰────────────────────────────────╯ │
+│                                    ││  Roadmap  Tasks  Decisions  Files  │
+│ [ Open plan in too-long ]  ×       ││ ╭─ NEXT UP ──────────────────────╮ │
+│ ❯                                  ││ │ ☑ Create the schema            │ │
+│                                    ││ │ ☐ Add the login form           │ │
+│                                    ││ ╰────────────────────────────────╯ │
+│                                    ││  [ Open full site ↗ ]              │
+└────────────────────────────────────┘└────────────────────────────────────┘
 ```
 
-Answer `y` to add the marketplace and pick the user scope. This also installs the too-long skill, so you don't need the `git clone` as well.
+### The loop
 
-To open a plan yourself, run `/too-long-pane path/to/plan.md`. With no path, it opens the plan of the current or latest planning in this project.
+```mermaid
+sequenceDiagram
+    actor You
+    participant C as Claude
+    participant M as too-long-live
+    participant F as plan.md
+    Note over You,F: 1. Planning (plan mode)
+    M-->>C: write - [ ] tasks, Decision:/Risk: labels
+    C->>F: writes the plan
+    C->>You: Long plan. Want a visual review? (and for what?)
+    You->>C: Roadmap / tracking
+    C->>M: show_plan(path, config)
+    M->>You: pane opens, site built with the views you chose
+    Note over You,F: 2. Approval
+    You->>C: Accept
+    M-->>C: tick tasks as you finish them
+    Note over You,F: 3. Implementation
+    loop for every task
+        C->>F: - [ ] becomes - [x]
+        F-->>M: change seen
+        M->>You: pane and site update
+    end
+    You->>F: you can tick too (pane, site or file)
+```
 
-The site the pane builds goes next to the plan, in `<plan's folder>/.too-long/<plan name>/`, e.g. `~/.claude/plans/.too-long/<name>/`.
+| Moment | What happens | You do |
+|---|---|---|
+| 📝 **Claude plans** | The plan is written as `- [ ]` tasks with labelled decisions and risks. For a **long plan** (about 60+ lines or 4+ sections) Claude asks whether you want a visual review, and what for | Pick a goal, or skip |
+| 🔎 **Review** | The pane and site open with views chosen for your goal (roadmap, TL;DR, diagrams, dependencies) | Read, ask for changes |
+| ✅ **Approval** | The normal Accept / Reject / Revise card, unchanged | Accept |
+| 🔨 **Claude builds** | Claude ticks each task in the plan as it finishes it | Watch the pane |
+| 🔁 **Any time** | `/too-long-live` reopens the project's last plan with every tick in place, even in a new conversation | Run it |
 
-The pane is a Claude Code mod (`hooks/register.tsx`) over the same Python core, through `scripts/pane.py`. It needs Python 3.9+ on `PATH`. To work on it:
-- load the repo with `claude --plugin-dir .`;
-- validate it with `claude plugin validate .`;
-- run its tests with `claude plugin test .`.
+Nothing opens on its own, and the pane itself calls no model.
+
+### One source of truth
+
+```mermaid
+flowchart TB
+    MD[("plan.md<br/>the only truth")]
+    MD --- A["Claude<br/>ticks as it works"]
+    MD --- B["Pane<br/>tick with a click"]
+    MD --- C["Site<br/>tick in the browser"]
+    MD --- D["You<br/>edit the file"]
+    style MD fill:#0f766e,color:#fff
+```
+
+Every tick, from anywhere, is one `[ ]` → `[x]` character written into the Markdown. A write based on an old version of the file is refused, so nobody's edit is silently overwritten.
+
+### The pane
+
+- the plan's progress and roadmap stages, with the next open tasks;
+- every task, which you can tick;
+- decisions, risks with their mitigations, and open questions;
+- the files the plan mentions, marked as already in the project or still to create;
+- an **Open full site** button: the same site, served live on 127.0.0.1.
+
+### Install
+
+The pane runs the skill's own scripts from `~/.claude/skills/too-long`, so install the skill first (see [Installation](#installation)), then the add-on, from a terminal session (it then loads in the desktop app's Code tab too; Claude Code 2.1.275 or later):
+
+```text
+/plugin install too-long-live --marketplace GalHavshush/too-long
+```
+
+Answer `y` to add the marketplace and pick the user scope. Without the skill the pane tells you how to install it.
+
+### Where things are
+
+| Surface | Offer to open the pane |
+|---|---|
+| Terminal | Claude's review question, `/too-long-live`, and a **[Open plan in too-long]** button above the prompt (hidden while the approval screen is up) |
+| Desktop app | Claude's review question and `/too-long-live` (the app does not draw mod buttons near plan approval) |
+
+The site the pane builds goes next to the plan, in `<plan's folder>/.too-long/<plan name>/`, e.g. `~/.claude/plans/.too-long/<name>/`. It is the same site the skill builds and enriches.
+
+The add-on is a Claude Code mod in [`live/`](live/hooks/register.tsx), over the skill's Python core through `scripts/pane.py`. It needs Python 3.9+ on `PATH`. To work on it:
+- load it with `claude --plugin-dir live`;
+- validate it with `claude plugin validate live`;
+- run its tests with `claude plugin test live`.
 
 ## Video mode
 
@@ -388,7 +480,7 @@ This runs everything:
 - unit tests for identity, config, regeneration, sync, the server, the CLI and the side pane's `pane.py`
 - browser tests (`tests/e2e.test.mjs`) that build sites and drive headless Chrome over the DevTools protocol, with no npm packages
 
-The side pane's own tests run in Claude Code's mod test kit: `claude plugin test .`. The browser tests need Node 22+ and Chrome and skip themselves without them. After an intended parser change, regenerate the golden files with `python3 tests/test_golden.py --update` and `python3 tests/test_semantic.py --update`, and review the diff.
+The side pane's own tests run in Claude Code's mod test kit: `claude plugin test live`. The browser tests need Node 22+ and Chrome and skip themselves without them. After an intended parser change, regenerate the golden files with `python3 tests/test_golden.py --update` and `python3 tests/test_semantic.py --update`, and review the diff.
 
 ## Troubleshooting
 

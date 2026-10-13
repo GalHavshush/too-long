@@ -5,12 +5,13 @@ import { expect, mock, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
 import type { On } from 'claude-code'
 
-const PLUGIN = 'too-long-pane'
+const PLUGIN = 'too-long-live'
 const PANE_PROPS = { title: 'too-long', isFocused: false, bodyColumns: 60, placement: 'dock', scroll: { offset: 0, bodyRows: 40 }, view: {} } as const
 
 type Fake = {
   files: Map<string, { mtimeMs: number; size: number }>
   calls: string[][]
+  scripts: string[]
   toasts: string[]
   opened: string[]
   task: { status: string; revision?: string }
@@ -46,15 +47,17 @@ function doc(f: Fake, path: string) {
 
 function fake(on: On): Fake {
   const f: Fake = {
-    files: new Map(), calls: [], toasts: [], opened: [], task: { status: 'applied' }, revision: 1, done: new Set(),
+    files: new Map(), calls: [], scripts: [], toasts: [], opened: [], task: { status: 'applied' }, revision: 1, done: new Set(),
     isPlaced: true, isModelBroken: false, isDesignDoc: false, holdModel: null, clock: mock.clock(on, { now: 1000 }),
   }
+  f.files.set('/home/me/.claude/skills/too-long/scripts/pane.py', { mtimeMs: 1, size: 1 }) // the installed skill
   mock.store(on)
   on('process.run', async ($, e) => {
     const argv = [...e.argv]
     if (argv[1] === '-c') return { value: { exitCode: 0, stdout: '', stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }
     const args = argv.slice(2)
     f.calls.push(args)
+    f.scripts.push(argv[1] ?? '')
     let out: unknown
     if (args[0] === 'model') {
       if (f.holdModel) await f.holdModel
@@ -71,6 +74,9 @@ function fake(on: On): Fake {
         args[3] === '--done' ? f.done.add(args[2] ?? '') : f.done.delete(args[2] ?? '')
         f.revision++
       }
+    } else if (args[0] === 'config') {
+      const config = JSON.parse(args[2] ?? '{}')
+      out = config.notes?.nope ? { status: 'error', error: "config notes has unknown section id 'nope'", sections: ['phase-1', 'phase-2'] } : { status: 'ok' }
     } else out = { status: 'ok' }
     return { value: { exitCode: 0, stdout: JSON.stringify(out), stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }
   })
@@ -80,7 +86,7 @@ function fake(on: On): Fake {
     return { value: { kind: 'file' as const, size: s.size, mtimeMs: s.mtimeMs, isLink: false, realPath: e.path } }
   })
   on('session.root', () => ({ value: '/proj' }))
-  on('env.get', () => ({ value: '/home/me' }))
+  on('env.get', ($, e) => ({ value: e.name === 'HOME' ? '/home/me' : undefined }))
   on('command.register', ($, e) => ({ value: { command: e.name } }))
   on('ui.open', ($, e) => {
     f.opened.push(e.id)
@@ -102,7 +108,7 @@ function touch(f: Fake, path: string, size = 100) {
 }
 
 function run($: Engine, args: string) {
-  return $.command.run({ command: 'too-long-pane', args, origin: { kind: 'composer' }, presentation: { isFullscreen: true, columns: 200 } })
+  return $.command.run({ command: 'too-long-live', args, origin: { kind: 'composer' }, presentation: { isFullscreen: true, columns: 200 } })
 }
 
 // Stops the plan's watcher, as the session ending does (the kit cannot close a pane).
@@ -341,8 +347,8 @@ test('switching plans moves the one watcher; reopening keeps it', async ($, on) 
   await end($)
 })
 
-function note($: Engine, type: 'plan_mode' | 'plan_mode_exit', path: string) {
-  const detail = type === 'plan_mode' ? { planFilePath: path, hasPlan: true, reminder: 'full' as const } : { planFilePath: path, hasPlan: true }
+function note($: Engine, type: 'plan_mode' | 'plan_mode_exit', path: string, reminder: 'full' | 'sparse' = 'full') {
+  const detail = type === 'plan_mode' ? { planFilePath: path, hasPlan: true, reminder } : { planFilePath: path, hasPlan: true }
   return $.prompt.attachment({ type, text: type, origin: { kind: 'engine' }, detail } as never)
 }
 
@@ -350,48 +356,135 @@ function exitPlanMode($: Engine) {
   return $.tool.call({ tool: 'ExitPlanMode', input: {} } as never)
 }
 
-test('only the approval opens the plan; replayed notes never do', async ($, on) => {
+const BAND_PROPS = { hasSurvey: false, isWorking: true, maxRows: 10, bodyColumns: 80, scroll: { offset: 0, bodyRows: 10 }, view: {} } as const
+
+function mountBand($: Engine, on: On) {
+  on('ui.render', { component: 'AbovePrompt' }, ($, e) => { // the engine's own band
+    const { Box } = $.ui.resolve(e)
+    return <Box key="engine-band" />
+  })
+  return $.ui.mount({ plugin: PLUGIN, surface: 'desktop', component: 'AbovePrompt', requestId: 'band', props: BAND_PROPS })
+}
+
+test('a new plan is offered by a button; nothing opens until it is pressed', async ($, on) => {
   const f = fake(on)
-  let isRejected = false
-  on('tool.call', () => (isRejected ? { deny: 'The user rejected the plan' } : { result: {}, text: 'approved' }) as never)
-  f.files.set('/home/me/.claude/plans/old.md', { mtimeMs: 1, size: 10 })
+  on('tool.call', () => ({ result: {}, text: 'approved' }) as never)
+  const band = await mountBand($, on)
+  expect(await band.find({ key: 'open-plan' })).toBeUndefined() // no plan yet
   f.files.set('/home/me/.claude/plans/p.md', { mtimeMs: 1, size: 10 })
-  // The engine renders old rows again when a mod loads: an earlier planning and its exit.
-  await note($, 'plan_mode', '/home/me/.claude/plans/old.md')
-  await note($, 'plan_mode_exit', '/home/me/.claude/plans/old.md')
   await note($, 'plan_mode', '/home/me/.claude/plans/p.md')
+  await exitPlanMode($) // approval opens nothing; the offer stays after it
   await f.clock.settle()
   expect(f.opened).toEqual([])
-  isRejected = true
-  await exitPlanMode($)
-  await f.clock.settle()
-  expect(f.opened).toEqual([])
-  isRejected = false
-  await exitPlanMode($)
+  expect(await band.find({ key: 'open-plan' })).toBeDefined()
+  await band.press({ key: 'open-plan' })
   await f.clock.settle()
   expect(f.opened).toEqual(['too-long'])
-  expect(f.calls[0]?.[1]).toBe('/home/me/.claude/plans/p.md') // the latest planning's file
+  expect(f.calls[0]?.[1]).toBe('/home/me/.claude/plans/p.md')
+  expect(await band.find({ key: 'open-plan' })).toBeUndefined() // shown: offered no more
+  await note($, 'plan_mode', '/home/me/.claude/plans/p.md') // the same file again: no new offer
+  expect(await band.find({ key: 'open-plan' })).toBeUndefined()
+  await band.unmount()
   await end($)
 })
 
-test('an approval with no known plan file says how to open one', async ($, on) => {
+test('a dismissed offer stays dismissed until plan mode names another file', async ($, on) => {
   const f = fake(on)
-  on('tool.call', () => ({ result: {}, text: 'approved' }) as never)
-  await exitPlanMode($)
-  await f.clock.settle()
+  const band = await mountBand($, on)
+  await note($, 'plan_mode', '/plans/a.md')
+  await band.press({ key: 'dismiss-plan' })
+  expect(await band.find({ key: 'open-plan' })).toBeUndefined()
+  await note($, 'plan_mode', '/plans/a.md')
+  expect(await band.find({ key: 'open-plan' })).toBeUndefined()
+  await note($, 'plan_mode', '/plans/b.md')
+  expect(await band.find({ key: 'open-plan' })).toBeDefined()
   expect(f.opened).toEqual([])
-  expect(f.toasts.at(-1)).toContain('/too-long-pane <path-to-plan.md>')
+  await band.unmount()
 })
 
-test('an approval on a narrow terminal leaves a toast instead', async ($, on) => {
+test('the command takes the offer too', async ($, on) => {
   const f = fake(on)
-  on('tool.call', () => ({ result: {}, text: 'approved' }) as never)
-  f.isPlaced = false
+  const band = await mountBand($, on)
+  f.files.set('/plans/c.md', { mtimeMs: 1, size: 10 })
+  await note($, 'plan_mode', '/plans/c.md')
+  await run($, '')
+  await f.clock.settle()
+  expect(f.opened).toEqual(['too-long'])
+  expect(await band.find({ key: 'open-plan' })).toBeUndefined()
+  await band.unmount()
+  await end($)
+})
+
+test("the plan's row in the transcript carries the button", async ($, on) => {
+  const f = fake(on)
+  on('ui.render', { component: 'ToolUse' }, ($, e) => {
+    const { Text } = $.ui.resolve(e)
+    return <Text key="engine-row">{String(e.props.tool)}</Text>
+  })
   f.files.set('/plans/r.md', { mtimeMs: 1, size: 10 })
   await note($, 'plan_mode', '/plans/r.md')
-  await exitPlanMode($)
+  const props = (tool: string, id: string) => ({ tool_use_id: id, tool, input: {}, isRunning: true, isErrored: false, isInterrupted: false })
+  const other = await $.ui.mount({ plugin: PLUGIN, surface: 'desktop', component: 'ToolUse', requestId: 'r1', props: props('Bash', 'r1') } as never)
+  expect(await other.find({ key: 'open-plan:r1' })).toBeUndefined()
+  await other.unmount()
+  const row = await $.ui.mount({ plugin: PLUGIN, surface: 'desktop', component: 'ToolUse', requestId: 'r2', props: props('ExitPlanMode', 'r2') } as never)
+  expect(await row.find({ text: 'ExitPlanMode' })).toBeDefined() // the engine's row is kept
+  await row.press({ key: 'open-plan:r2' })
   await f.clock.settle()
-  expect(f.toasts.at(-1)).toContain('Run /too-long-pane to open it')
+  expect(f.opened).toEqual(['too-long'])
+  expect(f.calls[0]?.[1]).toBe('/plans/r.md')
+  await row.unmount()
+  await end($)
+})
+
+test('planning is told to write trackable plans and offer a review; approval, to tick tasks', async ($, on) => {
+  fake(on)
+  const full = await note($, 'plan_mode', '/plans/p.md')
+  expect(full.text).toContain('plan_mode') // the engine's own words stay first
+  expect(full.text).toContain('`- [ ] ...`')
+  expect(full.text).toContain('before ExitPlanMode ask the user with AskUserQuestion')
+  const sparse = await note($, 'plan_mode', '/plans/p.md', 'sparse')
+  expect(sparse.text).toBe('plan_mode') // said once, not every turn
+  const exit = await note($, 'plan_mode_exit', '/plans/p.md')
+  expect(exit.text).toContain('The approved plan is /plans/p.md')
+  expect(exit.text).toContain('change that box to `- [x]`')
+})
+
+test('show_plan saves the config Claude chose, or says how to fix it', async ($, on) => {
+  const f = fake(on)
+  f.files.set('/plans/v.md', { mtimeMs: 1, size: 10 })
+  const call = (config: object) => $.tool.call({ tool: 'mcp__too-long-live__show_plan', path: '/plans/v.md', config } as never)
+  const bad = await call({ notes: { nope: 'x' } }) as { result?: unknown }
+  expect(bad.result).toContain("unknown section id 'nope'") // a string: what the model reads
+  expect(bad.result).toContain('Section ids: phase-1, phase-2')
+  expect(f.opened).toEqual([]) // nothing shown with a refused config
+  await call({ views: ['roadmap'], tldr: ['Short.'] })
+  await f.clock.settle()
+  expect(f.calls[1]).toEqual(['config', '/plans/v.md', '{"views":["roadmap"],"tldr":["Short."]}', '--root', '/proj'])
+  expect(f.opened).toEqual(['too-long'])
+  await end($)
+})
+
+test('without the skill installed the pane says how to install it', async ($, on) => {
+  const f = fake(on)
+  f.files.delete('/home/me/.claude/skills/too-long/scripts/pane.py')
+  f.files.set('/plans/n.md', { mtimeMs: 1, size: 10 })
+  await run($, '/plans/n.md')
+  await f.clock.settle()
+  const ui = await mountPane($)
+  expect(await ui.find({ text: /not installed in \/home\/me\/\.claude\/skills\/too-long/ })).toBeDefined()
+  expect(f.calls).toEqual([])
+  await ui.unmount()
+  await end($)
+})
+
+test("a project's own install of the skill comes first", async ($, on) => {
+  const f = fake(on)
+  f.files.set('/proj/.claude/skills/too-long/scripts/pane.py', { mtimeMs: 1, size: 1 })
+  f.files.set('/plans/s.md', { mtimeMs: 1, size: 10 })
+  await run($, '/plans/s.md')
+  await f.clock.settle()
+  expect(f.scripts[0]).toBe('/proj/.claude/skills/too-long/scripts/pane.py')
   await end($)
 })
 
@@ -442,9 +535,9 @@ test('a live site that does not start falls back to the static copy', async ($, 
 test('the skill shows the plan it built through the show_plan tool', async ($, on) => {
   const f = fake(on)
   f.files.set('/home/me/proj/plan.md', { mtimeMs: 1, size: 10 })
-  const r = await $.tool.call({ tool: 'mcp__too-long-pane__show_plan', input: { path: '~/proj/plan.md' } } as never)
+  const r = await $.tool.call({ tool: 'mcp__too-long-live__show_plan', path: '~/proj/plan.md' } as never)
   await f.clock.settle()
-  expect(String((r as { text?: string }).text)).toContain('/home/me/proj/plan.md')
+  expect((r as { result?: unknown }).result).toContain('/home/me/proj/plan.md')
   expect(f.opened).toEqual(['too-long'])
   expect(f.calls[0]).toEqual(['model', '/home/me/proj/plan.md', '--root', '/proj'])
   await end($)

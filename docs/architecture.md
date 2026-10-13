@@ -88,7 +88,7 @@ An editor integration (for example a side panel that shows the current plan) nee
 - call `sync.update_task(md, id, done, model["revision"], out=out)` when a checkbox is clicked; on `Conflict`, refresh and render again
 - key its own UI state by `doc_id` and task id (with `sig`)
 
-The Claude Code side pane (`hooks/register.tsx`) does this through `scripts/pane.py`. Each refresh and each tick is one short subprocess that prints one JSON object (`model`, `task`, `open`), so the mod holds no copy of the rules.
+The Claude Code side pane (`live/hooks/register.tsx`, an add-on plugin) does this through the installed skill's `scripts/pane.py`. Each refresh and each tick is one short subprocess that prints one JSON object (`model`, `task`, `open`), so the mod holds no copy of the rules.
 
 ## Tests
 

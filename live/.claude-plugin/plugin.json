@@ -1,0 +1,9 @@
+{
+  "name": "too-long-live",
+  "version": "0.1.0",
+  "description": "too-long live in Claude Code: review a plan before you approve it, then track it as Claude works, in a side pane kept in sync with the plan and its site.",
+  "author": {
+    "name": "Gal Havshush"
+  },
+  "types": "./types/index.d.ts"
+}
