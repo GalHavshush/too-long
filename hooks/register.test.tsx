@@ -196,7 +196,7 @@ test('ticking a task writes it with the revision shown, then refreshes', async (
   const ui = await mountPane($)
   await ui.press({ key: 'tab:tasks' })
   await ui.press({ key: 't:a' })
-  expect(f.calls.find(c => c[0] === 'task')).toEqual(['task', '/plans/c.md', 'a', '--done', '--revision', 'rev1'])
+  expect(f.calls.find(c => c[0] === 'task')).toEqual(['task', '/plans/c.md', 'a', '--done', '--revision', 'rev1', '--root', '/proj'])
   expect(f.calls.at(-1)?.[0]).toBe('model')
   expect(await ui.find({ text: /1\/3 tasks/ })).toBeDefined()
   expect(await ui.find({ key: 't:a' })).toBeUndefined() // done tasks fold away
@@ -414,8 +414,8 @@ test('Open full site starts the live site once and opens its address', async ($,
   await pressSettled(f, ui, 'open-site')
   expect(spawns).toEqual([['serve', '/plans/t.md', '--root', '/proj']])
   expect(f.calls.filter(c => c[0] === 'open')).toEqual([
-    ['open', '/plans/t.md', '--url', 'http://127.0.0.1:4321/'],
-    ['open', '/plans/t.md', '--url', 'http://127.0.0.1:4321/'],
+    ['open', '/plans/t.md', '--url', 'http://127.0.0.1:4321/', '--root', '/proj'],
+    ['open', '/plans/t.md', '--url', 'http://127.0.0.1:4321/', '--root', '/proj'],
   ])
   stop()
   await ui.unmount()
@@ -433,8 +433,19 @@ test('a live site that does not start falls back to the static copy', async ($, 
   await f.clock.settle()
   const ui = await mountPane($)
   await pressSettled(f, ui, 'open-site')
-  expect(f.calls.filter(c => c[0] === 'open')).toEqual([['open', '/plans/u.md']])
+  expect(f.calls.filter(c => c[0] === 'open')).toEqual([['open', '/plans/u.md', '--root', '/proj']])
   expect(f.toasts.at(-1)).toContain('opened the static copy')
   await ui.unmount()
+  await end($)
+})
+
+test('the skill shows the plan it built through the show_plan tool', async ($, on) => {
+  const f = fake(on)
+  f.files.set('/home/me/proj/plan.md', { mtimeMs: 1, size: 10 })
+  const r = await $.tool.call({ tool: 'mcp__too-long-pane__show_plan', input: { path: '~/proj/plan.md' } } as never)
+  await f.clock.settle()
+  expect(String((r as { text?: string }).text)).toContain('/home/me/proj/plan.md')
+  expect(f.opened).toEqual(['too-long'])
+  expect(f.calls[0]).toEqual(['model', '/home/me/proj/plan.md', '--root', '/proj'])
   await end($)
 })

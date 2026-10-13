@@ -50,7 +50,8 @@ async function runPane($: EngineInterface, args: string[]): Promise<Result> {
   if (!exe) return { status: 'error', error: NO_PYTHON }
   let r
   try {
-    r = await $.process.run([exe, `${$.plugin.root}/scripts/pane.py`, ...args], { timeoutMs: 120_000 })
+    // --root: the project, for file status and for finding the plan's site (shared with the skill)
+    r = await $.process.run([exe, `${$.plugin.root}/scripts/pane.py`, ...args, '--root', await $.session.root()], { timeoutMs: 120_000 })
   } catch (err) {
     return { status: 'error', error: `could not run too-long: ${String(err)}` }
   }
@@ -118,7 +119,7 @@ async function refresh($: EngineInterface, w: Watch): Promise<void> {
     do {
       w.isDirty = false
       const before = sigOf(await statFile($, w.path))
-      const r = await runPane($, ['model', w.path, '--root', await $.session.root()])
+      const r = await runPane($, ['model', w.path])
       if (watch !== w) return
       if (sigOf(await statFile($, w.path)) !== before) w.isDirty = true
       else w.builtSig = before
@@ -367,6 +368,14 @@ function fileTree(files: PlanFile[]): TreeRow[] {
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     await $.command.register({ name: 'too-long-pane', description: 'Show a Markdown plan in the too-long side pane', argumentHint: '[path-to-plan.md]' })
+    // The skill shows the plan it just built in the pane through this tool.
+    await $.tool.register({
+      name: 'show_plan',
+      description: 'Show a Markdown plan in the too-long side pane beside the transcript, live: its tasks can be ticked '
+        + 'there and stay in sync with the file and the too-long site. Call it after building a too-long site for a plan.',
+      inputSchema: { type: 'object', properties: { path: { type: 'string', description: 'The Markdown file' } }, required: ['path'] },
+      isDeferred: false,
+    })
     // After a reload the pane may still be open: watch its plan again (the old timer is gone).
     const v = await read($, view)
     if (v.path && (await $.ui.panes()).some(p => p.id === PANE)) $.clock.after(0, () => void startWatching($, v.path))
@@ -384,6 +393,13 @@ export const register: Register = on => {
     const path = asked || (await read($, plan)).path || String((await $.store.get(await storeKey($))) ?? '')
     if (!path) return { text: USAGE }
     return { text: await show($, path, true) }
+  })
+
+  on('tool.call', { tool: 'mcp__too-long-pane__show_plan' }, async ($, e) => {
+    const input = e.input as { path?: unknown }
+    const path = await expandPath($, typeof input.path === 'string' ? input.path : '')
+    const text = path ? await show($, path, false) : 'Give the path of the Markdown plan.'
+    return { result: { text }, text }
   })
 
   on('ui.close', { id: PANE }, ($, e, next) => {

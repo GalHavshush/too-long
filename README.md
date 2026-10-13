@@ -240,6 +240,9 @@ Every site has search, light/dark mode, works on phones, and has a Source view (
 | `index.html` from disk (file://) | Saved in this browser only. The Markdown is not changed. | Run `build` again, then reload |
 | `too_long.py watch plan.md` + `index.html` | Same as above | Rebuilt on every save; reload the page |
 | `too_long.py serve plan.md`, open `http://127.0.0.1:8765/` | Written to the Markdown (`- [ ]` ↔ `- [x]`) | The open page reloads itself |
+| The side pane in Claude Code | Written to the Markdown | The pane follows within ~2 s; its **Open full site** serves the site the same way |
+
+The skill serves the site when it builds it, so the Markdown, the site and the side pane are three views of one plan: a tick in any of them shows in the others. The pane uses the same site folder as the skill (it finds it through `build.json`), with the views and extras Claude chose.
 
 Details of served mode:
 
