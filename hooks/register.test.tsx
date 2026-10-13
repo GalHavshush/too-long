@@ -146,9 +146,10 @@ test('the pane draws the plan on every surface', async ($, on) => {
     expect((await ui.find({ text: /0\/3 tasks/ }))).toBeDefined()
     expect((await ui.find({ text: 'Next up: Phase 1' }))).toBeDefined()
     await ui.press({ key: 'tab:highlights' })
-    expect((await ui.find({ text: /Mitigation: Wrap labels/ }))).toBeDefined()
+    expect((await ui.find({ text: /↳ Wrap labels\./ }))).toBeDefined()
     await ui.press({ key: 'tab:files' })
-    expect((await ui.find({ text: /● src\/a\.ts/ }))).toBeDefined()
+    expect((await ui.find({ text: /src\/a\.ts/ }))).toBeDefined()
+    expect((await ui.find({ text: /1 exist · 0 to create/ }))).toBeDefined()
     await ui.press({ key: 'tab:roadmap' })
     await ui.unmount()
   }
@@ -163,7 +164,7 @@ test('a roadmap of task-less sections points at the open tasks instead', async (
   await f.clock.settle()
   const ui = await mountPane($)
   expect(await ui.find({ text: /1\. Goals/ })).toBeUndefined()
-  expect(await ui.find({ text: 'No stages with tasks.' })).toBeDefined()
+  expect(await ui.find({ text: 'Stages' })).toBeUndefined()
   expect(await ui.find({ text: 'Next up: Remaining work' })).toBeDefined()
   expect(await ui.find({ key: 't:a' })).toBeDefined()
   await ui.unmount()
@@ -181,9 +182,9 @@ test('ticking a task writes it with the revision shown, then refreshes', async (
   expect(f.calls.find(c => c[0] === 'task')).toEqual(['task', '/plans/c.md', 'a', '--done', '--revision', 'rev1'])
   expect(f.calls.at(-1)?.[0]).toBe('model')
   expect(await ui.find({ text: /1\/3 tasks/ })).toBeDefined()
-  expect(await ui.find({ text: '[x] Task a' })).toBeUndefined() // done tasks fold away
+  expect(await ui.find({ key: 't:a' })).toBeUndefined() // done tasks fold away
   await ui.press({ key: 'show-done' })
-  expect(await ui.find({ text: '[x] Task a' })).toBeDefined()
+  expect(await ui.find({ key: 't:a' })).toBeDefined()
   await ui.unmount()
   await end($)
 })

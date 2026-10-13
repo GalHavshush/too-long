@@ -12,7 +12,7 @@ const USAGE = 'Usage: /too-long-pane <path-to-plan.md>'
 const TICK_MS = 1000
 const MAX_ROWS = 200
 const NO_PYTHON = 'too-long needs Python 3.9+ on PATH (tried python3, python). Install it, then run /too-long-pane again.'
-const TABS: [Tab, string][] = [['roadmap', 'Roadmap'], ['tasks', 'Tasks'], ['highlights', 'Decisions & risks'], ['files', 'Files']]
+const TABS: [Tab, string][] = [['roadmap', 'Roadmap'], ['tasks', 'Tasks'], ['highlights', 'Decisions'], ['files', 'Files']]
 
 const EMPTY: PaneView = { status: 'idle', path: '', doc: null, error: '', notice: '', pending: '', tab: 'roadmap', showDone: false }
 const view = atom({ plugin: 'too-long-pane', key: 'view' } as const, EMPTY)
@@ -230,14 +230,34 @@ async function approved($: EngineInterface) {
 
 // ---- drawing ----
 
-function bar(done: number, total: number, width: number): string {
-  const n = total ? Math.round((done / total) * width) : 0
-  return '▓'.repeat(n) + '░'.repeat(width - n)
+const ACCENT = '#3fb27f'
+
+// A rounded progress bar for surfaces that draw SVG; the terminal gets text.
+function barSvg(done: number, total: number, width: number): string {
+  const w = total ? Math.round((done / total) * width) : 0
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="6" viewBox="0 0 ${width} 6">`
+    + `<rect width="${width}" height="6" rx="3" fill="#8884"/>`
+    + (w ? `<rect width="${w}" height="6" rx="3" fill="${ACCENT}"/>` : '')
+    + '</svg>'
 }
 
-function stageGlyph(done: number, total: number): string {
-  return total > 0 && done === total ? '✓' : done > 0 ? '◐' : '○'
+function barText(done: number, total: number, width: number): string {
+  const n = total ? Math.round((done / total) * width) : 0
+  return '━'.repeat(n) + '─'.repeat(width - n)
 }
+
+function stageMark(done: number, total: number): [string, string] {
+  if (total > 0 && done === total) return ['●', 'success']
+  return done > 0 ? ['◐', 'warning'] : ['○', 'subtle']
+}
+
+// Task text as written, minus the Markdown code ticks the pane cannot draw.
+function plain(text: string): string {
+  return text.replace(/`/g, '')
+}
+
+const KINDS = [['decision', 'Decisions', 'suggestion'], ['risk', 'Risks', 'warning'], ['question', 'Open questions', 'permission']] as const
+const FILE_MARK = { exists: ['●', 'success'], planned: ['○', 'subtle'], ambiguous: ['?', 'warning'] } as const
 
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
@@ -284,6 +304,7 @@ export const register: Register = on => {
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     const { Box, Text, Button } = $.ui.resolve(e)
+    const Svg = e.surface === 'terminal' ? null : $.ui.resolve(e).Svg
     const v = await read($, view)
     const cols = Math.max(20, e.props.bodyColumns)
     const doc = v.doc
@@ -294,25 +315,34 @@ export const register: Register = on => {
         : v.status === 'error' ? `Couldn't show ${v.path}: ${v.error}`
         : `No plan open. ${USAGE}`
       return (
-        <Box flexDirection="column">
-          <Text color={v.status === 'error' ? 'red' : undefined} dimColor={v.status !== 'error'} wrap="wrap">{msg}</Text>
+        <Box flexDirection="column" paddingY={1}>
+          <Text color={v.status === 'error' ? 'error' : undefined} dimColor={v.status !== 'error'} wrap="wrap">{msg}</Text>
         </Box>
       )
     }
 
     const checkable = doc.tasks.filter(t => !t.browser_only)
     const done = checkable.filter(t => t.done).length
+    const pct = checkable.length ? Math.round((done / checkable.length) * 100) : 0
     const titles = new Map([...doc.sections, ...doc.stages].map(s => [s.id, s.title] as const))
-    const rows: RenderElement[] = []
+    const body: RenderElement[] = []
     let shown = 0
 
+    const heading = (key: string, text: string, extra = '') => (
+      <Box key={key} marginTop={body.length ? 1 : 0}>
+        <Text bold wrap="truncate-end">{text}</Text>
+        {extra ? <Text dimColor>{`  ${extra}`}</Text> : null}
+      </Box>
+    )
+
     const taskRow = (t: Task) => {
-      const label = `${t.done ? '[x]' : '[ ]'} ${t.text}`
-      if (t.browser_only) return <Text key={`t:${t.id}`} dimColor wrap="wrap">{`  ${t.text} (tracked in the site only)`}</Text>
+      if (t.browser_only) return <Text key={`t:${t.id}`} dimColor wrap="wrap">{`·  ${plain(t.text)}  (site only)`}</Text>
       const isPending = v.pending === t.id
       return (
-        <Button key={`t:${t.id}`} plain dimColor={!!v.pending} onPress={() => void toggle($, t, doc.revision)}>
-          {isPending ? `... ${t.text}` : label}
+        <Button key={`t:${t.id}`} plain dimColor={!!v.pending && !isPending} onPress={() => void toggle($, t, doc.revision)}>
+          <Text color={isPending ? 'subtle' : t.done ? 'success' : 'subtle'}>{isPending ? '◌' : t.done ? '☑' : '☐'}</Text>
+          {'  '}
+          <Text dimColor={t.done} strikethrough={t.done}>{plain(t.text)}</Text>
         </Button>
       )
     }
@@ -320,12 +350,14 @@ export const register: Register = on => {
     if (v.tab === 'roadmap') {
       // Stages without tasks (a design doc's numbered sections) say nothing about progress.
       const stages = doc.stages.filter(s => s.total > 0)
-      if (!stages.length) rows.push(<Text key="none" dimColor>No stages with tasks.</Text>)
+      if (stages.length) body.push(heading('h:stages', 'Stages'))
       for (const s of stages) {
-        rows.push(
-          <Text key={`s:${s.id}`} wrap="truncate-end">
-            {`${stageGlyph(s.done, s.total)} ${s.title}`} <Text dimColor>{`${s.done}/${s.total}`}</Text>
-          </Text>,
+        const [mark, color] = stageMark(s.done, s.total)
+        body.push(
+          <Box key={`s:${s.id}`} flexDirection="row" justifyContent="space-between" columnGap={1}>
+            <Text wrap="truncate-end"><Text color={color}>{mark}</Text>{`  ${s.title}`}</Text>
+            <Text dimColor>{`${s.done}/${s.total}`}</Text>
+          </Box>,
         )
       }
       // Next up: the first unfinished stage, else wherever the first open task is.
@@ -333,71 +365,83 @@ export const register: Register = on => {
       const firstOpen = doc.tasks.find(t => !t.done && !t.browser_only)
       const where = current?.id ?? firstOpen?.section
       if (where) {
-        rows.push(<Text key="next" bold>{`Next up: ${titles.get(where) ?? where}`}</Text>)
+        body.push(heading('next', `Next up: ${titles.get(where) ?? where}`))
         const open = doc.tasks.filter(t => !t.done && (t.section === where || t.at === where)).slice(0, 3)
-        for (const t of open) rows.push(taskRow(t))
+        for (const t of open) body.push(taskRow(t))
+      } else if (checkable.length) {
+        body.push(<Text key="all-done" color="success">All tasks are done.</Text>)
+      } else {
+        body.push(<Text key="none" dimColor>No tasks in this plan.</Text>)
       }
     } else if (v.tab === 'tasks') {
-      if (!doc.tasks.length) rows.push(<Text key="none" dimColor>No tasks in this plan.</Text>)
+      if (!doc.tasks.length) body.push(<Text key="none" dimColor>No tasks in this plan.</Text>)
       const groups = new Map<string, Task[]>()
       for (const t of doc.tasks) groups.set(t.section, [...(groups.get(t.section) ?? []), t])
       for (const [section, list] of groups) {
         const visible = list.filter(t => v.showDone || !t.done)
         if (!visible.length) continue
-        rows.push(<Text key={`g:${section}`} bold>{titles.get(section) ?? section}</Text>)
+        body.push(heading(`g:${section}`, titles.get(section) ?? section, `${list.filter(t => t.done).length}/${list.length}`))
         for (const t of visible) {
-          if (shown++ < MAX_ROWS) rows.push(taskRow(t))
+          if (shown++ < MAX_ROWS) body.push(taskRow(t))
         }
       }
-      if (shown > MAX_ROWS) rows.push(<Text key="more" dimColor>{`${shown - MAX_ROWS} more: open the full site.`}</Text>)
+      if (shown > MAX_ROWS) body.push(<Text key="more" dimColor>{`${shown - MAX_ROWS} more in the full site.`}</Text>)
       const doneCount = doc.tasks.filter(t => t.done).length
       if (doneCount) {
-        rows.push(
-          <Button key="show-done" plain dimColor onPress={() => void update($, view, x => ({ ...x, showDone: !x.showDone }))}>
-            {v.showDone ? 'Hide done tasks' : `Show ${doneCount} done`}
-          </Button>,
+        body.push(
+          <Box key="show-done-row" marginTop={1}>
+            <Button key="show-done" plain dimColor onPress={() => void update($, view, x => ({ ...x, showDone: !x.showDone }))}>
+              {v.showDone ? 'Hide done tasks' : `Show ${doneCount} done`}
+            </Button>
+          </Box>,
         )
       }
     } else if (v.tab === 'highlights') {
-      if (!doc.highlights.length) rows.push(<Text key="none" dimColor>No decisions, risks or questions found.</Text>)
-      for (const kind of ['decision', 'risk', 'question'] as const) {
-        const list = doc.highlights.filter(h => h.kind === kind)
+      if (!doc.highlights.length) body.push(<Text key="none" dimColor>No decisions, risks or questions found.</Text>)
+      for (const [kind, label, color] of KINDS) {
+        const list = doc.highlights.filter(item => item.kind === kind)
         if (!list.length) continue
-        rows.push(<Text key={`k:${kind}`} bold>{{ decision: 'Decisions', risk: 'Risks', question: 'Open questions' }[kind]}</Text>)
+        body.push(heading(`k:${kind}`, label, String(list.length)))
         list.forEach((item, i) => { // not `h`: that is the JSX factory
-          rows.push(<Text key={`h:${kind}:${i}`} wrap="wrap">{`• ${item.title}`}</Text>)
-          if (item.mitigation) rows.push(<Text key={`m:${kind}:${i}`} dimColor wrap="wrap">{`  Mitigation: ${item.mitigation}`}</Text>)
+          body.push(<Text key={`h:${kind}:${i}`} wrap="wrap"><Text color={color}>▍</Text>{` ${plain(item.title)}`}</Text>)
+          if (item.mitigation) body.push(<Text key={`m:${kind}:${i}`} dimColor wrap="wrap">{`   ↳ ${plain(item.mitigation)}`}</Text>)
         })
       }
     } else {
-      if (!doc.files.length) rows.push(<Text key="none" dimColor>No files mentioned.</Text>)
-      else rows.push(<Text key="legend" dimColor>● exists  ○ to create  ? ambiguous</Text>)
+      if (!doc.files.length) body.push(<Text key="none" dimColor>No files mentioned.</Text>)
+      else {
+        const exist = doc.files.filter(f => f.status === 'exists').length
+        body.push(heading('h:files', 'Files', `${exist} exist · ${doc.files.length - exist} to create`))
+      }
       for (const f of doc.files.slice(0, MAX_ROWS)) {
-        rows.push(<Text key={`f:${f.path}`} wrap="truncate-start">{`${{ exists: '●', planned: '○', ambiguous: '?' }[f.status]} ${f.path}`}</Text>)
+        const [mark, color] = FILE_MARK[f.status]
+        body.push(<Text key={`f:${f.path}`} wrap="truncate-start"><Text color={color}>{mark}</Text>{`  ${f.path}`}</Text>)
       }
     }
 
+    const barWidth = Math.max(80, Math.min(cols * 8, 480))
     return (
       <Box flexDirection="column">
         <Text bold wrap="wrap">{doc.title}</Text>
-        <Text>
-          {`${done}/${checkable.length} tasks `}
-          <Text color="green">{bar(done, checkable.length, Math.min(20, cols - 18))}</Text>
-          {` ${checkable.length ? Math.round((done / checkable.length) * 100) : 0}%`}
-        </Text>
-        {v.notice ? <Text key="notice" color="yellow" wrap="wrap">{v.notice}</Text> : null}
-        <Box flexDirection="row" flexWrap="wrap" columnGap={1} marginTop={1}>
+        <Box flexDirection="column" marginTop={1}>
+          {Svg
+            ? <Svg source={barSvg(done, checkable.length, barWidth)} alt={`${done} of ${checkable.length} tasks done`} />
+            : <Text color="success">{barText(done, checkable.length, Math.min(30, cols - 2))}</Text>}
+          <Text dimColor>{`${done}/${checkable.length} tasks · ${pct}%`}</Text>
+        </Box>
+        {v.notice ? <Box key="notice" marginTop={1}><Text color="warning" wrap="wrap">{`⚠ ${v.notice}`}</Text></Box> : null}
+        <Box flexDirection="row" flexWrap="wrap" columnGap={2} marginTop={1}>
           {TABS.map(([id, label], i) => (
-            <Button key={`tab:${id}`} hotkey={String(i + 1)} variant={v.tab === id ? 'primary' : undefined}
+            <Button key={`tab:${id}`} plain hotkey={e.surface === 'terminal' ? String(i + 1) : undefined}
               onPress={() => void update($, view, x => ({ ...x, tab: id }))}>
-              {label}
+              {v.tab === id ? <Text bold underline>{label}</Text> : <Text dimColor>{label}</Text>}
             </Button>
           ))}
         </Box>
-        <Box flexDirection="column" marginTop={1}>{rows}</Box>
-        <Box flexDirection="column" marginTop={1}>
-          <Button key="open-site" onPress={() => void openSite($, doc.path)}>Open full site</Button>
-          <Text dimColor wrap="truncate-start">{doc.path}</Text>
+        <Box flexDirection="column" marginTop={1}>{body}</Box>
+        <Box flexDirection="row" justifyContent="space-between" alignItems="center" columnGap={1} marginTop={2}>
+          <Button key="open-site" onPress={() => void openSite($, doc.path)}>Open full site ↗</Button>
+          <Text dimColor wrap="truncate-start">{doc.file}</Text>
         </Box>
       </Box>
     )
