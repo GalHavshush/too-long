@@ -1,51 +1,78 @@
 # too-long
 
-**Too long. Just show me.**
+### Claude wrote a 400-line plan. You have 30 seconds. **Too long, just show me.**
 
-Claude just wrote you a long implementation plan. Phases, checklists, decisions, risks, file paths, diagrams. You were never going to read all of it.
+![Demo: a long plan turned into an overview, roadmap, task list, decisions, diagrams and files you can click through](docs/demo.gif)
 
-**too-long** is a [Claude Code](https://claude.com/claude-code) skill that turns that Markdown into a small website you will actually use. Say *"use too-long on plan.md"* and open the result.
+**too-long** turns the long Markdown plans Claude writes into something you can actually review, approve and follow: a small website, a live side pane in Claude Code, or a two-minute narrated video. Your plan file stays the single source of truth.
 
-![Demo: overview, roadmap, ticking tasks, highlights, diagrams, files, document and step-by-step views of an example plan](docs/demo.gif)
+## Why use it
+
+| Without too-long | With too-long |
+|---|---|
+| Scroll 400 lines to find what Claude intends to do | An overview, a TL;DR and every section at a glance |
+| Approve a plan you only half read | See the roadmap, the decisions and the risks first |
+| No idea what is done once Claude starts building | A live progress view: Claude ticks each task as it finishes it |
+| Decisions and their rejected alternatives buried in prose | Each decision next to what was rejected, each risk next to its mitigation |
+| Come back tomorrow and re-read everything | Reopen the plan with every tick in place |
 
 ## Three ways to use it
 
 ```mermaid
 flowchart LR
-    P[("📄 plan.md<br/>the one source of truth")]
-    P --> S["🌐 <b>Site</b><br/>/too-long plan.md<br/>read, navigate, tick"]
-    P --> V["🎬 <b>Video</b><br/>/too-long plan.md --video<br/>a 2 minute explainer"]
-    P <--> L["🪟 <b>Live</b><br/>/too-long-live<br/>review before approval,<br/>track after"]
+    P[("plan.md<br/>the one source of truth")]
+    P --> S["<b>Website</b><br/>/too-long plan.md"]
+    P --> V["<b>Video</b><br/>/too-long plan.md --video"]
+    P <--> L["<b>Live in Claude Code</b><br/>/too-long-live"]
     L <-.same site.-> S
 ```
 
-| | What it is | Install | Use |
-|---|---|---|---|
-| 🌐 **Site** | The plan as a small website: overview, roadmap, tasks, decisions, diagrams, files | the skill | `/too-long plan.md` |
-| 🎬 **Video** | A narrated ~2 minute explainer, rendered on your machine | the skill (+ Chrome, ffmpeg, Node) | `/too-long plan.md --video` |
-| 🪟 **Live** | A side pane in Claude Code: review the plan before you approve it, track it as Claude works | the skill **+** the `too-long-live` plugin | `/too-long-live` |
+| | What it is | Command |
+|---|---|---|
+| **Website** | The plan as a small site: overview, roadmap, tasks, decisions, diagrams, files | `/too-long plan.md` |
+| **Live in Claude Code** | A side pane to review a plan before you approve it, then track it while Claude builds | `/too-long-live` |
+| **Video** | A narrated ~2 minute explainer, rendered on your machine | `/too-long plan.md --video` |
 
-## What you get
+## See it
 
-- **The gist first.** An overview with a TL;DR, progress and every section at a glance.
-- **What to do next.** A roadmap that knows which phases are done, in progress, ready to start or blocked, and which can run in parallel.
-- **A real checklist.** Every `- [ ]` in one place. Tick them in the browser, or run `serve` and the ticks are written back into your Markdown.
-- **The decisions, not the noise.** Each architectural decision with the alternatives it rejected and the tradeoff it accepted, and each risk next to its mitigation.
-- **The architecture.** Diagrams from the plan, plus ones Claude draws from it, clearly labelled as Claude's.
-- **Every file the plan touches,** in one tree, with what already exists and what is still to be created.
-- **Learn it or present it.** Step through it one section at a time.
-- **Or just watch it.** Add `--video` for a narrated two-minute explainer, rendered on your machine.
+### The website
+
+Everything in the plan, arranged for the question you have: what is this, what is next, what could go wrong.
+
+![The overview: title, TL;DR, progress and every section as a card](docs/screenshots/overview.png)
+
+![The roadmap: phases with progress, dependencies, parallel work and what is ready or blocked](docs/screenshots/roadmap.png)
+
+### In Claude Code (terminal)
+
+For a long plan, Claude asks whether you want a visual review before you approve it.
+
+![Claude asks: The plan is long. Want a visual review of it? with choices for easier reading, tracking or architecture](docs/screenshots/live-review-question.png)
+
+Then, while Claude builds, the pane shows progress and what is next. Claude ticks the tasks itself; you can tick too.
+
+![Claude Code with the too-long pane beside it: 20 of 25 tasks done, the next tasks and phase progress](docs/screenshots/live-tracking.png)
+
+Decisions and risks, with their mitigations, one tab away:
+
+![The Decisions tab: decisions and risks with mitigations](docs/screenshots/live-decisions.png)
+
+### In Claude Code (desktop app)
+
+The same pane opens in the desktop app's Code tab, beside the plan and the approval card.
+
+<!-- DESKTOP-SCREENSHOT: add docs/screenshots/live-desktop.png and replace this comment with its image link -->
 
 ## Why you can trust it
 
-- **Nothing is left out.** The full document is always one click away, and every task, decision and file links back to the exact line it came from.
-- **Nothing is made up.** What comes from your plan and what Claude added are kept apart. Claude's additions are labelled, and flagged when the plan changes under them.
-- **It stays in sync.** Edit the plan and rebuild, or leave `watch` running. Rebuilding never needs Claude.
-- **It's yours.** No account, no server, no npm, no build step. The site is a folder of static files; the only thing it ever downloads is the diagram library, and without it you see the diagram source.
+- **Nothing is left out.** The full document is one click away, and every task, decision and file links to the exact line it came from.
+- **Nothing is made up.** What comes from your plan and what Claude added are kept apart: Claude's additions are labelled, and flagged when the plan changes under them.
+- **One source of truth.** Ticks from Claude, the pane, the site or your editor are all one `[ ]` to `[x]` character in your Markdown. A write based on an old version is refused, so no edit is silently overwritten.
+- **It is yours.** No account, no server to host, no npm, no build step. The site is a folder of static files.
 
 ## Get it
 
-Paste this into Claude Code:
+Paste this into Claude Code to install the skill:
 
 ```text
 Install the too-long skill from https://github.com/GalHavshush/too-long: clone it into ~/.claude/skills/too-long (create ~/.claude/skills if it doesn't exist; if too-long is already there, run git pull in it instead). Then check that ~/.claude/skills/too-long/SKILL.md exists and tell me how to use it.
@@ -58,6 +85,14 @@ Use too-long on plan.md
 ```
 
 Claude asks what you want from it (read it, track it, see the architecture, learn it, present it), picks the views that fit, builds the site and opens it.
+
+**Want it live inside Claude Code?** Add the optional plugin (it needs the skill above):
+
+```text
+/plugin install too-long-live --marketplace GalHavshush/too-long
+```
+
+Details in [too-long-live](#too-long-live-review-and-track-plans-in-claude-code).
 
 ---
 
