@@ -36,7 +36,10 @@ function doc(f: Fake, path: string) {
     ],
     tasks,
     highlights: [{ kind: 'risk', title: 'The pane is narrow.', mitigation: 'Wrap labels.', line: 9 }],
-    files: [{ path: 'src/a.ts', status: 'exists' }],
+    files: [
+      { path: 'src/a.ts', status: 'exists' }, { path: 'src/lib/b.ts', status: 'planned' }, { path: 'README.md', status: 'exists' },
+      { path: '~/.claude/plans/', status: 'exists' }, { path: 'index.html', status: 'ambiguous' },
+    ],
     warnings: [],
   }
 }
@@ -148,8 +151,14 @@ test('the pane draws the plan on every surface', async ($, on) => {
     await ui.press({ key: 'tab:highlights' })
     expect((await ui.find({ text: /↳ Wrap labels\./ }))).toBeDefined()
     await ui.press({ key: 'tab:files' })
-    expect((await ui.find({ text: /src\/a\.ts/ }))).toBeDefined()
-    expect((await ui.find({ text: /1 exist · 0 to create/ }))).toBeDefined()
+    expect((await ui.find({ text: /3 exist · 1 to create · 1 unclear/ }))).toBeDefined()
+    // A folder tree: folders first, nested by depth, paths outside the project last; "~/.claude/"
+    // holds only plans/, so they share one row.
+    const rows = (await ui.findAll({ type: 'Box' })).filter(b => b.key?.startsWith('f:'))
+    expect(rows.map(r => [r.key, r.props.paddingLeft])).toEqual([
+      ['f:src/', 0], ['f:src/lib/', 2], ['f:src/lib/b.ts', 4], ['f:src/a.ts', 2],
+      ['f:index.html', 0], ['f:README.md', 0], ['f:~/.claude/plans/', 0],
+    ])
     await ui.press({ key: 'tab:roadmap' })
     await ui.unmount()
   }

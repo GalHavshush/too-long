@@ -5,7 +5,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, FsStat, Register, RenderElement, Timer } from 'claude-code'
 
-import type { PaneDoc, PaneView, PlanMode, Tab, Task } from '../types'
+import type { PaneDoc, PaneView, PlanFile, PlanMode, Tab, Task } from '../types'
 
 const PANE = 'too-long'
 const USAGE = 'Usage: /too-long-pane <path-to-plan.md>'
@@ -259,6 +259,50 @@ function plain(text: string): string {
 const KINDS = [['decision', 'Decisions', 'suggestion'], ['risk', 'Risks', 'warning'], ['question', 'Open questions', 'permission']] as const
 const FILE_MARK = { exists: ['●', 'success'], planned: ['○', 'subtle'], ambiguous: ['?', 'warning'] } as const
 
+type TreeNode = { children: Map<string, TreeNode>; status?: PlanFile['status']; isDir: boolean }
+type TreeRow = { path: string; name: string; depth: number; isDir: boolean; status?: PlanFile['status'] }
+
+// The mentioned paths as a folder tree: folders first, then files, by name. A folder whose only
+// child is a folder, and that is not mentioned itself, shares its row ("~/.claude/plans/"). Paths
+// outside the project (~/, /) come last.
+function fileTree(files: PlanFile[]): TreeRow[] {
+  const root: TreeNode = { children: new Map(), isDir: true }
+  for (const f of files) {
+    const parts = f.path.split('/').filter(Boolean)
+    if (f.path.startsWith('/') && parts.length) parts[0] = `/${parts[0]}`
+    let node = root
+    parts.forEach((part, i) => {
+      const isLast = i === parts.length - 1
+      let child = node.children.get(part)
+      if (!child) node.children.set(part, (child = { children: new Map(), isDir: !isLast || f.path.endsWith('/') }))
+      if (!isLast) child.isDir = true
+      else child.status = f.status
+      node = child
+    })
+  }
+  const rows: TreeRow[] = []
+  const walk = (node: TreeNode, depth: number, prefix: string) => {
+    const outside = (name: string) => Number(depth === 0 && /^[~/]/.test(name)) // ~/ and / paths after the project's
+    const entries = [...node.children].sort(([a, x], [b, y]) =>
+      outside(a) - outside(b) || Number(y.isDir) - Number(x.isDir) || a.localeCompare(b))
+    for (const [part, child] of entries) {
+      let name = part
+      let n = child
+      while (n.isDir && !n.status && n.children.size === 1) {
+        const [[next, only]] = [...n.children] as [[string, TreeNode]]
+        if (!only.isDir) break
+        name += `/${next}`
+        n = only
+      }
+      const path = `${prefix}${name}${n.isDir ? '/' : ''}`
+      rows.push({ path, name: n.isDir ? `${name}/` : name, depth, isDir: n.isDir, status: n.status })
+      walk(n, depth + 1, path)
+    }
+  }
+  walk(root, 0, '')
+  return rows
+}
+
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     await $.command.register({ name: 'too-long-pane', description: 'Show a Markdown plan in the too-long side pane', argumentHint: '[path-to-plan.md]' })
@@ -410,12 +454,21 @@ export const register: Register = on => {
     } else {
       if (!doc.files.length) body.push(<Text key="none" dimColor>No files mentioned.</Text>)
       else {
-        const exist = doc.files.filter(f => f.status === 'exists').length
-        body.push(heading('h:files', 'Files', `${exist} exist · ${doc.files.length - exist} to create`))
+        const count = (status: PlanFile['status']) => doc.files.filter(f => f.status === status).length
+        const unclear = count('ambiguous')
+        body.push(heading('h:files', 'Files', `${count('exists')} exist · ${count('planned')} to create${unclear ? ` · ${unclear} unclear` : ''}`))
       }
-      for (const f of doc.files.slice(0, MAX_ROWS)) {
-        const [mark, color] = FILE_MARK[f.status]
-        body.push(<Text key={`f:${f.path}`} wrap="truncate-start"><Text color={color}>{mark}</Text>{`  ${f.path}`}</Text>)
+      for (const row of fileTree(doc.files).slice(0, MAX_ROWS)) {
+        const [mark, color] = row.status ? FILE_MARK[row.status] : (['▾', 'subtle'] as const)
+        body.push(
+          <Box key={`f:${row.path}`} paddingLeft={row.depth * 2}>
+            <Text wrap="truncate-end">
+              <Text color={color}>{mark}</Text>
+              {'  '}
+              {row.isDir ? <Text bold={!row.status} dimColor={!row.status}>{row.name}</Text> : row.name}
+            </Text>
+          </Box>,
+        )
       }
     }
 
