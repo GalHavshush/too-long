@@ -2,7 +2,7 @@
 
 ### Claude wrote a 400-line plan. You have 30 seconds. **Too long, just show me.**
 
-![Demo: a long plan turned into an overview, roadmap, task list, decisions, diagrams and files you can click through](docs/demo.gif)
+![Demo: Claude offers a visual review of a long plan, the pane tracks tasks while Claude builds, then the site's overview, roadmap, tasks, highlights, diagrams, and the video](docs/demo.gif)
 
 **too-long** turns the long Markdown plans Claude writes into something you can actually review, approve and follow: a small website, a live side pane in Claude Code, or a two-minute narrated video. Your plan file stays the single source of truth.
 
