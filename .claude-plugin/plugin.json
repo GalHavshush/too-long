@@ -1,0 +1,7 @@
+{
+  "name": "too-long-pane",
+  "version": "0.1.0",
+  "description": "Shows an approved plan in a side pane: progress, stages, tasks you can tick, decisions, risks and files.",
+  "author": { "name": "Gal Havshush" },
+  "types": "./types/index.d.ts"
+}

@@ -62,6 +62,7 @@ def summary(model):
             highlights.append(h)
     return {
         "revision": model["revision"], "doc_id": model["doc_id"], "title": model["title"], "file": model["file"],
+        "sections": [{"id": s["id"], "title": s["title"]} for s in model["sections"]],
         "stages": stages,
         "tasks": [{k: t[k] for k in ("id", "text", "done", "section", "at", "line")} | {"browser_only": bool(t.get("browser_only"))}
                   for t in tasks],

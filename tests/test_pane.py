@@ -38,6 +38,7 @@ assert Path(res["index"]) == out / "index.html" and (out / "index.html").exists(
 assert res["title"] == "Ship it" and res["file"] == plan.name and len(res["revision"]) == 64
 assert [(s["id"], s["done"], s["total"]) for s in res["stages"]] == [("phase-1-core", 1, 2), ("phase-2-pane", 0, 1)], res["stages"]
 assert [t["done"] for t in res["tasks"]] == [True, False, False]
+assert [s["title"] for s in res["sections"]] == ["Phase 1: Core", "Phase 2: Pane", "Steps", "Risks"]
 assert {h["kind"] for h in res["highlights"]} == {"risk", "decision", "question"}
 assert next(h for h in res["highlights"] if h["kind"] == "risk")["mitigation"] == "Wrap the labels."
 # --root: a file of the project exists, one the plan will create is planned.
