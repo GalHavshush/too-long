@@ -187,21 +187,19 @@ The generated site is committed in [`examples/trailhead-site/`](examples/trailhe
 
 **too-long-live** is an optional add-on to the skill. It puts the plan in a pane beside the transcript, and teaches Claude to write plans you can review and to tick them off as it works.
 
-```text
-┌─ transcript ───────────────────────┐┌─ too-long ─────────────────────────┐
-│ > Plan a todo-list web app         ││ ╭────────────────────────────────╮ │
-│                                    ││ │ Todo-list web app              │ │
-│ ⏺ Updated plan                     ││ │  ◐ 12/30 tasks done            │ │
-│                                    ││ │  Phase 3: Frontend             │ │
-│ ⏺ Plan written.                    ││ ╰────────────────────────────────╯ │
-│                                    ││  Roadmap  Tasks  Decisions  Files  │
-│ [ Open plan in too-long ]  ×       ││ ╭─ NEXT UP ──────────────────────╮ │
-│ ❯                                  ││ │ ☑ Create the schema            │ │
-│                                    ││ │ ☐ Add the login form           │ │
-│                                    ││ ╰────────────────────────────────╯ │
-│                                    ││  [ Open full site ↗ ]              │
-└────────────────────────────────────┘└────────────────────────────────────┘
-```
+### See it
+
+**1. Before approval:** for a long plan, Claude asks whether you want a visual review, and what for.
+
+![Claude asks "The plan is long. Want a visual review of it?" with the choices: no, easier reading, track progress, architecture](docs/screenshots/live-review-question.png)
+
+**2. While Claude builds:** the pane sits beside the transcript. Here Claude has implemented the app and ticked 20 of 25 tasks by itself; the roadmap shows the finished phases and what is next.
+
+![Claude Code with the too-long pane: 20/25 tasks done, NEXT UP card and phase progress bars beside the transcript](docs/screenshots/live-tracking.png)
+
+**3. The decisions and risks:** every labelled decision, and every risk next to its mitigation, without reading the plan again.
+
+![The pane's Decisions tab listing decisions and risks with their mitigations](docs/screenshots/live-decisions.png)
 
 ### The loop
 
