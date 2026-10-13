@@ -52,8 +52,6 @@ export type PaneView = {
 export type PlanMode = {
   /** The plan file of the current or latest planning, as the engine named it. */
   path: string
-  /** True from a planning reminder until that planning's approval opened the pane. */
-  isArmed: boolean
 }
 
 declare module 'claude-code' {

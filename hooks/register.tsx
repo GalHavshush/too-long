@@ -16,7 +16,7 @@ const TABS: [Tab, string][] = [['roadmap', 'Roadmap'], ['tasks', 'Tasks'], ['hig
 
 const EMPTY: PaneView = { status: 'idle', path: '', doc: null, error: '', notice: '', pending: '', tab: 'roadmap', showDone: false }
 const view = atom({ plugin: 'too-long-pane', key: 'view' } as const, EMPTY)
-const plan = atom({ plugin: 'too-long-pane', key: 'plan' } as const, { path: '', isArmed: false } as PlanMode)
+const plan = atom({ plugin: 'too-long-pane', key: 'plan' } as const, { path: '' } as PlanMode)
 
 type Result = { status: string; error?: string; revision?: string; [k: string]: unknown }
 
@@ -214,21 +214,17 @@ async function openSite($: EngineInterface, path: string) {
 
 // ---- plan mode ----
 
-async function arm($: EngineInterface, path: string) {
-  const p = await read($, plan)
-  if (p.path !== path || !p.isArmed) await update($, plan, () => ({ path, isArmed: true }))
+async function remember($: EngineInterface, path: string) {
+  if ((await read($, plan)).path !== path) await update($, plan, () => ({ path }))
 }
 
-// Plan mode ended with a plan approved: open it once per planning.
-async function approved($: EngineInterface, exitPath: string | null) {
-  const p = await read($, plan)
-  const path = exitPath ?? p.path
+// The plan was approved (ExitPlanMode succeeded): open the file this planning wrote.
+async function approved($: EngineInterface) {
+  const { path } = await read($, plan)
   if (!path) {
     $.ui.toast(`Plan approved. ${USAGE}`)
     return
   }
-  if (!p.isArmed && path === p.path) return // this planning's approval already opened it
-  await update($, plan, () => ({ path, isArmed: false }))
   await show($, path, false)
 }
 
@@ -269,29 +265,20 @@ export const register: Register = on => {
     return next(e)
   }).catch(($, e, next) => next(e))
 
-  // Planning: remember which file the plan is written to.
-  on('prompt.attachment', { type: 'plan_mode' }, async ($, e, next) => {
-    if (e.detail?.planFilePath) await arm($, e.detail.planFilePath)
-    return next(e)
-  })
-  on('prompt.attachment', { type: 'plan_mode_reentry' }, async ($, e, next) => {
-    if (e.detail?.planFilePath) await arm($, e.detail.planFilePath)
-    return next(e)
-  })
+  // Which file the plan is written to. These notes only remember the path: the engine renders
+  // them again for old rows (when a mod loads, say), so they never open anything.
+  for (const type of ['plan_mode', 'plan_mode_reentry', 'plan_mode_exit'] as const) {
+    on('prompt.attachment', { type }, async ($, e, next) => {
+      const path = e.detail?.planFilePath
+      if (path) await remember($, path)
+      return next(e)
+    })
+  }
 
-  // Approval, as the engine notes it when plan mode ends...
-  on('prompt.attachment', { type: 'plan_mode_exit' }, async ($, e, next) => {
-    const d = e.detail
-    if (!d || d.hasPlan) {
-      const exitPath = d ? d.planFilePath : null
-      $.clock.after(0, () => void approved($, exitPath))
-    }
-    return next(e)
-  })
-  // ...and as the tool call that asked for it (a host whose note carries no path).
+  // Approval: the ExitPlanMode call itself, which happens once and is never replayed.
   on('tool.call', { tool: 'ExitPlanMode' }, async ($, e, next) => {
     const r = await next(e)
-    if (!r.isError) $.clock.after(0, () => void approved($, null))
+    if (r.result !== undefined && !r.isError) $.clock.after(0, () => void approved($)) // not a deny or a rejection
     return r
   }).catch(($, e, next) => next(e)) // never in the way of the tool call
 

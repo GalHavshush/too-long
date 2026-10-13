@@ -301,47 +301,55 @@ test('switching plans moves the one watcher; reopening keeps it', async ($, on) 
   await end($)
 })
 
-test('approving a plan opens it once per planning', async ($, on) => {
+function note($: Engine, type: 'plan_mode' | 'plan_mode_exit', path: string) {
+  const detail = type === 'plan_mode' ? { planFilePath: path, hasPlan: true, reminder: 'full' as const } : { planFilePath: path, hasPlan: true }
+  return $.prompt.attachment({ type, text: type, origin: { kind: 'engine' }, detail } as never)
+}
+
+function exitPlanMode($: Engine) {
+  return $.tool.call({ tool: 'ExitPlanMode', input: {} } as never)
+}
+
+test('only the approval opens the plan; replayed notes never do', async ($, on) => {
   const f = fake(on)
+  let isRejected = false
+  on('tool.call', () => (isRejected ? { deny: 'The user rejected the plan' } : { result: {}, text: 'approved' }) as never)
+  f.files.set('/home/me/.claude/plans/old.md', { mtimeMs: 1, size: 10 })
   f.files.set('/home/me/.claude/plans/p.md', { mtimeMs: 1, size: 10 })
-  const detail = { planFilePath: '/home/me/.claude/plans/p.md', hasPlan: true }
-  await $.prompt.attachment({ type: 'plan_mode', text: 'plan mode is on', origin: { kind: 'engine' }, detail: { ...detail, reminder: 'full' } })
-  await $.prompt.attachment({ type: 'plan_mode_exit', text: 'plan mode ended', origin: { kind: 'engine' }, detail })
+  // The engine renders old rows again when a mod loads: an earlier planning and its exit.
+  await note($, 'plan_mode', '/home/me/.claude/plans/old.md')
+  await note($, 'plan_mode_exit', '/home/me/.claude/plans/old.md')
+  await note($, 'plan_mode', '/home/me/.claude/plans/p.md')
+  await f.clock.settle()
+  expect(f.opened).toEqual([])
+  isRejected = true
+  await exitPlanMode($)
+  await f.clock.settle()
+  expect(f.opened).toEqual([])
+  isRejected = false
+  await exitPlanMode($)
   await f.clock.settle()
   expect(f.opened).toEqual(['too-long'])
-  expect(f.calls[0]?.[1]).toBe('/home/me/.claude/plans/p.md')
-  // The same approval seen again (the tool call, or the note once more) does not reopen it.
-  await $.prompt.attachment({ type: 'plan_mode_exit', text: 'plan mode ended', origin: { kind: 'engine' }, detail })
-  await f.clock.settle()
-  expect(f.opened).toEqual(['too-long'])
-  // Planning again, then approving, does.
-  await $.prompt.attachment({ type: 'plan_mode_reentry', text: 'again', origin: { kind: 'engine' }, detail: { planFilePath: detail.planFilePath } })
-  await $.prompt.attachment({ type: 'plan_mode_exit', text: 'plan mode ended', origin: { kind: 'engine' }, detail })
-  await f.clock.settle()
-  expect(f.opened).toEqual(['too-long', 'too-long'])
+  expect(f.calls[0]?.[1]).toBe('/home/me/.claude/plans/p.md') // the latest planning's file
   await end($)
 })
 
-test('an approval with no path falls back to the planning file, else says how', async ($, on) => {
+test('an approval with no known plan file says how to open one', async ($, on) => {
   const f = fake(on)
-  await $.prompt.attachment({ type: 'plan_mode_exit', text: 'plan mode ended', origin: { kind: 'engine' } })
+  on('tool.call', () => ({ result: {}, text: 'approved' }) as never)
+  await exitPlanMode($)
   await f.clock.settle()
   expect(f.opened).toEqual([])
   expect(f.toasts.at(-1)).toContain('/too-long-pane <path-to-plan.md>')
-  f.files.set('/plans/q.md', { mtimeMs: 1, size: 10 })
-  await $.prompt.attachment({ type: 'plan_mode', text: 'on', origin: { kind: 'engine' }, detail: { planFilePath: '/plans/q.md', hasPlan: false, reminder: 'full' } })
-  await $.prompt.attachment({ type: 'plan_mode_exit', text: 'plan mode ended', origin: { kind: 'engine' } })
-  await f.clock.settle()
-  expect(f.calls[0]?.[1]).toBe('/plans/q.md')
-  await end($)
 })
 
 test('an approval on a narrow terminal leaves a toast instead', async ($, on) => {
   const f = fake(on)
+  on('tool.call', () => ({ result: {}, text: 'approved' }) as never)
   f.isPlaced = false
   f.files.set('/plans/r.md', { mtimeMs: 1, size: 10 })
-  await $.prompt.attachment({ type: 'plan_mode', text: 'on', origin: { kind: 'engine' }, detail: { planFilePath: '/plans/r.md', hasPlan: true, reminder: 'full' } })
-  await $.prompt.attachment({ type: 'plan_mode_exit', text: 'off', origin: { kind: 'engine' }, detail: { planFilePath: '/plans/r.md', hasPlan: true } })
+  await note($, 'plan_mode', '/plans/r.md')
+  await exitPlanMode($)
   await f.clock.settle()
   expect(f.toasts.at(-1)).toContain('Run /too-long-pane to open it')
   await end($)
