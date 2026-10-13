@@ -318,7 +318,8 @@ def find_files(text):
     text = expand_braces(re.sub(r"https?://\S+", " ", text))
     found = [p for p in PATH_RE.findall(text) if p.endswith("/") or EXT_RE.search(p)]
     found += [n for n in NAME_RE.findall(text) if not NOT_FILES.match(n)]
-    return [re.sub(r"^\./", "", p) for p in found]
+    found = [re.sub(r"^\./", "", p) for p in found]
+    return [p for p in found if p]  # a bare "./" names no file
 
 
 def file_index(files):

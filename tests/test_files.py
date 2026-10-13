@@ -6,7 +6,7 @@ from pathlib import Path
 
 from _path import ROOT
 from model import build_document
-from parse import parse_file
+from parse import find_files, parse_file
 
 FIX = ROOT / "tests" / "fixtures" / "file-references.md"
 
@@ -23,6 +23,9 @@ assert [m["at"] for m in files["src/app/config.py"]["mentions"]] == ["layout", "
 # "main.py" could be two files: left alone, with both candidates; "../" paths are never merged.
 assert files["main.py"]["candidates"] == ["src/app/cli/main.py", "src/app/scheduler/main.py"]
 assert "aliases" not in files["../shared/settings.py"]
+
+# A bare "./" (as in `"source": "./"`) is no file, not an empty path.
+assert find_files('"source": "./" beside ./src/a.py') == ["src/a.py"]
 
 # On disk: in a git repository, existing files are marked, the rest are planned.
 with tempfile.TemporaryDirectory() as d:
